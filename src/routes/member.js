@@ -1,111 +1,117 @@
 const router = require('express').Router();
-const db = require('../database');
+const { Group, User, Saving, Loan, Repayment, AuditLog } = require('../models');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { emails } = require('../utils/email');
 
 router.use(authenticate, requireRole('member'));
 
-// ── Dashboard ─────────────────────────────────────────────────────
-router.get('/dashboard', (req, res) => {
-  const m = req.user;
-  const group = db.groups.find(g => g.id === m.groupId);
-  const balance = db.getSavingsBalance(m.id);
-  const activeLoan = db.getActiveLoan(m.id);
-  const recentTx = db.savings.filter(s => s.memberId === m.id).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-  const pendingLoan = db.loans.find(l => l.memberId === m.id && l.status === 'pending');
-  const shareProgress = Math.round((m.shareCapitalPaid / m.shareCapitalTarget) * 100);
-  res.render('member/dashboard', { user: m, group, balance, activeLoan, recentTx, pendingLoan, shareProgress });
+const getBalance = async (memberId) => {
+  const rows = await Saving.findAll({ where: { memberId }, attributes: ['amount'] });
+  return rows.reduce((s, r) => s + r.amount, 0);
+};
+
+router.get('/dashboard', async (req, res) => {
+  try {
+    const m     = req.user;
+    const group = await Group.findByPk(m.groupId);
+    const balance     = await getBalance(m.id);
+    const activeLoan  = await Loan.findOne({ where: { memberId: m.id, status: 'active' } });
+    const pendingLoan = await Loan.findOne({ where: { memberId: m.id, status: 'pending' } });
+    const recentTx    = await Saving.findAll({ where: { memberId: m.id }, order: [['date','DESC']], limit: 5 });
+    const shareProgress = Math.round((m.shareCapitalPaid / m.shareCapitalTarget) * 100);
+    res.render('member/dashboard', { user: m.toJSON(), group: group.toJSON(), balance, activeLoan: activeLoan?.toJSON()||null, pendingLoan: pendingLoan?.toJSON()||null, recentTx, shareProgress });
+  } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
-// ── Savings Statement ─────────────────────────────────────────────
-router.get('/savings', (req, res) => {
-  const m = req.user;
-  const group = db.groups.find(g => g.id === m.groupId);
-  const transactions = db.savings.filter(s => s.memberId === m.id).sort((a, b) => new Date(b.date) - new Date(a.date));
-  let running = 0;
-  const withBalance = [...transactions].reverse().map(t => { running += t.amount; return { ...t, runningBalance: running }; }).reverse();
-  const balance = db.getSavingsBalance(m.id);
-  res.render('member/savings', { user: m, group, transactions: withBalance, balance });
+router.get('/savings', async (req, res) => {
+  try {
+    const m     = req.user;
+    const group = await Group.findByPk(m.groupId);
+    const rows  = await Saving.findAll({ where: { memberId: m.id }, order: [['date','ASC']] });
+    let running = 0;
+    const transactions = rows.map(t => { running += t.amount; return { ...t.toJSON(), runningBalance: running }; }).reverse();
+    const balance = running;
+    res.render('member/savings', { user: m.toJSON(), group: group.toJSON(), transactions, balance });
+  } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
-// ── Loans ─────────────────────────────────────────────────────────
-router.get('/loans', (req, res) => {
-  const m = req.user;
-  const group = db.groups.find(g => g.id === m.groupId);
-  const balance = db.getSavingsBalance(m.id);
-  const loans = db.loans.filter(l => l.memberId === m.id).sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
-  const repayments = db.repayments.filter(r => r.memberId === m.id);
-  const eligibleAmount = balance * 3;
-  const hasActiveLoan = loans.some(l => l.status === 'active');
-  const hasPendingLoan = loans.some(l => l.status === 'pending');
-  res.render('member/loans', { user: m, group, loans, repayments, balance, eligibleAmount, hasActiveLoan, hasPendingLoan });
+router.get('/loans', async (req, res) => {
+  try {
+    const m     = req.user;
+    const group = await Group.findByPk(m.groupId);
+    const balance      = await getBalance(m.id);
+    const loans        = await Loan.findAll({ where: { memberId: m.id }, order: [['appliedAt','DESC']] });
+    const repayments   = await Repayment.findAll({ where: { memberId: m.id } });
+    const eligibleAmount = balance * 3;
+    const hasActiveLoan  = loans.some(l => l.status === 'active');
+    const hasPendingLoan = loans.some(l => l.status === 'pending');
+    res.render('member/loans', { user: m.toJSON(), group: group.toJSON(), loans: loans.map(l=>l.toJSON()), repayments, balance, eligibleAmount, hasActiveLoan, hasPendingLoan, query: req.query });
+  } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
 router.post('/loans/apply', async (req, res) => {
-  const m = req.user;
-  const group = db.groups.find(g => g.id === m.groupId);
-  const admin = db.users.find(u => u.role === 'admin' && u.groupId === m.groupId);
-  const balance = db.getSavingsBalance(m.id);
+  try {
+    const m     = req.user;
+    const group = await Group.findByPk(m.groupId);
+    const admin = await User.findOne({ where: { groupId: m.groupId, role: 'admin' } });
+    const balance = await getBalance(m.id);
 
-  if (db.loans.find(l => l.memberId === m.id && (l.status === 'pending' || l.status === 'active'))) {
-    return res.redirect('/member/loans?error=existing_loan');
-  }
+    const existing = await Loan.findOne({ where: { memberId: m.id, status: ['pending','active'] } });
+    if (existing) return res.redirect('/member/loans?error=existing_loan');
 
-  const amount = parseInt(req.body.amount);
-  if (amount > balance * 3) return res.redirect('/member/loans?error=exceeds_limit');
+    const amount = parseInt(req.body.amount);
+    if (amount > balance * 3) return res.redirect('/member/loans?error=exceeds_limit');
 
-  const loan = {
-    id: db.nextId('loan'), memberId: m.id, groupId: m.groupId,
-    amount, purpose: req.body.purpose,
-    repaymentMonths: parseInt(req.body.repaymentMonths),
-    monthlyInstallment: 0, totalRepayable: 0, amountRepaid: 0,
-    status: 'pending', appliedAt: new Date(),
-    approvedAt: null, approvedBy: null, disbursedAt: null, notes: '',
-  };
-  db.loans.push(loan);
-  db.log(m.id, 'LOAN_APPLICATION', `Applied for loan of UGX ${amount.toLocaleString()}`, m.groupId);
+    const loan = await Loan.create({
+      memberId: m.id, groupId: m.groupId, amount,
+      purpose: req.body.purpose,
+      repaymentMonths: parseInt(req.body.repaymentMonths),
+      status: 'pending', appliedAt: new Date(),
+    });
 
-  if (admin) emails.loanRequestToAdmin(admin, m, loan, group).catch(() => {});
-  emails.loanRequestConfirmToMember(m, loan, group).catch(() => {});
-
-  res.redirect('/member/loans?success=loan_applied');
+    await AuditLog.create({ userId: m.id, action: 'LOAN_APPLICATION', detail: `Applied for loan of UGX ${amount.toLocaleString()}`, groupId: m.groupId });
+    if (admin) emails.loanRequestToAdmin(admin.toJSON(), m.toJSON(), loan.toJSON(), group.toJSON()).catch(()=>{});
+    emails.loanRequestConfirmToMember(m.toJSON(), loan.toJSON(), group.toJSON()).catch(()=>{});
+    res.redirect('/member/loans?success=loan_applied');
+  } catch (err) { console.error(err); res.redirect('/member/loans?error=apply_failed'); }
 });
 
-// ── Deposit (Simulated) ───────────────────────────────────────────
-router.get('/deposit', (req, res) => {
-  const m = req.user;
-  const group = db.groups.find(g => g.id === m.groupId);
-  const balance = db.getSavingsBalance(m.id);
-  res.render('member/deposit', { user: m, group, balance });
+router.get('/deposit', async (req, res) => {
+  try {
+    const m     = req.user;
+    const group = await Group.findByPk(m.groupId);
+    const balance = await getBalance(m.id);
+    res.render('member/deposit', { user: m.toJSON(), group: group.toJSON(), balance });
+  } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
 router.post('/deposit', async (req, res) => {
-  const m = req.user;
-  const group = db.groups.find(g => g.id === m.groupId);
-  const { amount, paymentMethod, description } = req.body;
-  const parsedAmount = parseInt(amount);
+  try {
+    const m     = req.user;
+    const group = await Group.findByPk(m.groupId);
+    const { amount, paymentMethod, description } = req.body;
+    const parsedAmount = parseInt(amount);
+    const ref = `TXN${Date.now()}`;
 
-  // Simulate payment gateway success
-  const tx = {
-    id: db.nextId('sav'), memberId: m.id, groupId: m.groupId,
-    amount: parsedAmount, type: 'online_deposit',
-    description: description || `Online deposit via ${paymentMethod}`,
-    date: new Date(), postedBy: m.id,
-    paymentMethod, transactionRef: `TXN${Date.now()}`,
-  };
-  db.savings.push(tx);
-  db.log(m.id, 'ONLINE_DEPOSIT', `Deposited UGX ${parsedAmount.toLocaleString()} via ${paymentMethod}`, m.groupId);
+    const tx = await Saving.create({
+      memberId: m.id, groupId: m.groupId,
+      amount: parsedAmount, type: 'online_deposit',
+      description: description || `Online deposit via ${paymentMethod}`,
+      date: new Date(), postedBy: m.id, paymentMethod, transactionRef: ref,
+    });
 
-  const balance = db.getSavingsBalance(m.id);
-  emails.savingsReceiptToMember(m, tx, balance, group).catch(() => {});
-
-  res.redirect('/member/savings?success=deposit_confirmed&ref=' + tx.transactionRef.slice(-6));
+    await AuditLog.create({ userId: m.id, action: 'ONLINE_DEPOSIT', detail: `Deposited UGX ${parsedAmount.toLocaleString()} via ${paymentMethod}`, groupId: m.groupId });
+    const balance = await getBalance(m.id);
+    emails.savingsReceiptToMember(m.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(()=>{});
+    res.redirect(`/member/savings?success=deposit_confirmed&ref=${ref.slice(-6)}`);
+  } catch (err) { console.error(err); res.redirect('/member/deposit?error=deposit_failed'); }
 });
 
-// ── Profile ───────────────────────────────────────────────────────
-router.get('/profile', (req, res) => {
-  const group = db.groups.find(g => g.id === req.user.groupId);
-  res.render('member/profile', { user: req.user, group });
+router.get('/profile', async (req, res) => {
+  try {
+    const group = await Group.findByPk(req.user.groupId);
+    res.render('member/profile', { user: req.user.toJSON(), group: group.toJSON() });
+  } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
 module.exports = router;

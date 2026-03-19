@@ -1,13 +1,12 @@
 const jwt = require('jsonwebtoken');
-const db = require('../database');
+const { User } = require('../models');
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.redirect('/login?error=session_expired');
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = db.users.find(u => u.id === decoded.id && u.active);
+    const user = await User.findOne({ where: { id: decoded.id, active: true } });
     if (!user) return res.redirect('/login?error=user_not_found');
     req.user = user;
     next();
@@ -19,20 +18,17 @@ function authenticate(req, res, next) {
 
 function requireRole(...roles) {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).render('error', { message: 'Access denied', user: req.user });
-    }
+    if (!roles.includes(req.user.role)) return res.status(403).render('error', { message: 'Access denied', user: req.user });
     next();
   };
 }
 
-function apiAuth(req, res, next) {
+async function apiAuth(req, res, next) {
   const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
-
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = db.users.find(u => u.id === decoded.id && u.active);
+    const user = await User.findOne({ where: { id: decoded.id, active: true } });
     if (!user) return res.status(401).json({ error: 'User not found' });
     req.user = user;
     next();
