@@ -1,134 +1,284 @@
-<style class="print-style">@media print{.sidebar,.topbar,.no-print,.page-footer{display:none!important;}.main{margin-left:0!important;}}</style>
 <%- include('../partials/head', { title: 'Invoices & Revenue', activePage: 'super-invoices' }) %>
 
-<% if (locals.query.success === 'created') { %><div class="alert alert-success">Invoice created and email sent to SACCO admin.</div><% } %>
-<% if (locals.query.success === 'marked_paid') { %><div class="alert alert-success">Invoice marked as paid.</div><% } %>
+<style>
+@media print {
+  .sidebar,.topbar,.no-print,.page-footer { display:none!important; }
+  .main { margin-left:0!important; }
+  .invoice-print-block { display:block!important; }
+}
+.invoice-print-block { display:none; }
+</style>
 
-<div class="stats-grid mb-6">
-  <div class="stat-card accent">
-    <div class="label">Total Revenue Collected</div>
-    <div class="value">UGX <%= (totalRevenue/1000000).toFixed(2) %>M</div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Pending Revenue</div>
-    <div class="value" style="color:var(--warning);">UGX <%= pendingRevenue.toLocaleString() %></div>
-    <div class="sub warn"><%= invoices.filter(i=>i.status==='pending').length %> unpaid invoices</div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Paid Invoices</div>
-    <div class="value text-success"><%= invoices.filter(i=>i.status==='paid').length %></div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Total Invoices</div>
-    <div class="value"><%= invoices.length %></div>
-  </div>
-</div>
-
-<div class="grid-2 gap-4 mb-6">
-  <!-- Create Invoice -->
-  <div class="card">
-    <div class="card-header"><h3>Create New Invoice</h3></div>
-    <div class="card-body">
-      <form method="POST" action="/super/invoices/create">
-        <div class="form-group">
-          <label class="form-label">SACCO Group *</label>
-          <select name="groupId" class="form-control" required>
-            <option value="">— Select group —</option>
-            <% invoices.reduce((groups, inv) => { if(!groups.find(g=>g.id===inv.group?.id) && inv.group) groups.push(inv.group); return groups; }, []).forEach(g => { %>
-              <option value="<%= g.id %>"><%= g.name %></option>
-            <% }) %>
-          </select>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Invoice Type</label>
-            <select name="type" class="form-control">
-              <option value="monthly">Monthly Subscription</option>
-              <option value="annual">Annual Subscription</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Amount (UGX) *</label>
-            <input type="number" name="amount" class="form-control" placeholder="50000" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Due Date *</label>
-          <input type="date" name="dueDate" class="form-control" required>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Period Start</label>
-            <input type="date" name="periodStart" class="form-control">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Period End</label>
-            <input type="date" name="periodEnd" class="form-control">
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Notes</label>
-          <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Create & Send Invoice</button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Revenue summary -->
-  <div class="card">
-    <div class="card-header"><h3>YoSACCO Revenue Summary</h3></div>
-    <div class="card-body">
-      <% const byGroup = {}; invoices.filter(i=>i.status==='paid').forEach(i => { const n = i.group?.name||'Unknown'; byGroup[n]=(byGroup[n]||0)+i.paidAmount; }); %>
-      <p class="text-sm font-semibold mb-3">Revenue by SACCO Group</p>
-      <% Object.entries(byGroup).forEach(([name, amt]) => { %>
-      <div class="flex-between mb-2">
-        <span class="text-sm"><%= name %></span>
-        <span class="text-sm font-semibold text-teal">UGX <%= amt.toLocaleString() %></span>
+<!-- Hidden printable invoice blocks — one per invoice -->
+<% invoices.forEach(function(inv, idx){ %>
+<div class="invoice-print-block" id="super-inv-<%= idx %>">
+  <div style="max-width:680px;margin:0 auto;font-family:Arial,sans-serif;padding:32px;border:1px solid #ddd;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+      <div>
+        <img src="/assets/logo.png" style="height:52px;margin-bottom:8px;" onerror="this.style.display='none'"><br>
+        <div style="font-size:13px;color:#666;">Online SACCO Management Platform</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">info@yosacco.coop · +256 756 683 141</div>
       </div>
-      <% }) %>
-      <% if (!Object.keys(byGroup).length) { %><p class="text-muted text-sm">No payments received yet.</p><% } %>
-      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
-      <div class="flex-between">
-        <span class="font-semibold">Total Collected</span>
-        <span class="font-semibold text-teal">UGX <%= totalRevenue.toLocaleString() %></span>
+      <div style="text-align:right;">
+        <div style="font-size:26px;font-weight:800;color:#0D7377;">INVOICE</div>
+        <div style="font-size:16px;font-weight:700;color:#0A2342;"><%= inv.invoiceNumber %></div>
+        <div style="font-size:12px;color:#666;margin-top:4px;">Issued: <%= new Date(inv.createdAt).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></div>
+        <div style="font-size:12px;color:#666;">Due: <%= new Date(inv.dueDate).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- All Invoices -->
-<div class="section-head"><h2>All Invoices</h2><button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print All</button></div>
-<div class="card p-0">
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Invoice #</th><th>SACCO Group</th><th>Type</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead>
+    <div style="display:flex;gap:40px;padding:16px;background:#f6f8fa;border-radius:8px;margin-bottom:24px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">From</div>
+        <div style="font-weight:700;color:#0A2342;">YoSACCO Platform</div>
+        <div style="font-size:13px;color:#555;">info@yosacco.coop</div>
+        <div style="font-size:13px;color:#555;">+256 756 683 141</div>
+        <div style="font-size:13px;color:#555;">Kampala, Uganda</div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">To</div>
+        <div style="font-weight:700;color:#0A2342;"><%= inv.group ? inv.group.name : 'SACCO Group' %></div>
+        <div style="font-size:13px;color:#555;"><%= inv.group ? inv.group.adminEmail : '' %></div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      <thead>
+        <tr style="background:#0A2342;color:#fff;">
+          <th style="padding:11px 14px;text-align:left;font-size:13px;">Description</th>
+          <th style="padding:11px 14px;text-align:center;font-size:13px;">Period</th>
+          <th style="padding:11px 14px;text-align:right;font-size:13px;">Amount</th>
+        </tr>
+      </thead>
       <tbody>
-        <% invoices.forEach(inv => { %>
         <tr>
-          <td class="font-semibold text-sm"><%= inv.invoiceNumber %></td>
-          <td class="text-sm"><%= inv.group?.name || '—' %></td>
-          <td><span class="badge badge-gray"><%= inv.type %></span></td>
-          <td class="font-semibold">UGX <%= inv.amount.toLocaleString() %></td>
-          <td class="text-sm text-muted"><%= new Date(inv.dueDate).toLocaleDateString() %></td>
-          <td><span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':'warning' %>"><%= inv.status %></span></td>
-          <td>
-            <% if (inv.status !== 'paid') { %>
-            <form method="POST" action="/super/invoices/<%= inv.id %>/mark-paid" style="display:inline;">
-              <button class="btn btn-sm btn-success">Mark Paid</button>
-            </form>
-            <% } else { %>
-              <span class="text-xs text-muted">Paid <%= new Date(inv.paidAt).toLocaleDateString() %></span>
-            <% } %>
+          <td style="padding:13px 14px;font-size:13px;border-bottom:1px solid #eee;">
+            YoSACCO <%= inv.type==='annual'?'Annual':'Monthly' %> Subscription
+          </td>
+          <td style="padding:13px 14px;text-align:center;font-size:13px;border-bottom:1px solid #eee;color:#666;">
+            <% if(inv.periodStart && inv.periodEnd){ %>
+              <%= new Date(inv.periodStart).toLocaleDateString() %> – <%= new Date(inv.periodEnd).toLocaleDateString() %>
+            <% } else { %>—<% } %>
+          </td>
+          <td style="padding:13px 14px;text-align:right;font-weight:700;font-size:14px;border-bottom:1px solid #eee;">
+            UGX <%= inv.amount.toLocaleString() %>
           </td>
         </tr>
-        <% }) %>
-        <% if (!invoices.length) { %>
-        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">No invoices created yet.</td></tr>
-        <% } %>
       </tbody>
     </table>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
+      <div style="background:#f0f9f0;border:2px solid #0D7377;border-radius:10px;padding:18px 28px;text-align:right;">
+        <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;">Total Due</div>
+        <div style="font-size:26px;font-weight:800;color:#0D7377;margin:4px 0;">UGX <%= inv.amount.toLocaleString() %></div>
+        <span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:<%= inv.status==='paid'?'#d6f0e4':inv.status==='overdue'?'#fed7d7':'#fefcbf' %>;color:<%= inv.status==='paid'?'#1a7f4b':inv.status==='overdue'?'#c53030':'#b7791f' %>;">
+          <%= inv.status.toUpperCase() %>
+        </span>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #eee;padding-top:14px;font-size:12px;color:#888;">
+      <strong style="color:#444;">Payment Instructions:</strong>
+      Please pay via MTN MoMo, Airtel Money, or Bank Transfer to YoSACCO.
+      Use reference: <strong style="color:#0A2342;"><%= inv.invoiceNumber %></strong>
+      · Contact: +256 756 683 141 · info@yosacco.coop
+    </div>
+
+    <% if(inv.status === 'paid'){ %>
+    <div style="margin-top:14px;padding:10px 16px;background:#d6f0e4;border-radius:8px;font-size:13px;color:#1a7f4b;font-weight:600;">
+      ✓ PAYMENT RECEIVED — UGX <%= inv.paidAmount.toLocaleString() %> on <%= new Date(inv.paidAt).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %>
+    </div>
+    <% } %>
+
+    <div style="text-align:center;margin-top:24px;font-size:11px;color:#aaa;">
+      Powered by YoSACCO · www.yosacco.coop · +256 756 683 141
+    </div>
   </div>
 </div>
+<% }); %>
+
+<!-- ── Page Content ─────────────────────────────────────────────── -->
+<div class="no-print">
+  <% if (locals.query && locals.query.success === 'created') { %><div class="alert alert-success">Invoice created and email sent to SACCO admin.</div><% } %>
+  <% if (locals.query && locals.query.success === 'marked_paid') { %><div class="alert alert-success">Invoice marked as paid.</div><% } %>
+
+  <div class="stats-grid mb-6">
+    <div class="stat-card accent">
+      <div class="label">Total Revenue Collected</div>
+      <div class="value">UGX <%= (totalRevenue/1000000).toFixed(2) %>M</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Pending Revenue</div>
+      <div class="value" style="color:var(--warning);">UGX <%= pendingRevenue.toLocaleString() %></div>
+      <div class="sub warn"><%= invoices.filter(function(i){return i.status==='pending';}).length %> unpaid</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Paid Invoices</div>
+      <div class="value text-success"><%= invoices.filter(function(i){return i.status==='paid';}).length %></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Total Invoices</div>
+      <div class="value"><%= invoices.length %></div>
+    </div>
+  </div>
+
+  <div class="grid-2 gap-4 mb-6">
+    <!-- Create Invoice -->
+    <div class="card">
+      <div class="card-header"><h3>Create New Invoice</h3></div>
+      <div class="card-body">
+        <form method="POST" action="/super/invoices/create">
+          <div class="form-group">
+            <label class="form-label">SACCO Group *</label>
+            <select name="groupId" class="form-control" required>
+              <option value="">— Select group —</option>
+              <%
+                var seenGroups = [];
+                invoices.forEach(function(inv){
+                  if(inv.group && !seenGroups.find(function(g){return g.id===inv.group.id;})){
+                    seenGroups.push(inv.group);
+                  }
+                });
+              %>
+              <% seenGroups.forEach(function(g){ %>
+                <option value="<%= g.id %>"><%= g.name %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select name="type" class="form-control">
+                <option value="monthly">Monthly</option>
+                <option value="annual">Annual</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Amount (UGX) *</label>
+              <input type="number" name="amount" class="form-control" placeholder="50000" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Due Date *</label>
+            <input type="date" name="dueDate" class="form-control" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Period Start</label>
+              <input type="date" name="periodStart" class="form-control">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Period End</label>
+              <input type="date" name="periodEnd" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Create & Send Invoice</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Revenue by Group -->
+    <div class="card">
+      <div class="card-header"><h3>Revenue by SACCO Group</h3></div>
+      <div class="card-body">
+        <%
+          var byGroup = {};
+          invoices.filter(function(i){return i.status==='paid';}).forEach(function(i){
+            var n = i.group ? i.group.name : 'Unknown';
+            byGroup[n] = (byGroup[n]||0) + i.paidAmount;
+          });
+        %>
+        <% Object.keys(byGroup).forEach(function(name){ %>
+        <div class="flex-between mb-2">
+          <span class="text-sm"><%= name %></span>
+          <span class="text-sm font-semibold text-teal">UGX <%= byGroup[name].toLocaleString() %></span>
+        </div>
+        <% }); %>
+        <% if(!Object.keys(byGroup).length){ %><p class="text-muted text-sm">No payments yet.</p><% } %>
+        <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
+        <div class="flex-between">
+          <span class="font-semibold">Total Collected</span>
+          <span class="font-semibold text-teal">UGX <%= totalRevenue.toLocaleString() %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Invoices Table -->
+  <div class="section-head"><h2>All Invoices</h2></div>
+  <div class="card p-0">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Invoice #</th>
+            <th>SACCO Group</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if(!invoices.length){ %>
+          <tr><td colspan="7" style="text-align:center;padding:28px;color:var(--text-muted);">No invoices yet.</td></tr>
+          <% } %>
+          <% invoices.forEach(function(inv, idx){ %>
+          <tr>
+            <td class="font-semibold text-sm"><%= inv.invoiceNumber %></td>
+            <td class="text-sm"><%= inv.group ? inv.group.name : '—' %></td>
+            <td><span class="badge badge-gray" style="font-size:11px;"><%= inv.type %></span></td>
+            <td class="font-semibold">UGX <%= inv.amount.toLocaleString() %></td>
+            <td class="text-sm text-muted"><%= new Date(inv.dueDate).toLocaleDateString() %></td>
+            <td>
+              <span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':'warning' %>">
+                <%= inv.status %>
+              </span>
+            </td>
+            <td>
+              <div class="flex gap-2">
+                <button onclick="printSingleInvoice(<%= idx %>)" class="btn btn-sm btn-outline">🖨 Print</button>
+                <% if(inv.status !== 'paid'){ %>
+                <form method="POST" action="/super/invoices/<%= inv.id %>/mark-paid" style="display:inline;">
+                  <button class="btn btn-sm btn-success">Mark Paid</button>
+                </form>
+                <% } else { %>
+                  <span class="text-xs text-muted">Paid <%= new Date(inv.paidAt).toLocaleDateString() %></span>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function printSingleInvoice(idx) {
+  // Hide all invoice print blocks
+  document.querySelectorAll('.invoice-print-block').forEach(function(el){
+    el.style.display = 'none';
+  });
+  // Show only the selected one
+  var target = document.getElementById('super-inv-' + idx);
+  if (target) target.style.display = 'block';
+
+  window.print();
+
+  // After printing, hide again
+  setTimeout(function(){
+    document.querySelectorAll('.invoice-print-block').forEach(function(el){
+      el.style.display = 'none';
+    });
+  }, 1500);
+}
+</script>
 
 <%- include('../partials/foot') %>
