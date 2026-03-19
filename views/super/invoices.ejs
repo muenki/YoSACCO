@@ -1,12 +1,7 @@
 <%- include('../partials/head', { title: 'Invoices & Revenue', activePage: 'super-invoices' }) %>
 
 <style>
-@media print {
-  .sidebar,.topbar,.no-print,.page-footer { display:none!important; }
-  .main { margin-left:0!important; }
-  .invoice-print-block { display:block!important; }
-}
-.invoice-print-block { display:none; }
+
 </style>
 
 <!-- Hidden printable invoice blocks — one per invoice -->
@@ -262,21 +257,16 @@
 
 <script>
 function printSingleInvoice(idx) {
-  // Hide all invoice print blocks
   document.querySelectorAll('.invoice-print-block').forEach(function(el){
-    el.style.display = 'none';
+    el.classList.remove('active-print');
   });
-  // Show only the selected one
   var target = document.getElementById('super-inv-' + idx);
-  if (target) target.style.display = 'block';
-
+  if(target) target.classList.add('active-print');
+  document.body.classList.add('printing-invoice');
   window.print();
-
-  // After printing, hide again
   setTimeout(function(){
-    document.querySelectorAll('.invoice-print-block').forEach(function(el){
-      el.style.display = 'none';
-    });
+    document.body.classList.remove('printing-invoice');
+    if(target) target.classList.remove('active-print');
   }, 1500);
 }
 </script>

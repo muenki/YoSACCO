@@ -12,7 +12,7 @@
 
 <!-- Hidden printable invoice templates (one per invoice) -->
 <% invoices.forEach(function(inv, idx){ %>
-<div class="invoice-print-wrapper" id="inv-print-<%= idx %>">
+<div class="invoice-print-block" id="inv-print-<%= idx %>">
   <div style="max-width:680px;margin:0 auto;font-family:Arial,sans-serif;padding:32px;border:1px solid #ddd;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
       <div>
@@ -143,21 +143,17 @@
 
 <script>
 function printInvoice(idx) {
-  // Hide all printable wrappers, show only the selected one
-  document.querySelectorAll('.invoice-print-wrapper').forEach(function(el){
-    el.style.display = 'none';
+  document.querySelectorAll('.invoice-print-wrapper, .invoice-print-block').forEach(function(el){
+    el.classList.remove('active-print');
   });
   var target = document.getElementById('inv-print-' + idx);
-  if(target) target.style.display = 'block';
-
+  if(target) target.classList.add('active-print');
+  document.body.classList.add('printing-invoice');
   window.print();
-
-  // Restore after print
   setTimeout(function(){
-    document.querySelectorAll('.invoice-print-wrapper').forEach(function(el){
-      el.style.display = 'none';
-    });
-  }, 1000);
+    document.body.classList.remove('printing-invoice');
+    if(target) target.classList.remove('active-print');
+  }, 1500);
 }
 </script>
 
