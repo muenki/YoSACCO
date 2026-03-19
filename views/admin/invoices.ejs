@@ -1,66 +1,164 @@
 <%- include('../partials/head', { title: 'My Invoices', activePage: 'admin-invoices', group }) %>
 
-<div class="stats-grid mb-6">
-  <div class="stat-card">
-    <div class="label">Total Invoices</div>
-    <div class="value"><%= invoices.length %></div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Paid</div>
-    <div class="value text-success"><%= invoices.filter(i=>i.status==='paid').length %></div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Pending</div>
-    <div class="value" style="color:var(--warning);"><%= invoices.filter(i=>i.status==='pending').length %></div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Total Paid</div>
-    <div class="value" style="font-size:18px;">UGX <%= invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+i.paidAmount,0).toLocaleString() %></div>
-  </div>
-</div>
+<style>
+@media print {
+  .sidebar,.topbar,.no-print,.page-footer { display:none!important; }
+  .main { margin-left:0!important; }
+  .invoice-print-wrapper { display:block!important; }
+  .print-single { page-break-after: always; }
+}
+.invoice-print-wrapper { display:none; }
+</style>
 
-<% if (invoices.filter(i=>i.status==='pending').length > 0) { %>
-<div class="alert alert-warning" style="margin-bottom:24px;">
-  You have <strong><%= invoices.filter(i=>i.status==='pending').length %> pending invoice(s)</strong>.
-  Please pay promptly to avoid service interruption. Contact YoSACCO: <strong>+256 756 683 141</strong>
-</div>
-<% } %>
-
-<div class="section-head"><h2>Invoice History</h2><button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print Invoices</button></div>
-
-<% invoices.forEach(inv => { %>
-<div class="invoice-card <%= inv.status %>">
-  <div class="flex-between mb-2">
-    <div>
-      <div class="font-semibold"><%= inv.invoiceNumber %></div>
-      <div class="text-xs text-muted">
-        <%= inv.type === 'annual' ? 'Annual' : 'Monthly' %> Subscription ·
-        <% if(inv.periodStart) { %>Period: <%= new Date(inv.periodStart).toLocaleDateString() %> – <%= new Date(inv.periodEnd).toLocaleDateString() %><% } %>
+<!-- Hidden printable invoice templates (one per invoice) -->
+<% invoices.forEach(function(inv, idx){ %>
+<div class="invoice-print-wrapper" id="inv-print-<%= idx %>">
+  <div style="max-width:680px;margin:0 auto;font-family:Arial,sans-serif;padding:32px;border:1px solid #ddd;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+      <div>
+        <% if(group.logo){ %><img src="<%= group.logo %>" style="height:50px;margin-bottom:8px;"><br><% } %>
+        <div style="font-size:20px;font-weight:700;color:#0A2342;"><%= group.name %></div>
+        <div style="font-size:12px;color:#666;">SACCO Subscription Invoice</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:24px;font-weight:800;color:#0D7377;">INVOICE</div>
+        <div style="font-size:16px;font-weight:700;"><%= inv.invoiceNumber %></div>
+        <div style="font-size:12px;color:#666;">Date: <%= new Date(inv.createdAt).toLocaleDateString() %></div>
+        <div style="font-size:12px;color:#666;">Due: <%= new Date(inv.dueDate).toLocaleDateString() %></div>
       </div>
     </div>
-    <span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':'warning' %>">
-      <%= inv.status.charAt(0).toUpperCase()+inv.status.slice(1) %>
-    </span>
-  </div>
-  <div class="flex gap-3 text-sm">
-    <span class="font-semibold">UGX <%= inv.amount.toLocaleString() %></span>
-    <span class="text-muted">·</span>
-    <span class="text-muted">Due: <%= new Date(inv.dueDate).toLocaleDateString() %></span>
-    <% if(inv.status==='paid' && inv.paidAt) { %>
-      <span class="text-muted">·</span>
-      <span class="text-success">Paid <%= new Date(inv.paidAt).toLocaleDateString() %></span>
+
+    <div style="display:flex;gap:32px;margin-bottom:24px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:6px;">Invoice From</div>
+        <div style="font-weight:700;">YoSACCO Platform</div>
+        <div style="font-size:13px;color:#444;">info@yosacco.coop</div>
+        <div style="font-size:13px;color:#444;">+256 756 683 141</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:6px;">Invoice To</div>
+        <div style="font-weight:700;"><%= group.name %></div>
+        <div style="font-size:13px;color:#444;"><%= group.adminEmail %></div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <thead>
+        <tr style="background:#0A2342;color:#fff;">
+          <th style="padding:10px 14px;text-align:left;font-size:13px;">Description</th>
+          <th style="padding:10px 14px;text-align:center;font-size:13px;">Period</th>
+          <th style="padding:10px 14px;text-align:right;font-size:13px;">Amount (UGX)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#f9f9f9;">
+          <td style="padding:12px 14px;font-size:13px;"><%= inv.type==='annual'?'Annual':'Monthly' %> YoSACCO Subscription</td>
+          <td style="padding:12px 14px;text-align:center;font-size:13px;">
+            <% if(inv.periodStart){ %><%= new Date(inv.periodStart).toLocaleDateString() %> – <%= new Date(inv.periodEnd).toLocaleDateString() %><% } else { %>—<% } %>
+          </td>
+          <td style="padding:12px 14px;text-align:right;font-weight:700;font-size:13px;">UGX <%= inv.amount.toLocaleString() %></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
+      <div style="background:#f0f0f0;padding:16px 24px;border-radius:8px;text-align:right;">
+        <div style="font-size:12px;color:#666;">TOTAL DUE</div>
+        <div style="font-size:24px;font-weight:800;color:#0D7377;">UGX <%= inv.amount.toLocaleString() %></div>
+        <div style="margin-top:8px;">
+          <span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:<%= inv.status==='paid'?'#d6f0e4':inv.status==='overdue'?'#fed7d7':'#fefcbf' %>;color:<%= inv.status==='paid'?'#1a7f4b':inv.status==='overdue'?'#c53030':'#b7791f' %>;">
+            <%= inv.status.toUpperCase() %>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:#888;border-top:1px solid #eee;padding-top:14px;">
+      <strong>Payment Instructions:</strong> Pay via MTN MoMo / Airtel Money / Bank Transfer to YoSACCO.
+      Reference: <strong><%= inv.invoiceNumber %></strong> · Contact: +256 756 683 141 · info@yosacco.coop
+    </div>
+    <% if(inv.status==='paid'){ %>
+    <div style="margin-top:12px;padding:10px 14px;background:#d6f0e4;border-radius:6px;font-size:12px;color:#1a7f4b;">
+      <strong>✓ PAID</strong> — Received UGX <%= inv.paidAmount.toLocaleString() %> on <%= new Date(inv.paidAt).toLocaleDateString() %>
+    </div>
     <% } %>
   </div>
-  <% if(inv.status==='paid') { %>
-    <div class="mt-2"><span class="badge badge-success">✓ Receipt available — paid UGX <%= inv.paidAmount.toLocaleString() %></span></div>
-  <% } else { %>
-    <div class="mt-2 text-xs text-muted">To pay: MTN MoMo / Airtel / Bank Transfer to YoSACCO. Reference: <%= inv.invoiceNumber %>. Call: +256 756 683 141</div>
+</div>
+<% }); %>
+
+<!-- Page Content -->
+<div class="no-print">
+  <div class="stats-grid mb-6">
+    <div class="stat-card"><div class="label">Total Invoices</div><div class="value"><%= invoices.length %></div></div>
+    <div class="stat-card"><div class="label">Paid</div><div class="value text-success"><%= invoices.filter(function(i){return i.status==='paid';}).length %></div></div>
+    <div class="stat-card"><div class="label">Pending</div><div class="value" style="color:var(--warning);"><%= invoices.filter(function(i){return i.status==='pending';}).length %></div></div>
+    <div class="stat-card"><div class="label">Total Paid</div><div class="value" style="font-size:18px;">UGX <%= invoices.filter(function(i){return i.status==='paid';}).reduce(function(s,i){return s+i.paidAmount;},0).toLocaleString() %></div></div>
+  </div>
+
+  <% if(invoices.filter(function(i){return i.status==='pending';}).length > 0){ %>
+  <div class="alert alert-warning mb-4">
+    <strong><%= invoices.filter(function(i){return i.status==='pending';}).length %> pending invoice(s).</strong>
+    Contact YoSACCO: <strong>+256 756 683 141</strong>
+  </div>
+  <% } %>
+
+  <div class="section-head"><h2>Invoice History</h2></div>
+
+  <% invoices.forEach(function(inv, idx){ %>
+  <div class="invoice-card <%= inv.status %>" style="margin-bottom:16px;">
+    <div class="flex-between mb-2">
+      <div>
+        <div class="font-semibold"><%= inv.invoiceNumber %></div>
+        <div class="text-xs text-muted">
+          <%= inv.type==='annual'?'Annual':'Monthly' %> Subscription
+          <% if(inv.periodStart){ %> · <%= new Date(inv.periodStart).toLocaleDateString() %> – <%= new Date(inv.periodEnd).toLocaleDateString() %><% } %>
+        </div>
+      </div>
+      <div class="flex gap-2" style="align-items:center;">
+        <span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':'warning' %>">
+          <%= inv.status.charAt(0).toUpperCase()+inv.status.slice(1) %>
+        </span>
+        <button onclick="printInvoice(<%= idx %>)" class="btn btn-sm btn-outline">🖨 Print</button>
+      </div>
+    </div>
+    <div class="flex gap-3 text-sm">
+      <span class="font-semibold">UGX <%= inv.amount.toLocaleString() %></span>
+      <span class="text-muted">·</span>
+      <span class="text-muted">Due: <%= new Date(inv.dueDate).toLocaleDateString() %></span>
+      <% if(inv.status==='paid'&&inv.paidAt){ %>
+        <span class="text-muted">·</span>
+        <span class="text-success">Paid <%= new Date(inv.paidAt).toLocaleDateString() %></span>
+      <% } %>
+    </div>
+    <% if(inv.status==='pending'){ %>
+      <div class="mt-2 text-xs text-muted">Reference: <%= inv.invoiceNumber %> · +256 756 683 141</div>
+    <% } %>
+  </div>
+  <% }); %>
+
+  <% if(!invoices.length){ %>
+  <div class="card"><div class="card-body text-muted text-sm">No invoices yet.</div></div>
   <% } %>
 </div>
-<% }) %>
 
-<% if (!invoices.length) { %>
-<div class="card"><div class="card-body text-muted text-sm">No invoices yet.</div></div>
-<% } %>
+<script>
+function printInvoice(idx) {
+  // Hide all printable wrappers, show only the selected one
+  document.querySelectorAll('.invoice-print-wrapper').forEach(function(el){
+    el.style.display = 'none';
+  });
+  var target = document.getElementById('inv-print-' + idx);
+  if(target) target.style.display = 'block';
+
+  window.print();
+
+  // Restore after print
+  setTimeout(function(){
+    document.querySelectorAll('.invoice-print-wrapper').forEach(function(el){
+      el.style.display = 'none';
+    });
+  }, 1000);
+}
+</script>
 
 <%- include('../partials/foot') %>

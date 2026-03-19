@@ -2,78 +2,78 @@
 
 <style>
 @media print {
-  .sidebar, .topbar, .no-print, .page-footer { display:none!important; }
+  .sidebar,.topbar,.no-print,.page-footer { display:none!important; }
   .main { margin-left:0!important; }
-  .card { box-shadow:none!important; border:1px solid #ccc!important; }
+  .card { box-shadow:none!important; border:1px solid #ccc!important; break-inside:avoid; }
   .page-content { padding:0!important; }
   .print-header { display:block!important; }
-  body { font-size:12px; }
+  .tab-pane { display:block!important; }
+  .tab-nav  { display:none!important; }
+  table { font-size:11px; }
+  .print-section { page-break-before: always; }
 }
-.print-header { display:none; text-align:center; margin-bottom:20px; }
+.print-header { display:none; }
 </style>
 
-<!-- Print Header (only shows when printing) -->
-<div class="print-header">
-  <h2 style="font-size:20px;"><%= group.name %></h2>
-  <p><strong><%= period.charAt(0).toUpperCase()+period.slice(1) %> Report</strong> — 
-  <%= start.toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %> to 
-  <%= end.toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></p>
-  <p style="font-size:11px;color:#666;">Generated: <%= new Date().toLocaleString() %></p>
-  <hr>
+<!-- Universal Print Header -->
+<div class="print-header" style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #ccc;">
+  <% if(group.logo){ %><img src="<%= group.logo %>" style="height:60px;margin-bottom:8px;"><br><% } %>
+  <h2 style="font-size:20px;margin:0;"><%= group.name %></h2>
+  <p style="font-size:14px;margin:4px 0;"><strong><%= period==='annual'?'Annual':period==='quarterly'?'Q'+quarter+' Quarterly':'Monthly' %> Report — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %></strong></p>
+  <p style="font-size:12px;color:#666;">Period: <%= start.toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %> to <%= end.toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></p>
+  <p style="font-size:11px;color:#888;">Generated: <%= new Date().toLocaleString() %></p>
 </div>
 
 <!-- Period Selector -->
-<div class="card mb-6 no-print">
-  <div class="card-body">
-    <form method="GET" action="/admin/reports" id="reportForm" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+<form method="GET" action="/admin/reports" id="reportForm" class="no-print">
+  <div class="card mb-4">
+    <div class="card-body" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
       <input type="hidden" name="tab" id="activeTab" value="<%= tab %>">
       <div class="form-group" style="margin:0;min-width:140px;">
         <label class="form-label">Period</label>
         <select name="period" class="form-control" onchange="this.form.submit()">
-          <option value="monthly"   <%= period==='monthly'   ?'selected':'' %>>Monthly</option>
-          <option value="quarterly" <%= period==='quarterly' ?'selected':'' %>>Quarterly</option>
-          <option value="annual"    <%= period==='annual'    ?'selected':'' %>>Annual</option>
+          <option value="monthly"   <%= period==='monthly'  ?'selected':'' %>>Monthly</option>
+          <option value="quarterly" <%= period==='quarterly'?'selected':'' %>>Quarterly</option>
+          <option value="annual"    <%= period==='annual'   ?'selected':'' %>>Annual</option>
         </select>
       </div>
       <div class="form-group" style="margin:0;min-width:100px;">
         <label class="form-label">Year</label>
         <select name="year" class="form-control" onchange="this.form.submit()">
-          <% years.forEach(y => { %><option value="<%= y %>" <%= y===year?'selected':'' %>><%= y %></option><% }) %>
+          <% years.forEach(function(y){ %><option value="<%= y %>" <%= y===year?'selected':'' %>><%= y %></option><% }); %>
         </select>
       </div>
-      <% if (period==='quarterly') { %>
+      <% if(period==='quarterly'){ %>
       <div class="form-group" style="margin:0;min-width:100px;">
         <label class="form-label">Quarter</label>
         <select name="quarter" class="form-control" onchange="this.form.submit()">
-          <% quarters.forEach(q => { %><option value="<%= q %>" <%= q===quarter?'selected':'' %>>Q<%= q %></option><% }) %>
+          <% [1,2,3,4].forEach(function(q){ %><option value="<%= q %>" <%= q===quarter?'selected':'' %>>Q<%= q %></option><% }); %>
         </select>
       </div>
       <% } %>
-      <% if (period==='monthly') { %>
+      <% if(period==='monthly'){ %>
       <div class="form-group" style="margin:0;min-width:130px;">
         <label class="form-label">Month</label>
         <select name="month" class="form-control" onchange="this.form.submit()">
-          <% months.forEach((m,i) => { %><option value="<%= i %>" <%= i===month?'selected':'' %>><%= m %></option><% }) %>
+          <% months.forEach(function(m,i){ %><option value="<%= i %>" <%= i===month?'selected':'' %>><%= m %></option><% }); %>
         </select>
       </div>
       <% } %>
-      <div style="display:flex;gap:8px;">
-        <button type="button" onclick="window.print()" class="btn btn-primary no-print">🖨 Print Report</button>
-      </div>
-    </form>
+      <button type="button" onclick="printAll()" class="btn btn-primary">🖨 Print All Reports</button>
+    </div>
   </div>
-</div>
+</form>
 
-<!-- Report Period Label -->
-<div class="flex-between mb-4">
+<!-- Period Label -->
+<div class="flex-between mb-4 no-print">
   <h2 style="font-size:18px;">
-    <%= period==='annual'?'Annual':period==='quarterly'?'Q'+quarter:months[month] %> Report — <%= year %>
-    <span class="text-muted text-sm" style="font-weight:400;"> (<%= start.toLocaleDateString() %> – <%= end.toLocaleDateString() %>)</span>
+    <%= period==='annual'?year+' Annual':period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %> Report
+    <span class="text-muted text-sm" style="font-weight:400;"> — <%= start.toLocaleDateString() %> to <%= end.toLocaleDateString() %></span>
   </h2>
 </div>
 
-<!-- Summary Cards -->
-<div class="stats-grid mb-6">
+<!-- Summary Stats -->
+<div class="stats-grid mb-4">
   <div class="stat-card"><div class="label">Period Savings</div><div class="value" style="font-size:18px;">UGX <%= totalPeriodSavings.toLocaleString() %></div></div>
   <div class="stat-card"><div class="label">Interest Income</div><div class="value" style="font-size:18px;">UGX <%= periodInterest.toLocaleString() %></div></div>
   <div class="stat-card"><div class="label">Expenditure</div><div class="value" style="font-size:18px;color:var(--danger);">UGX <%= totalExpend.toLocaleString() %></div></div>
@@ -82,39 +82,40 @@
 
 <!-- Tabs -->
 <div class="tab-nav no-print">
-  <% [['savings','💰 Savings'],['loans','📋 Loan Portfolio'],['interest','📊 Interest Distribution'],['expenditure','💸 Expenditure'],['projects','🏗️ Projects'],['summary','📄 Full Summary']].forEach(([t,label])=>{ %>
-  <button class="tab-btn <%= tab===t?'active':'' %>" onclick="switchTab('<%= t %>')"><%= label %></button>
-  <% }) %>
+  <% var tabs = [['savings','💰 Savings'],['loans','📋 Loans'],['interest','📊 Interest'],['expenditure','💸 Expenditure'],['projects','🏗️ Projects'],['assets','🏛️ Assets'],['summary','📄 Summary']]; %>
+  <% tabs.forEach(function(t){ %>
+  <button class="tab-btn <%= tab===t[0]?'active':'' %>" onclick="switchTab('<%= t[0] %>')"><%= t[1] %></button>
+  <% }); %>
 </div>
 
-<!-- ══ SAVINGS TAB ══════════════════════════════════════════════ -->
+<!-- ══ SAVINGS ══════════════════════════════════════════════════ -->
 <div class="tab-pane <%= tab==='savings'?'active':'' %>" id="tab-savings">
   <div class="flex-between mb-3">
-    <h3>Member Savings — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %></h3>
-    <button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print</button>
+    <h3>Savings Report — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %></h3>
+    <button onclick="printTab('savings')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
   </div>
   <div class="card p-0">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>#</th><th>Member</th><th>Member ID</th><th>Period Savings</th><th>Total Balance</th><th>Share Capital</th><th>Total Assets</th></tr></thead>
+        <thead><tr><th>#</th><th>Member</th><th>ID</th><th>Period Savings</th><th>Total Balance</th><th>Share Capital</th><th>Total Member Assets</th></tr></thead>
         <tbody>
-          <% memberSavings.forEach((m,i) => { %>
+          <% memberSavings.forEach(function(m, i){ %>
           <tr>
             <td class="text-muted text-sm"><%= i+1 %></td>
-            <td><div class="font-semibold text-sm"><%= m.name %></div></td>
+            <td class="font-semibold text-sm"><%= m.name %></td>
             <td class="text-sm"><%= m.memberId||'—' %></td>
             <td class="font-semibold text-teal">UGX <%= m.periodSavings.toLocaleString() %></td>
             <td class="font-semibold">UGX <%= m.totalBalance.toLocaleString() %></td>
             <td>UGX <%= (m.shareCapitalPaid||0).toLocaleString() %></td>
             <td class="font-semibold">UGX <%= ((m.totalBalance||0)+(m.shareCapitalPaid||0)).toLocaleString() %></td>
           </tr>
-          <% }) %>
+          <% }); %>
           <tr style="background:var(--bg);font-weight:700;">
             <td colspan="3" style="text-align:right;padding:10px 16px;">TOTAL</td>
             <td style="padding:10px 16px;color:var(--teal);">UGX <%= totalPeriodSavings.toLocaleString() %></td>
-            <td style="padding:10px 16px;">UGX <%= memberSavings.reduce((t,m)=>t+m.totalBalance,0).toLocaleString() %></td>
-            <td style="padding:10px 16px;">UGX <%= memberSavings.reduce((t,m)=>t+(m.shareCapitalPaid||0),0).toLocaleString() %></td>
-            <td style="padding:10px 16px;">UGX <%= memberSavings.reduce((t,m)=>t+m.totalBalance+(m.shareCapitalPaid||0),0).toLocaleString() %></td>
+            <td style="padding:10px 16px;">UGX <%= memberSavings.reduce(function(t,m){return t+m.totalBalance;},0).toLocaleString() %></td>
+            <td style="padding:10px 16px;">UGX <%= memberSavings.reduce(function(t,m){return t+(m.shareCapitalPaid||0);},0).toLocaleString() %></td>
+            <td style="padding:10px 16px;">UGX <%= memberSavings.reduce(function(t,m){return t+m.totalBalance+(m.shareCapitalPaid||0);},0).toLocaleString() %></td>
           </tr>
         </tbody>
       </table>
@@ -122,39 +123,41 @@
   </div>
 </div>
 
-<!-- ══ LOANS TAB ════════════════════════════════════════════════ -->
+<!-- ══ LOANS ════════════════════════════════════════════════════ -->
 <div class="tab-pane <%= tab==='loans'?'active':'' %>" id="tab-loans">
   <div class="flex-between mb-3">
     <h3>Loan Portfolio Report</h3>
-    <button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print</button>
+    <button onclick="printTab('loans')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
   </div>
-  <div class="stats-grid mb-4">
+  <div class="stats-grid mb-4" style="grid-template-columns:repeat(4,1fr);">
     <div class="stat-card"><div class="label">Active Loans</div><div class="value"><%= activeLoans.length %></div></div>
-    <div class="stat-card"><div class="label">Outstanding</div><div class="value" style="font-size:16px;">UGX <%= activeLoans.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0).toLocaleString() %></div></div>
+    <div class="stat-card"><div class="label">Outstanding</div><div class="value" style="font-size:16px;">UGX <%= activeLoans.reduce(function(t,l){return t+(l.totalRepayable-l.amountRepaid);},0).toLocaleString() %></div></div>
     <div class="stat-card"><div class="label">Repaid (Period)</div><div class="value" style="font-size:16px;">UGX <%= totalRepaid.toLocaleString() %></div></div>
-    <div class="stat-card"><div class="label">Applied (Period)</div><div class="value"><%= loansInPeriod.length %></div></div>
+    <div class="stat-card"><div class="label">New Applications</div><div class="value"><%= loansInPeriod.length %></div></div>
   </div>
   <div class="card p-0">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Member</th><th>Type</th><th>Amount</th><th>Total Repayable</th><th>Repaid</th><th>Outstanding</th><th>Status</th></tr></thead>
+        <thead><tr><th>Member</th><th>Type</th><th>Loan Amount</th><th>Total Repayable</th><th>Repaid</th><th>Outstanding</th><th>Monthly</th><th>Status</th></tr></thead>
         <tbody>
-          <% activeLoans.forEach(l => { %>
+          <% activeLoans.forEach(function(l){ %>
           <tr>
-            <td><div class="font-semibold text-sm"><%= l.member?.name||'—' %></div><div class="text-xs text-muted"><%= l.member?.memberId %></div></td>
+            <td><div class="font-semibold text-sm"><%= l.member?l.member.name:'—' %></div><div class="text-xs text-muted"><%= l.member?l.member.memberId:'' %></div></td>
             <td><span class="badge badge-info" style="font-size:10px;"><%= l.loanType==='new_loan'?'New':l.loanType==='top_up'?'Top-Up':'Emergency' %></span></td>
             <td class="text-sm">UGX <%= l.amount.toLocaleString() %></td>
             <td class="text-sm">UGX <%= l.totalRepayable.toLocaleString() %></td>
             <td class="text-sm text-success">UGX <%= l.amountRepaid.toLocaleString() %></td>
             <td class="text-sm font-semibold text-danger">UGX <%= (l.totalRepayable-l.amountRepaid).toLocaleString() %></td>
+            <td class="text-sm">UGX <%= l.monthlyInstallment.toLocaleString() %></td>
             <td><span class="badge badge-info" style="font-size:10px;">Active</span></td>
           </tr>
-          <% }) %>
+          <% }); %>
+          <% if(!activeLoans.length){ %><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted);">No active loans.</td></tr><% } %>
           <tr style="background:var(--bg);font-weight:700;">
             <td colspan="4" style="text-align:right;padding:10px 16px;">TOTALS</td>
-            <td style="padding:10px 16px;color:var(--success);">UGX <%= activeLoans.reduce((t,l)=>t+l.amountRepaid,0).toLocaleString() %></td>
-            <td style="padding:10px 16px;color:var(--danger);">UGX <%= activeLoans.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0).toLocaleString() %></td>
-            <td></td>
+            <td style="padding:10px 16px;color:var(--success);">UGX <%= activeLoans.reduce(function(t,l){return t+l.amountRepaid;},0).toLocaleString() %></td>
+            <td style="padding:10px 16px;color:var(--danger);">UGX <%= activeLoans.reduce(function(t,l){return t+(l.totalRepayable-l.amountRepaid);},0).toLocaleString() %></td>
+            <td colspan="2"></td>
           </tr>
         </tbody>
       </table>
@@ -162,35 +165,37 @@
   </div>
 </div>
 
-<!-- ══ INTEREST DISTRIBUTION TAB ════════════════════════════════ -->
+<!-- ══ INTEREST ══════════════════════════════════════════════════ -->
 <div class="tab-pane <%= tab==='interest'?'active':'' %>" id="tab-interest">
   <div class="flex-between mb-3">
     <h3>Interest Distribution</h3>
-    <button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print</button>
+    <button onclick="printTab('interest')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
   </div>
   <div class="alert alert-info mb-4">
-    <strong>Distribution Method:</strong>
-    <%= method==='share_capital_only'?'Share Capital Only':method==='savings_only'?'Savings Balance Only':'Share Capital + Savings Balance' %> ·
+    <strong>Method:</strong> <%= method==='share_capital_only'?'Share Capital Only':method==='savings_only'?'Savings Only':'Share Capital + Savings' %> &nbsp;·&nbsp;
     <strong>Total Interest Pool:</strong> UGX <%= totalInterestPool.toLocaleString() %>
   </div>
   <div class="card p-0">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Member</th><th>Share Capital</th><th>Savings Balance</th><th>Weight</th><th>% Share</th><th>Interest Due</th></tr></thead>
+        <thead><tr><th>Member</th><th>Share Capital</th><th>Savings Balance</th><th>Weight</th><th>Share %</th><th>Interest Due (UGX)</th></tr></thead>
         <tbody>
-          <% interestDistribution.forEach(m => { %>
+          <%
+            var totalWeight = interestDistribution.reduce(function(t,m){return t+m.weight;},0);
+          %>
+          <% interestDistribution.forEach(function(m){ %>
           <tr>
             <td><div class="font-semibold text-sm"><%= m.name %></div><div class="text-xs text-muted"><%= m.memberId %></div></td>
             <td class="text-sm">UGX <%= (m.shareCapitalPaid||0).toLocaleString() %></td>
-            <td class="text-sm">UGX <%= (memberSavings.find(ms=>ms.id===m.id)?.totalBalance||0).toLocaleString() %></td>
+            <td class="text-sm">UGX <%= (memberSavings.find(function(ms){return ms.id===m.id;})||{totalBalance:0}).totalBalance.toLocaleString() %></td>
             <td class="text-sm">UGX <%= (m.weight||0).toLocaleString() %></td>
-            <td class="text-sm"><%= totalInterestPool>0?((m.weight/interestDistribution.reduce((t,x)=>t+x.weight,0))*100).toFixed(1):'0' %>%</td>
+            <td class="text-sm"><%= totalWeight>0?((m.weight/totalWeight)*100).toFixed(1):'0' %>%</td>
             <td class="font-semibold text-teal">UGX <%= m.interestShare.toLocaleString() %></td>
           </tr>
-          <% }) %>
+          <% }); %>
           <tr style="background:var(--bg);font-weight:700;">
             <td colspan="5" style="text-align:right;padding:10px 16px;">TOTAL DISTRIBUTED</td>
-            <td style="padding:10px 16px;color:var(--teal);">UGX <%= interestDistribution.reduce((t,m)=>t+m.interestShare,0).toLocaleString() %></td>
+            <td style="padding:10px 16px;color:var(--teal);">UGX <%= interestDistribution.reduce(function(t,m){return t+m.interestShare;},0).toLocaleString() %></td>
           </tr>
         </tbody>
       </table>
@@ -198,28 +203,29 @@
   </div>
 </div>
 
-<!-- ══ EXPENDITURE TAB ══════════════════════════════════════════ -->
+<!-- ══ EXPENDITURE ═══════════════════════════════════════════════ -->
 <div class="tab-pane <%= tab==='expenditure'?'active':'' %>" id="tab-expenditure">
   <div class="flex-between mb-3">
     <h3>Expenditure Ledger</h3>
-    <button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print Ledger</button>
+    <button onclick="printTab('expenditure')" class="btn btn-sm btn-outline no-print">🖨 Print Ledger</button>
   </div>
   <div class="card p-0">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount (UGX)</th></tr></thead>
+        <thead><tr><th>#</th><th>Date</th><th>Category</th><th>Description</th><th>Amount (UGX)</th></tr></thead>
         <tbody>
-          <% expenditures.forEach(e => { %>
+          <% expenditures.forEach(function(e, i){ %>
           <tr>
+            <td class="text-muted text-sm"><%= i+1 %></td>
             <td class="text-sm text-muted"><%= new Date(e.date).toLocaleDateString('en-UG',{year:'numeric',month:'short',day:'numeric'}) %></td>
             <td><span class="badge badge-gray text-xs"><%= e.category %></span></td>
             <td class="text-sm"><%= e.description||'—' %></td>
             <td class="font-semibold text-danger">UGX <%= e.amount.toLocaleString() %></td>
           </tr>
-          <% }) %>
-          <% if (!expenditures.length) { %><tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">No expenditures in this period.</td></tr><% } %>
+          <% }); %>
+          <% if(!expenditures.length){ %><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">No expenditures in this period.</td></tr><% } %>
           <tr style="background:var(--bg);font-weight:700;">
-            <td colspan="3" style="text-align:right;padding:10px 16px;">TOTAL EXPENDITURE</td>
+            <td colspan="4" style="text-align:right;padding:10px 16px;">TOTAL EXPENDITURE</td>
             <td style="padding:10px 16px;color:var(--danger);">UGX <%= totalExpend.toLocaleString() %></td>
           </tr>
         </tbody>
@@ -228,89 +234,157 @@
   </div>
 </div>
 
-<!-- ══ PROJECTS TAB ══════════════════════════════════════════════ -->
+<!-- ══ PROJECTS ══════════════════════════════════════════════════ -->
 <div class="tab-pane <%= tab==='projects'?'active':'' %>" id="tab-projects">
   <div class="flex-between mb-3">
-    <h3>Projects & Contributions</h3>
-    <button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print</button>
+    <h3>Projects Report</h3>
+    <button onclick="printTab('projects')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
   </div>
   <div class="card p-0">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Project</th><th>Type</th><th>Target</th><th>Raised</th><th>Progress</th><th>Status</th></tr></thead>
+        <thead><tr><th>Project</th><th>Type</th><th>Target</th><th>Raised</th><th>Progress</th><th>Return Rate</th><th>Status</th></tr></thead>
         <tbody>
-          <% projects.forEach(p => { const pct = p.targetAmount>0?Math.round(p.raisedAmount/p.targetAmount*100):0; %>
+          <% projects.forEach(function(p){ var pct=p.targetAmount>0?Math.round(p.raisedAmount/p.targetAmount*100):0; %>
           <tr>
-            <td><div class="font-semibold text-sm"><%= p.name %></div><% if(p.returnRate>0){ %><div class="text-xs text-muted"><%= p.returnRate %>% annual return</div><% } %></td>
-            <td><span class="badge badge-gray text-xs"><%= p.type.replace('_',' ') %></span></td>
+            <td><div class="font-semibold text-sm"><%= p.name %></div><% if(p.description){ %><div class="text-xs text-muted"><%= p.description.slice(0,60) %></div><% } %></td>
+            <td><span class="badge badge-gray text-xs" style="text-transform:capitalize;"><%= p.type.replace(/_/g,' ') %></span></td>
             <td class="text-sm">UGX <%= p.targetAmount.toLocaleString() %></td>
-            <td class="text-sm font-semibold">UGX <%= p.raisedAmount.toLocaleString() %></td>
-            <td style="min-width:100px;"><div class="progress" style="height:6px;"><div class="progress-bar" style="width:<%= pct %>%"></div></div><div class="text-xs text-muted mt-1"><%= pct %>%</div></td>
-            <td><span class="badge badge-<%= p.status==='active'?'success':'warning' %>"><%= p.status %></span></td>
+            <td class="text-sm font-semibold text-teal">UGX <%= p.raisedAmount.toLocaleString() %></td>
+            <td style="min-width:90px;"><div class="progress" style="height:5px;"><div class="progress-bar" style="width:<%= pct %>%"></div></div><div class="text-xs text-muted mt-1"><%= pct %>%</div></td>
+            <td class="text-sm"><%= p.returnRate>0?p.returnRate+'% p.a.':'—' %></td>
+            <td><span class="badge badge-<%= p.status==='active'?'success':'warning' %>" style="font-size:10px;"><%= p.status %></span></td>
           </tr>
-          <% }) %>
-          <% if (!projects.length) { %><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No projects yet.</td></tr><% } %>
+          <% }); %>
+          <% if(!projects.length){ %><tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">No projects.</td></tr><% } %>
+          <tr style="background:var(--bg);font-weight:700;">
+            <td colspan="3" style="text-align:right;padding:10px 16px;">TOTAL RAISED</td>
+            <td style="padding:10px 16px;color:var(--teal);">UGX <%= projects.reduce(function(t,p){return t+p.raisedAmount;},0).toLocaleString() %></td>
+            <td colspan="3"></td>
+          </tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- ══ FULL SUMMARY TAB ══════════════════════════════════════════ -->
+<!-- ══ ASSETS ════════════════════════════════════════════════════ -->
+<div class="tab-pane <%= tab==='assets'?'active':'' %>" id="tab-assets">
+  <div class="flex-between mb-3">
+    <h3>Asset Register</h3>
+    <button onclick="printTab('assets')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
+  </div>
+  <div class="card p-0">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Asset</th><th>Category</th><th>Purchase Value</th><th>Current Value</th><th>Date</th><th>Condition</th><th>Status</th></tr></thead>
+        <tbody>
+          <% (locals.allAssets||[]).forEach(function(a, i){ %>
+          <tr>
+            <td class="text-sm text-muted"><%= i+1 %></td>
+            <td><div class="font-semibold text-sm"><%= a.name %></div><% if(a.location){ %><div class="text-xs text-muted"><%= a.location %></div><% } %></td>
+            <td><span class="badge badge-gray text-xs" style="text-transform:capitalize;"><%= a.category.replace(/_/g,' ') %></span></td>
+            <td class="text-sm">UGX <%= a.purchaseValue.toLocaleString() %></td>
+            <td class="text-sm font-semibold">UGX <%= a.currentValue.toLocaleString() %></td>
+            <td class="text-sm text-muted"><%= a.purchaseDate?new Date(a.purchaseDate).toLocaleDateString():'—' %></td>
+            <td><span class="badge text-xs badge-<%= a.condition==='excellent'||a.condition==='good'?'success':'warning' %>"><%= a.condition %></span></td>
+            <td><span class="badge text-xs badge-<%= a.status==='active'?'success':'warning' %>"><%= a.status.replace(/_/g,' ') %></span></td>
+          </tr>
+          <% }); %>
+          <% if(!(locals.allAssets||[]).length){ %><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted);">No assets recorded.</td></tr><% } %>
+          <tr style="background:var(--bg);font-weight:700;">
+            <td colspan="3" style="text-align:right;padding:10px 16px;">TOTALS</td>
+            <td style="padding:10px 16px;">UGX <%= (locals.allAssets||[]).reduce(function(t,a){return t+a.purchaseValue;},0).toLocaleString() %></td>
+            <td style="padding:10px 16px;">UGX <%= (locals.allAssets||[]).reduce(function(t,a){return t+a.currentValue;},0).toLocaleString() %></td>
+            <td colspan="3"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SUMMARY ═══════════════════════════════════════════════════ -->
 <div class="tab-pane <%= tab==='summary'?'active':'' %>" id="tab-summary">
   <div class="flex-between mb-3">
-    <h3>Full Summary Report — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %></h3>
-    <button onclick="window.print()" class="btn btn-primary no-print">🖨 Print Full Report</button>
+    <h3>General Summary Report — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %></h3>
+    <button onclick="printTab('summary')" class="btn btn-primary no-print">🖨 Print Summary</button>
   </div>
 
-  <div class="card mb-4">
-    <div class="card-header"><h3>📊 Income Summary</h3></div>
-    <div class="card-body">
-      <div class="info-list">
-        <div class="info-item"><span class="info-key">Member Savings (Period)</span><span class="info-val text-success">+ UGX <%= totalPeriodSavings.toLocaleString() %></span></div>
-        <div class="info-item"><span class="info-key">Interest Income (Period)</span><span class="info-val text-success">+ UGX <%= periodInterest.toLocaleString() %></span></div>
-        <div class="info-item"><span class="info-key">Project Contributions</span><span class="info-val text-success">+ UGX <%= totalProjectContribs.toLocaleString() %></span></div>
-        <div class="info-item" style="font-weight:700;"><span class="info-key">TOTAL INCOME</span><span class="info-val text-teal">UGX <%= (totalPeriodSavings+periodInterest+totalProjectContribs).toLocaleString() %></span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card mb-4">
-    <div class="card-header"><h3>💸 Expenditure Summary</h3></div>
-    <div class="card-body">
-      <div class="info-list">
-        <% const catTotals = {}; expenditures.forEach(e=>{catTotals[e.category]=(catTotals[e.category]||0)+e.amount;}); %>
-        <% Object.entries(catTotals).forEach(([cat,amt])=>{ %>
-        <div class="info-item"><span class="info-key"><%= cat %></span><span class="info-val text-danger">- UGX <%= amt.toLocaleString() %></span></div>
-        <% }) %>
-        <div class="info-item" style="font-weight:700;"><span class="info-key">TOTAL EXPENDITURE</span><span class="info-val text-danger">UGX <%= totalExpend.toLocaleString() %></span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card mb-4">
-    <div class="card-header"><h3>📋 Loan Portfolio Summary</h3></div>
-    <div class="card-body">
-      <div class="info-list">
-        <div class="info-item"><span class="info-key">Active Loans</span><span class="info-val"><%= activeLoans.length %> loans</span></div>
-        <div class="info-item"><span class="info-key">Total Outstanding</span><span class="info-val text-danger">UGX <%= loanPortfolio.toLocaleString() %></span></div>
-        <div class="info-item"><span class="info-key">Total Repaid (Period)</span><span class="info-val text-success">UGX <%= totalRepaid.toLocaleString() %></span></div>
-        <div class="info-item"><span class="info-key">Lifetime Interest Income</span><span class="info-val text-teal">UGX <%= interestIncome.toLocaleString() %></span></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card" style="border:2px solid var(--teal);">
-    <div class="card-header" style="background:var(--navy);color:#fff;border-radius:12px 12px 0 0;"><h3 style="color:#fff;">💰 Available Balance</h3></div>
-    <div class="card-body">
-      <div class="info-list">
-        <div class="info-item"><span class="info-key">Total Savings Collected (All Time)</span><span class="info-val">UGX <%= totalSavingsEver.toLocaleString() %></span></div>
-        <div class="info-item"><span class="info-key">Total Expenditure (All Time)</span><span class="info-val text-danger">- UGX <%= totalExpendsEver.toLocaleString() %></span></div>
-        <div class="info-item"><span class="info-key">Loan Portfolio Outstanding</span><span class="info-val text-danger">- UGX <%= loanPortfolio.toLocaleString() %></span></div>
-        <div class="info-item" style="font-size:18px;font-weight:700;border-top:2px solid var(--teal);margin-top:8px;padding-top:12px;">
-          <span class="info-key">AVAILABLE BALANCE</span>
-          <span class="info-val" style="color:var(--teal);font-size:22px;">UGX <%= availableBalance.toLocaleString() %></span>
+  <div class="grid-2 gap-4 mb-4">
+    <div class="card">
+      <div class="card-header" style="background:var(--navy);border-radius:12px 12px 0 0;"><h3 style="color:#fff;">💰 Savings & Capital</h3></div>
+      <div class="card-body">
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Period Savings</span><span class="info-val text-success">UGX <%= totalPeriodSavings.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Total Savings (All Time)</span><span class="info-val">UGX <%= totalSavingsEver.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Total Share Capital</span><span class="info-val">UGX <%= memberSavings.reduce(function(t,m){return t+(m.shareCapitalPaid||0);},0).toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Members</span><span class="info-val"><%= memberSavings.length %></span></div>
         </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header" style="background:var(--teal);border-radius:12px 12px 0 0;"><h3 style="color:#fff;">📋 Loan Portfolio</h3></div>
+      <div class="card-body">
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Active Loans</span><span class="info-val"><%= activeLoans.length %></span></div>
+          <div class="info-item"><span class="info-key">Outstanding Balance</span><span class="info-val text-danger">UGX <%= loanPortfolio.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Repaid (Period)</span><span class="info-val text-success">UGX <%= totalRepaid.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Interest Accrued (Period)</span><span class="info-val text-teal">UGX <%= periodInterest.toLocaleString() %></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header" style="background:#7B2D8B;border-radius:12px 12px 0 0;"><h3 style="color:#fff;">🏗️ Projects & Assets</h3></div>
+      <div class="card-body">
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Active Projects</span><span class="info-val"><%= projects.filter(function(p){return p.status==='active';}).length %></span></div>
+          <div class="info-item"><span class="info-key">Total Raised (Projects)</span><span class="info-val">UGX <%= projects.reduce(function(t,p){return t+p.raisedAmount;},0).toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Assets (Current Value)</span><span class="info-val">UGX <%= (locals.allAssets||[]).filter(function(a){return a.status==='active';}).reduce(function(t,a){return t+a.currentValue;},0).toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Number of Assets</span><span class="info-val"><%= (locals.allAssets||[]).filter(function(a){return a.status==='active';}).length %></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header" style="background:var(--danger);border-radius:12px 12px 0 0;"><h3 style="color:#fff;">💸 Expenditure</h3></div>
+      <div class="card-body">
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Period Expenditure</span><span class="info-val text-danger">UGX <%= totalExpend.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Total Expenditure (All Time)</span><span class="info-val text-danger">UGX <%= totalExpendsEver.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Transactions</span><span class="info-val"><%= expenditures.length %></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Available Balance Box -->
+  <div class="card" style="border:3px solid var(--teal);">
+    <div class="card-header" style="background:linear-gradient(135deg,var(--navy),#1a3a5c);border-radius:10px 10px 0 0;">
+      <h3 style="color:#fff;font-size:18px;">📊 <%= group.name %> — Financial Position Summary</h3>
+    </div>
+    <div class="card-body">
+      <div class="grid-2 gap-4">
+        <div>
+          <p class="text-sm font-semibold mb-3" style="color:var(--success);">INCOME / ASSETS</p>
+          <div class="info-list">
+            <div class="info-item"><span class="info-key">Total Savings Collected</span><span class="info-val text-success">+ UGX <%= totalSavingsEver.toLocaleString() %></span></div>
+            <div class="info-item"><span class="info-key">Interest Income (Period)</span><span class="info-val text-success">+ UGX <%= periodInterest.toLocaleString() %></span></div>
+            <div class="info-item"><span class="info-key">Project Contributions</span><span class="info-val text-success">+ UGX <%= totalProjectContribs.toLocaleString() %></span></div>
+            <div class="info-item"><span class="info-key">Asset Value</span><span class="info-val text-success">+ UGX <%= (locals.allAssets||[]).filter(function(a){return a.status==='active';}).reduce(function(t,a){return t+a.currentValue;},0).toLocaleString() %></span></div>
+          </div>
+        </div>
+        <div>
+          <p class="text-sm font-semibold mb-3" style="color:var(--danger);">LIABILITIES / OUTFLOWS</p>
+          <div class="info-list">
+            <div class="info-item"><span class="info-key">Total Expenditure</span><span class="info-val text-danger">- UGX <%= totalExpendsEver.toLocaleString() %></span></div>
+            <div class="info-item"><span class="info-key">Loan Portfolio (Outstanding)</span><span class="info-val text-danger">- UGX <%= loanPortfolio.toLocaleString() %></span></div>
+          </div>
+        </div>
+      </div>
+      <hr style="border:none;border-top:2px solid var(--teal);margin:20px 0;">
+      <div class="flex-between">
+        <div style="font-size:18px;font-weight:700;">NET AVAILABLE BALANCE</div>
+        <div style="font-size:28px;font-weight:800;color:var(--teal);">UGX <%= availableBalance.toLocaleString() %></div>
       </div>
     </div>
   </div>
@@ -318,15 +392,27 @@
 
 <script>
 function switchTab(t) {
-  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+t).classList.add('active');
-  document.querySelectorAll('.tab-btn').forEach(b=>{ if(b.textContent.includes(t)||b.getAttribute('onclick').includes("'"+t+"'")) b.classList.add('active'); });
-  document.getElementById('activeTab').value=t;
+  document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  var el = document.getElementById('tab-'+t);
+  if(el) el.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(function(b){
+    if(b.getAttribute('onclick') && b.getAttribute('onclick').indexOf("'"+t+"'")>-1) b.classList.add('active');
+  });
+  document.getElementById('activeTab').value = t;
 }
-// Activate correct tab btn on load
-document.querySelectorAll('.tab-btn').forEach(b => {
-  if (b.getAttribute('onclick') && b.getAttribute('onclick').includes("'<%= tab %>'")) b.classList.add('active');
-});
+function printTab(t) {
+  switchTab(t);
+  setTimeout(function(){ window.print(); }, 200);
+}
+function printAll() {
+  document.querySelectorAll('.tab-pane').forEach(function(p){p.style.display='block';});
+  window.print();
+  setTimeout(function(){
+    document.querySelectorAll('.tab-pane').forEach(function(p){p.style.display='';});
+    var active = document.getElementById('tab-' + document.getElementById('activeTab').value);
+    if(active) active.classList.add('active');
+  }, 1000);
+}
 </script>
 <%- include('../partials/foot') %>

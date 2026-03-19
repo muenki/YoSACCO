@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { Op } = require('sequelize');
-const { Group, User, Saving, Loan, Repayment, Expenditure, Project, ProjectContribution, GroupSettings } = require('../models');
+const { Group, User, Saving, Loan, Repayment, Expenditure, Project, ProjectContribution, GroupSettings, Asset } = require('../models');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 router.use(authenticate, requireRole('admin','superadmin'));
@@ -108,6 +108,7 @@ router.get('/', async (req, res) => {
       interestDistribution, totalInterestPool, method,
       availableBalance, totalSavingsEver, totalExpendsEver, loanPortfolio,
       years, quarters, months, settings: settings?.toJSON()||{},
+      allAssets: (await Asset.findAll({ where:{ groupId:gid }, order:[['purchaseDate','DESC']] })).map(a=>a.toJSON()),
     });
   } catch(err) {
     console.error('Reports error:', err);
