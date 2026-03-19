@@ -132,4 +132,34 @@ router.get('/profile', async (req, res) => {
   } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
+router.get('/projects', async (req, res) => {
+  try {
+    const m     = req.user;
+    const group = await Group.findByPk(m.groupId);
+    const { Project, ProjectContribution } = require('../models');
+
+    const rawProjects = await Project.findAll({ where: { groupId: m.groupId }, order: [['createdAt','DESC']] });
+
+    const projects = await Promise.all(rawProjects.map(async function(p) {
+      // All contributions to this project
+      const allContribs = await ProjectContribution.findAll({ where: { projectId: p.id } });
+      const raisedAmount   = allContribs.reduce(function(t,c){return t+c.amount;},0);
+      const contributorCount = [...new Set(allContribs.map(function(c){return c.memberId;}))].length;
+
+      // This member's contributions
+      const myHistory = await ProjectContribution.findAll({
+        where: { projectId: p.id, memberId: m.id },
+        order: [['date','ASC']],
+      });
+      const myContributions = myHistory.reduce(function(t,c){return t+c.amount;},0);
+
+      return { ...p.toJSON(), raisedAmount, contributorCount, myContributions, myHistory: myHistory.map(function(c){return c.toJSON();}) };
+    }));
+
+    const myTotalContributions = projects.reduce(function(t,p){return t+p.myContributions;},0);
+
+    res.render('member/projects', { user: m.toJSON(), group: group.toJSON(), projects, myTotalContributions });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error loading projects', user: req.user }); }
+});
+
 module.exports = router;

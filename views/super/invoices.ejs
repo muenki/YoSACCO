@@ -1,12 +1,19 @@
 <%- include('../partials/head', { title: 'Invoices & Revenue', activePage: 'super-invoices' }) %>
 
 <style>
-
+.inv-template { display: none !important; }
+body.printing .sidebar,
+body.printing .topbar,
+body.printing .main-content,
+body.printing .page-footer,
+body.printing .no-print { display: none !important; }
+body.printing .inv-template { display: none !important; }
+body.printing .inv-template.selected { display: block !important; }
 </style>
 
 <!-- Hidden printable invoice blocks — one per invoice -->
 <% invoices.forEach(function(inv, idx){ %>
-<div class="invoice-print-block" id="super-inv-<%= idx %>">
+<div class="inv-template" id="invts-<%= idx %>">
   <div style="max-width:680px;margin:0 auto;font-family:Arial,sans-serif;padding:32px;border:1px solid #ddd;">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
       <div>
@@ -257,9 +264,19 @@
 
 <script>
 function printSingleInvoice(idx) {
-  document.querySelectorAll('.invoice-print-block').forEach(function(el){
-    el.classList.remove('active-print');
+  document.querySelectorAll('.inv-template').forEach(function(el) {
+    el.classList.remove('selected');
   });
+  var target = document.getElementById('invts-' + idx);
+  if (!target) return;
+  target.classList.add('selected');
+  document.body.classList.add('printing');
+  window.print();
+  setTimeout(function() {
+    document.body.classList.remove('printing');
+    target.classList.remove('selected');
+  }, 2000);
+});
   var target = document.getElementById('super-inv-' + idx);
   if(target) target.classList.add('active-print');
   document.body.classList.add('printing-invoice');

@@ -1,0 +1,129 @@
+<%- include('../partials/head', { title: 'Projects', activePage: 'member-projects', group }) %>
+
+<style>
+@media print {
+  .sidebar,.topbar,.no-print,.page-footer { display:none!important; }
+  .main { margin-left:0!important; }
+}
+</style>
+
+<!-- Summary -->
+<div class="stats-grid mb-6">
+  <div class="stat-card accent">
+    <div class="label">Active Projects</div>
+    <div class="value"><%= projects.filter(function(p){return p.status==='active';}).length %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">My Total Contributions</div>
+    <div class="value" style="font-size:18px;">UGX <%= myTotalContributions.toLocaleString() %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Projects I Contribute To</div>
+    <div class="value"><%= projects.filter(function(p){return p.myContributions>0;}).length %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Raised (All Projects)</div>
+    <div class="value" style="font-size:18px;">UGX <%= projects.reduce(function(t,p){return t+p.raisedAmount;},0).toLocaleString() %></div>
+  </div>
+</div>
+
+<div class="flex-between mb-4 no-print">
+  <h2 style="font-size:18px;">Group Projects — <%= group.name %></h2>
+  <button onclick="window.print()" class="btn btn-sm btn-outline">🖨 Print My Contributions</button>
+</div>
+
+<% if (!projects.length) { %>
+<div class="card"><div class="card-body text-muted text-sm">No projects have been set up for your SACCO yet.</div></div>
+<% } %>
+
+<% projects.forEach(function(proj) {
+  var pct = proj.targetAmount > 0 ? Math.round(proj.raisedAmount / proj.targetAmount * 100) : 0;
+  var myPct = proj.raisedAmount > 0 ? ((proj.myContributions / proj.raisedAmount) * 100).toFixed(1) : 0;
+%>
+<div class="card mb-4">
+  <div class="card-body">
+    <!-- Project Header -->
+    <div class="flex-between mb-3">
+      <div>
+        <div style="font-size:17px;font-weight:700;"><%= proj.name %></div>
+        <div class="flex gap-2 mt-1">
+          <span class="badge badge-<%= proj.type==='unit_trust'?'info':proj.type==='property'?'success':'gray' %>" style="text-transform:capitalize;">
+            <%= proj.type.replace(/_/g,' ') %>
+          </span>
+          <span class="badge badge-<%= proj.status==='active'?'success':'warning' %>"><%= proj.status %></span>
+          <% if(proj.returnRate > 0){ %>
+          <span class="badge badge-warning"><%= proj.returnRate %>% p.a. return</span>
+          <% } %>
+        </div>
+      </div>
+      <% if (proj.myContributions > 0) { %>
+      <div style="text-align:right;">
+        <div class="text-xs text-muted">My contribution</div>
+        <div style="font-size:20px;font-weight:700;color:var(--teal);">UGX <%= proj.myContributions.toLocaleString() %></div>
+        <div class="text-xs text-muted"><%= myPct %>% of total raised</div>
+      </div>
+      <% } else { %>
+      <span class="badge badge-gray">Not yet contributed</span>
+      <% } %>
+    </div>
+
+    <% if (proj.description) { %>
+    <p class="text-sm text-muted mb-3"><%= proj.description %></p>
+    <% } %>
+
+    <!-- Overall Progress -->
+    <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:16px;">
+      <div class="flex-between mb-2">
+        <span class="text-sm font-semibold">Overall Progress</span>
+        <span class="text-sm text-muted"><%= pct %>%</span>
+      </div>
+      <div class="progress mb-2"><div class="progress-bar" style="width:<%= pct %>%"></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px;">
+        <div><div class="text-xs text-muted">Target</div><div class="text-sm font-semibold">UGX <%= proj.targetAmount.toLocaleString() %></div></div>
+        <div><div class="text-xs text-muted">Total Raised</div><div class="text-sm font-semibold text-teal">UGX <%= proj.raisedAmount.toLocaleString() %></div></div>
+        <div><div class="text-xs text-muted">Contributors</div><div class="text-sm font-semibold"><%= proj.contributorCount %> members</div></div>
+      </div>
+    </div>
+
+    <% if (proj.startDate) { %>
+    <div class="text-xs text-muted mb-3">
+      Started: <%= new Date(proj.startDate).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %>
+      <% if(proj.endDate){ %> · Target End: <%= new Date(proj.endDate).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %><% } %>
+    </div>
+    <% } %>
+
+    <!-- My Contribution History -->
+    <% if (proj.myHistory && proj.myHistory.length > 0) { %>
+    <div>
+      <div class="text-sm font-semibold mb-2" style="color:var(--teal);">My Contribution History</div>
+      <div class="card p-0" style="border:1px solid var(--border);">
+        <table>
+          <thead><tr><th>#</th><th>Date</th><th>Amount</th><th>Notes</th></tr></thead>
+          <tbody>
+            <% proj.myHistory.forEach(function(c, i){ %>
+            <tr>
+              <td class="text-muted text-sm"><%= i+1 %></td>
+              <td class="text-sm text-muted"><%= new Date(c.date).toLocaleDateString('en-UG',{year:'numeric',month:'short',day:'numeric'}) %></td>
+              <td class="font-semibold text-teal">UGX <%= c.amount.toLocaleString() %></td>
+              <td class="text-sm text-muted"><%= c.notes || '—' %></td>
+            </tr>
+            <% }); %>
+            <tr style="background:var(--bg);font-weight:700;">
+              <td colspan="2" style="padding:8px 16px;text-align:right;">My Total</td>
+              <td style="padding:8px 16px;color:var(--teal);">UGX <%= proj.myContributions.toLocaleString() %></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <% } else { %>
+    <div style="background:var(--info-bg);border-radius:8px;padding:12px 16px;">
+      <p class="text-sm" style="color:var(--info);">You have not contributed to this project yet. Contact your SACCO admin to contribute.</p>
+    </div>
+    <% } %>
+  </div>
+</div>
+<% }); %>
+
+<%- include('../partials/foot') %>
