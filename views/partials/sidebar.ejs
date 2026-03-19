@@ -21,6 +21,9 @@ function isActive(p) { return path === p ? 'active' : ''; }
       <a href="/super/dashboard" class="nav-link <%= isActive('super-dashboard') %>"><span class="icon">📊</span> Dashboard</a>
       <a href="/super/groups" class="nav-link <%= isActive('super-groups') %>"><span class="icon">🏦</span> SACCO Groups</a>
       <a href="/super/audit" class="nav-link <%= isActive('super-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
+    <% } else if (role === 'credit_officer' || role === 'treasurer' || role === 'chairperson') { %>
+      <div class="nav-section">Loan Approvals</div>
+      <a href="/approver/dashboard" class="nav-link <%= isActive('approver-dashboard') %>"><span class="icon">📋</span> My Review Queue</a>
     <% } else if (role === 'admin') { %>
       <div class="nav-section">Management</div>
       <a href="/admin/dashboard" class="nav-link <%= isActive('admin-dashboard') %>"><span class="icon">📊</span> Dashboard</a>

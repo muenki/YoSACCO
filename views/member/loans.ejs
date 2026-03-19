@@ -1,38 +1,57 @@
 <%- include('../partials/head', { title: 'My Loans', activePage: 'member-loans', group }) %>
 
 <% const q = locals.query || {}; %>
-<% if (q.success === 'loan_applied') { %>
-<div class="alert alert-success">Loan application submitted! The SACCO admin has been notified. You'll receive a confirmation email shortly.</div>
-<% } %>
-<% if (q.error === 'existing_loan') { %>
-<div class="alert alert-danger">You already have an active or pending loan. Please wait for it to be resolved before applying again.</div>
-<% } %>
-<% if (q.error === 'exceeds_limit') { %>
-<div class="alert alert-danger">Requested amount exceeds your eligibility (3× savings = UGX <%= (balance*3).toLocaleString() %>).</div>
-<% } %>
+<% if (q.success === 'loan_applied') { %><div class="alert alert-success">Loan application submitted! Your Credit Officer has been notified by email. You will receive updates at each approval stage.</div><% } %>
+<% if (q.error === 'existing_loan') { %><div class="alert alert-danger">You already have an active loan. You can apply for a Top-Up instead.</div><% } %>
+<% if (q.error === 'existing_pending') { %><div class="alert alert-danger">You have a loan application currently in progress. Please wait for it to be resolved before applying again.</div><% } %>
+<% if (q.error === 'exceeds_limit') { %><div class="alert alert-danger">Requested amount exceeds your eligibility. New/Top-Up loans: up to 3× savings. Emergency loans: up to 1× savings.</div><% } %>
+<% if (q.error === 'no_active_loan_for_topup') { %><div class="alert alert-danger">Top-Up is only available when you have an active loan.</div><% } %>
 
 <div class="grid-2 gap-4 mb-6">
-  <!-- Apply Form -->
+
+  <!-- Application Form -->
   <div class="card">
     <div class="card-header"><h3>Apply for a Loan</h3></div>
     <div class="card-body">
-      <% if (hasActiveLoan || hasPendingLoan) { %>
-        <div class="alert alert-warning">
-          <% if (hasPendingLoan) { %>Your loan application is currently under review. You cannot apply for another until it is resolved.<% } %>
-          <% if (hasActiveLoan) { %>You have an active loan. Please repay it fully before applying for a new one.<% } %>
-        </div>
+      <% if (hasPendingLoan) { %>
+        <div class="alert alert-warning">You have a loan application currently in progress. You cannot apply for another until it is resolved.</div>
       <% } else { %>
-        <div class="alert alert-info" style="margin-bottom:16px;">
-          <strong>Your eligibility:</strong> UGX <%= eligibleAmount.toLocaleString() %> (3× your savings of UGX <%= balance.toLocaleString() %>)
+
+        <div class="form-group">
+          <label class="form-label">Select Loan Type</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;">
+            <div class="loan-type-opt selected" data-type="new_loan" onclick="selectLoanType('new_loan')" style="cursor:pointer;padding:12px 8px;text-align:center;border:2px solid var(--teal);border-radius:10px;background:rgba(13,115,119,0.06);transition:all 0.15s;">
+              <div style="font-size:22px;margin-bottom:4px;">🏦</div>
+              <div style="font-size:12px;font-weight:600;">New Loan</div>
+              <div style="font-size:10px;color:var(--text-muted);">Up to 3× savings</div>
+            </div>
+            <div class="loan-type-opt" data-type="top_up" onclick="selectLoanType('top_up')" style="cursor:pointer;padding:12px 8px;text-align:center;border:2px solid var(--border);border-radius:10px;transition:all 0.15s;">
+              <div style="font-size:22px;margin-bottom:4px;">➕</div>
+              <div style="font-size:12px;font-weight:600;">Top-Up</div>
+              <div style="font-size:10px;color:var(--text-muted);"><%= hasActiveLoan ? 'Up to 3× savings' : 'Need active loan' %></div>
+            </div>
+            <div class="loan-type-opt" data-type="emergency" onclick="selectLoanType('emergency')" style="cursor:pointer;padding:12px 8px;text-align:center;border:2px solid var(--border);border-radius:10px;transition:all 0.15s;">
+              <div style="font-size:22px;margin-bottom:4px;">🚨</div>
+              <div style="font-size:12px;font-weight:600;">Emergency</div>
+              <div style="font-size:10px;color:var(--text-muted);">Up to 1× savings</div>
+            </div>
+          </div>
         </div>
+
         <form method="POST" action="/member/loans/apply">
+          <input type="hidden" name="loanType" id="loanTypeInput" value="new_loan">
+
+          <div class="alert alert-info" id="eligNote" style="font-size:13px;margin-bottom:14px;">
+            <strong>Eligibility (New Loan):</strong> Up to UGX <span id="eligAmt"><%= (balance*3).toLocaleString() %></span>
+          </div>
+
           <div class="form-group">
-            <label class="form-label">Loan Amount (UGX) *</label>
-            <input type="number" name="amount" class="form-control" placeholder="e.g. 1500000" min="50000" max="<%= eligibleAmount %>" required>
-            <div class="form-hint">Maximum: UGX <%= eligibleAmount.toLocaleString() %></div>
+            <label class="form-label">Amount (UGX) *</label>
+            <input type="number" name="amount" id="amountField" class="form-control" placeholder="e.g. 1,500,000" min="50000" max="<%= balance*3 %>" required>
+            <div class="form-hint" id="amountHint">Maximum: UGX <%= (balance*3).toLocaleString() %></div>
           </div>
           <div class="form-group">
-            <label class="form-label">Purpose of Loan *</label>
+            <label class="form-label">Purpose *</label>
             <select name="purpose" class="form-control" required>
               <option value="">— Select purpose —</option>
               <option>School fees</option>
@@ -41,6 +60,7 @@
               <option>Home improvement</option>
               <option>Asset purchase</option>
               <option>Emergency</option>
+              <option>Top-up existing loan</option>
               <option>Other</option>
             </select>
           </div>
@@ -54,35 +74,39 @@
               <option value="24">24 months</option>
             </select>
           </div>
-          <p class="text-xs text-muted mb-4">Interest rate: 1.5% per month. By submitting, you agree to the loan terms and repayment schedule. A confirmation email will be sent to you and your admin will be notified.</p>
+          <p class="text-xs text-muted mb-4">
+            Interest: 1.5%/month (Emergency: 2%/month). Your application passes through a
+            <strong>3-stage approval</strong>: Credit Officer → Treasurer → Chairperson.
+            You will receive an email update at every stage.
+          </p>
           <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Submit Loan Application</button>
         </form>
       <% } %>
     </div>
   </div>
 
-  <!-- Loan Stats -->
+  <!-- Info panel -->
   <div>
-    <div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
-      <div class="stat-card">
-        <div class="label">Total Loans</div>
-        <div class="value"><%= loans.length %></div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Total Repaid</div>
-        <div class="value" style="font-size:18px;">UGX <%= repayments.reduce((s,r)=>s+r.amount,0).toLocaleString() %></div>
+    <div class="card mb-4">
+      <div class="card-header"><h3>3-Stage Approval</h3></div>
+      <div class="card-body">
+        <% [['1','🔍','Credit Officer','Checks savings & eligibility'],['2','💰','Treasurer','Confirms funds available'],['3','👑','Chairperson','Final board approval'],['4','✅','Admin','Disburses the funds']].forEach(([n,ico,t,d]) => { %>
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+          <div style="width:30px;height:30px;border-radius:50%;background:<%= n==='4'?'var(--teal)':'var(--navy)' %>;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;"><%= n %></div>
+          <div><div style="font-size:13px;font-weight:600;"><%= ico %> <%= t %></div><div style="font-size:12px;color:var(--text-muted);"><%= d %></div></div>
+        </div>
+        <% }) %>
       </div>
     </div>
     <div class="card">
       <div class="card-body">
-        <p class="text-sm font-semibold mb-2">How loans work</p>
-        <ul style="list-style:none;display:grid;gap:8px;">
-          <li class="text-sm text-muted">✓ Apply online — admin notified instantly by email</li>
-          <li class="text-sm text-muted">✓ Approval decision within 1–3 business days</li>
-          <li class="text-sm text-muted">✓ Interest rate: 1.5% per month (flat)</li>
-          <li class="text-sm text-muted">✓ Maximum: 3× your savings balance</li>
-          <li class="text-sm text-muted">✓ You'll receive email notification of decision</li>
-        </ul>
+        <p class="text-sm font-semibold mb-3">Your Account Summary</p>
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Savings balance</span><span class="info-val text-teal">UGX <%= balance.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">New loan / Top-Up limit</span><span class="info-val">UGX <%= (balance*3).toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Emergency loan limit</span><span class="info-val">UGX <%= balance.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Active loan</span><span class="info-val"><%= activeLoan ? 'UGX '+(activeLoan.totalRepayable-activeLoan.amountRepaid).toLocaleString()+' outstanding' : 'None' %></span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -92,40 +116,102 @@
 <div class="section-head"><h2>My Loan History</h2></div>
 
 <% if (loans.length === 0) { %>
-<div class="card"><div class="card-body text-muted text-sm">No loan history. Apply for your first loan above.</div></div>
+  <div class="card"><div class="card-body text-muted text-sm">No loans yet. Apply for your first loan above.</div></div>
 <% } %>
 
 <% loans.forEach(loan => { %>
-<div class="loan-card <%= loan.status %>">
+<div class="loan-card <%= ['pending','under_review','approved'].includes(loan.status) ? 'pending' : loan.status %>">
   <div class="flex-between mb-3">
     <div>
-      <div class="font-semibold">UGX <%= loan.amount.toLocaleString() %> — <%= loan.purpose %></div>
-      <div class="text-sm text-muted">Applied: <%= new Date(loan.appliedAt).toLocaleDateString() %></div>
+      <div class="flex gap-2 mb-1" style="flex-wrap:wrap;">
+        <span class="font-semibold">UGX <%= loan.amount.toLocaleString() %></span>
+        <span class="badge badge-<%= loan.loanType==='emergency'?'danger':loan.loanType==='top_up'?'info':'gray' %>">
+          <%= loan.loanType==='new_loan'?'New Loan':loan.loanType==='top_up'?'Top-Up':'Emergency' %>
+        </span>
+      </div>
+      <div class="text-sm text-muted"><%= loan.purpose %> · Applied <%= new Date(loan.appliedAt).toLocaleDateString() %></div>
     </div>
-    <span class="badge badge-<%= loan.status==='active'?'info':loan.status==='pending'?'warning':loan.status==='repaid'?'success':'danger' %>">
-      <%= loan.status.charAt(0).toUpperCase()+loan.status.slice(1) %>
+    <span class="badge badge-<%= loan.status==='active'?'info':['pending','under_review'].includes(loan.status)?'warning':loan.status==='approved'?'success':loan.status==='repaid'?'success':'danger' %>">
+      <%
+        const statusLabel = {
+          pending: 'Pending Review', under_review: 'Under Review',
+          approved: 'Approved — Pending Disbursement', active: 'Active',
+          repaid: 'Fully Repaid', rejected: 'Rejected', declined: 'Declined',
+        };
+      %>
+      <%= statusLabel[loan.status] || loan.status %>
     </span>
   </div>
 
+  <!-- Live Progress Tracker for in-progress loans -->
+  <% if (['pending','under_review','approved'].includes(loan.status)) { %>
+  <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:14px;">
+    <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Approval Progress</div>
+    <div style="display:flex;align-items:center;">
+      <%
+        const stageList = [
+          { label:'Credit Officer', s: loan.creditOfficerStatus, who: loan.coUser },
+          { label:'Treasurer',      s: loan.treasurerStatus,     who: loan.trUser },
+          { label:'Chairperson',    s: loan.chairpersonStatus,   who: loan.chUser },
+          { label:'Disbursement',   s: loan.status==='active'?'approved':'pending', who: null },
+        ];
+      %>
+      <% stageList.forEach((st, i) => { %>
+        <div style="flex:1;text-align:center;">
+          <div style="width:34px;height:34px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;background:<%= st.s==='approved'?'var(--success)':st.s==='rejected'?'var(--danger)':'var(--border)' %>;color:<%= st.s==='approved'||st.s==='rejected'?'#fff':'var(--text-muted)' %>;">
+            <%= st.s==='approved'?'✓':st.s==='rejected'?'✗':(i+1) %>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);line-height:1.3;"><%= st.label %></div>
+          <% if(st.who){ %><div style="font-size:9px;color:var(--text-sm);">(<%= st.who %>)</div><% } %>
+        </div>
+        <% if(i < stageList.length-1){ %>
+        <div style="height:2px;flex:0 0 12px;background:<%= st.s==='approved'?'var(--success)':'var(--border)' %>;margin-bottom:20px;"></div>
+        <% } %>
+      <% }) %>
+    </div>
+    <% if(loan.status==='approved'){ %>
+      <p style="font-size:12px;color:var(--success);font-weight:600;margin-top:10px;">🎉 All stages approved — admin will disburse your funds shortly.</p>
+    <% } %>
+  </div>
+  <% } %>
+
+  <!-- Active loan progress bar -->
   <% if (loan.status === 'active') { %>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;padding:12px;background:var(--bg);border-radius:8px;">
-    <div><div class="text-xs text-muted">Monthly Installment</div><div class="font-semibold">UGX <%= loan.monthlyInstallment.toLocaleString() %></div></div>
-    <div><div class="text-xs text-muted">Amount Repaid</div><div class="font-semibold text-success">UGX <%= loan.amountRepaid.toLocaleString() %></div></div>
-    <div><div class="text-xs text-muted">Outstanding</div><div class="font-semibold text-danger">UGX <%= (loan.totalRepayable - loan.amountRepaid).toLocaleString() %></div></div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;">
+    <div><div class="text-xs text-muted">Monthly</div><div class="font-semibold text-sm">UGX <%= (loan.monthlyInstallment||0).toLocaleString() %></div></div>
+    <div><div class="text-xs text-muted">Repaid</div><div class="font-semibold text-sm text-success">UGX <%= (loan.amountRepaid||0).toLocaleString() %></div></div>
+    <div><div class="text-xs text-muted">Outstanding</div><div class="font-semibold text-sm text-danger">UGX <%= Math.max(0,(loan.totalRepayable||0)-(loan.amountRepaid||0)).toLocaleString() %></div></div>
   </div>
-  <div class="progress mb-1">
-    <div class="progress-bar" style="background:var(--success);width:<%= Math.round(loan.amountRepaid/loan.totalRepayable*100) %>%"></div>
-  </div>
-  <div class="text-xs text-muted mb-2"><%= Math.round(loan.amountRepaid/loan.totalRepayable*100) %>% repaid · <%= loan.repaymentMonths %> month term</div>
-  <p class="text-xs text-muted">To make a repayment, please contact your SACCO admin or use the online deposit feature.</p>
-  <% } else if (loan.status === 'pending') { %>
-    <p class="text-sm text-muted">Your application is under review. You will receive an email once a decision has been made.</p>
-  <% } else if (loan.status === 'repaid') { %>
-    <p class="text-sm text-success">This loan has been fully repaid. 🎉</p>
-  <% } else if (loan.status === 'declined') { %>
-    <p class="text-sm text-danger">Declined<% if(loan.notes) { %>: <%= loan.notes %><% } %></p>
+  <div class="progress mb-1"><div class="progress-bar" style="background:var(--success);width:<%= loan.totalRepayable>0?Math.round(loan.amountRepaid/loan.totalRepayable*100):0 %>%"></div></div>
+  <div class="text-xs text-muted"><%= loan.totalRepayable>0?Math.round(loan.amountRepaid/loan.totalRepayable*100):0 %>% repaid · <%= loan.repaymentMonths %> month term</div>
+  <% } %>
+
+  <% if (loan.status === 'rejected' || loan.status === 'declined') { %>
+    <p class="text-sm text-danger mt-2">❌ Rejected<% if(loan.notes){ %>: <%= loan.notes %><% } %></p>
+  <% } %>
+  <% if (loan.status === 'repaid') { %>
+    <p class="text-sm text-success mt-2">🎉 Loan fully repaid!</p>
   <% } %>
 </div>
 <% }) %>
+
+<script>
+const bal = <%= balance %>;
+function selectLoanType(type) {
+  document.getElementById('loanTypeInput').value = type;
+  const limits = { new_loan: bal*3, top_up: bal*3, emergency: bal };
+  const descs  = { new_loan:'New Loan — up to 3× savings', top_up:'Top-Up — up to 3× savings (active loan required)', emergency:'Emergency — up to 1× savings, 2%/month interest' };
+  const limit  = limits[type];
+  document.querySelectorAll('.loan-type-opt').forEach(el => {
+    const sel = el.dataset.type === type;
+    el.style.border = sel ? '2px solid var(--teal)' : '2px solid var(--border)';
+    el.style.background = sel ? 'rgba(13,115,119,0.06)' : '';
+  });
+  document.getElementById('eligAmt').textContent = limit.toLocaleString();
+  document.getElementById('amountHint').textContent = 'Maximum: UGX ' + limit.toLocaleString();
+  document.getElementById('amountField').max = limit;
+  document.getElementById('eligNote').innerHTML = '<strong>Eligibility (' + type.replace('_',' ') + '):</strong> Up to UGX <span id="eligAmt">' + limit.toLocaleString() + '</span>';
+}
+</script>
 
 <%- include('../partials/foot') %>

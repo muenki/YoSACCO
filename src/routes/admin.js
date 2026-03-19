@@ -229,3 +229,25 @@ router.get('/audit', async (req, res) => {
 });
 
 module.exports = router;
+
+// ── Admin: Disburse a fully approved loan ────────────────────────
+router.post('/loans/:id/disburse', async (req, res) => {
+  try {
+    const gid  = req.user.groupId;
+    const loan = await Loan.findOne({ where: { id: req.params.id, groupId: gid, status: 'approved' } });
+    if (!loan) return res.redirect('/admin/loans?error=not_approved_yet');
+    const group  = await Group.findByPk(gid);
+    const member = await User.findByPk(loan.memberId);
+    const rate   = loan.loanType === 'emergency' ? 0.02 : 0.015;
+    loan.monthlyInstallment = Math.round(loan.amount * (1 + rate * loan.repaymentMonths) / loan.repaymentMonths);
+    loan.totalRepayable     = loan.monthlyInstallment * loan.repaymentMonths;
+    loan.status             = 'active';
+    loan.approvedBy         = req.user.id;
+    loan.approvedAt         = new Date();
+    loan.disbursedAt        = new Date();
+    loan.notes              = req.body.notes || '';
+    await loan.save();
+    await AuditLog.create({ userId: req.user.id, action: 'LOAN_DISBURSED', detail: `Disbursed UGX ${loan.amount.toLocaleString()} to ${member.name}`, groupId: gid });
+    res.redirect('/admin/loans?success=loan_disbursed');
+  } catch (err) { console.error(err); res.redirect('/admin/loans?error=disburse_failed'); }
+});

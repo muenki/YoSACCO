@@ -1,0 +1,95 @@
+<%- include('../partials/head', { title: 'Loan Review Dashboard', activePage: 'approver-dashboard', group }) %>
+
+<%
+const roleLabels = { credit_officer: 'Credit Officer', treasurer: 'Treasurer', chairperson: 'Chairperson' };
+const roleLabel  = roleLabels[user.role] || user.role;
+const stageNum   = user.role === 'credit_officer' ? 1 : user.role === 'treasurer' ? 2 : 3;
+%>
+
+<% if (locals.query.success === 'reviewed') { %><div class="alert alert-success">Review submitted successfully.</div><% } %>
+<% if (locals.query.error) { %><div class="alert alert-danger">Error: <%= locals.query.error.replace(/_/g,' ') %></div><% } %>
+
+<!-- Role banner -->
+<div class="card mb-6" style="background:var(--navy);color:#fff;border:none;">
+  <div class="card-body" style="display:flex;align-items:center;gap:20px;">
+    <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;">
+      <%= stageNum === 1 ? '🔍' : stageNum === 2 ? '💰' : '👑' %>
+    </div>
+    <div>
+      <div style="font-size:20px;font-weight:700;"><%= user.name %></div>
+      <div style="font-size:13px;opacity:0.7;"><%= roleLabel %> · Stage <%= stageNum %> of 3 · <%= group.name %></div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div style="font-size:12px;opacity:0.6;">Total reviewed</div>
+      <div style="font-size:28px;font-weight:800;"><%= totalReviewed %></div>
+    </div>
+  </div>
+</div>
+
+<!-- Approval Pipeline Info -->
+<div class="card mb-6">
+  <div class="card-body">
+    <p class="text-sm font-semibold mb-3">3-Stage Loan Approval Pipeline</p>
+    <div style="display:flex;align-items:center;gap:0;">
+      <% [{num:1,label:'Credit Officer',role:'credit_officer'},{num:2,label:'Treasurer',role:'treasurer'},{num:3,label:'Chairperson',role:'chairperson'}].forEach((s,i) => { %>
+      <div style="flex:1;text-align:center;padding:12px 8px;background:<%= s.role===user.role ? 'var(--teal)' : 'var(--bg)' %>;color:<%= s.role===user.role ? '#fff' : 'var(--text-muted)' %>;border-radius:<%= i===0?'8px 0 0 8px':i===2?'0 8px 8px 0':'0' %>;border:1px solid var(--border);border-left:<%= i>0?'none':'' %>;">
+        <div style="font-size:18px;margin-bottom:4px;"><%= s.num %></div>
+        <div style="font-size:12px;font-weight:<%= s.role===user.role?'600':'400' %>"><%= s.label %></div>
+        <% if(s.role===user.role) { %><div style="font-size:10px;margin-top:2px;opacity:0.8;">← You are here</div><% } %>
+      </div>
+      <% if(i<2) { %><div style="font-size:18px;color:var(--text-muted);z-index:1;">›</div><% } %>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<div class="section-head">
+  <h2>My Review Queue (<%= myQueue.length %> pending)</h2>
+</div>
+
+<% if (myQueue.length === 0) { %>
+<div class="card"><div class="card-body">
+  <p class="text-muted text-sm">No loan applications in your queue right now.</p>
+  <% if (stageNum > 1) { %><p class="text-xs text-muted mt-2">Loans will appear here once Stage <%= stageNum-1 %> is approved.</p><% } %>
+</div></div>
+<% } %>
+
+<% myQueue.forEach(loan => { %>
+<div class="loan-card pending" style="background:#fffbeb;">
+  <div class="flex-between mb-3">
+    <div class="member-row">
+      <div class="avatar" style="background:#fef3c7;color:#b7791f;width:44px;height:44px;font-size:16px;">
+        <%= loan.member ? loan.member.name.split(' ').map(n=>n[0]).join('') : '?' %>
+      </div>
+      <div>
+        <div class="font-semibold"><%= loan.member ? loan.member.name : 'Unknown' %></div>
+        <div class="text-xs text-muted"><%= loan.member ? loan.member.memberId : '' %> · Applied <%= new Date(loan.appliedAt).toLocaleDateString() %></div>
+      </div>
+    </div>
+    <span class="badge badge-<%= loan.loanType==='emergency'?'danger':loan.loanType==='top_up'?'info':'warning' %>">
+      <%= loan.loanType==='new_loan'?'New Loan':loan.loanType==='top_up'?'Top-Up':'Emergency' %>
+    </span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:12px;background:#fff;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;">
+    <div><div class="text-xs text-muted">Amount</div><div class="font-semibold">UGX <%= loan.amount.toLocaleString() %></div></div>
+    <div><div class="text-xs text-muted">Purpose</div><div class="font-semibold"><%= loan.purpose %></div></div>
+    <div><div class="text-xs text-muted">Repayment</div><div class="font-semibold"><%= loan.repaymentMonths %> months</div></div>
+  </div>
+
+  <a href="/approver/loans/<%= loan.id %>" class="btn btn-outline btn-sm mb-3" style="display:inline-block;">View Full Application</a>
+
+  <form method="POST" action="/approver/loans/<%= loan.id %>/review">
+    <div class="form-group">
+      <label class="form-label">Your Note / Comment</label>
+      <textarea name="note" class="form-control" rows="2" placeholder="Add a review note (optional)..."></textarea>
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" name="decision" value="approved" class="btn btn-success">✓ Approve</button>
+      <button type="submit" name="decision" value="rejected" class="btn btn-danger">✗ Reject</button>
+    </div>
+  </form>
+</div>
+<% }) %>
+
+<%- include('../partials/foot') %>

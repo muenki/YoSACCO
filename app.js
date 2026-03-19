@@ -18,7 +18,8 @@ app.use((req, res, next) => { res.locals.query = req.query; next(); });
 app.use('/',       require('./src/routes/auth'));
 app.use('/super',  require('./src/routes/super'));
 app.use('/admin',  require('./src/routes/admin'));
-app.use('/member', require('./src/routes/member'));
+app.use('/member',   require('./src/routes/member'));
+app.use('/approver', require('./src/routes/approver'));
 
 app.use((req, res) => res.status(404).render('error', { message: 'Page not found (404)', user: null }));
 

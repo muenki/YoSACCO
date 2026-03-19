@@ -1,0 +1,107 @@
+<%- include('../partials/head', { title: 'Loan Application Detail', activePage: 'approver-dashboard', group }) %>
+
+<div class="mb-4"><a href="/approver/dashboard" class="btn btn-outline btn-sm">← Back to Queue</a></div>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Member Info -->
+  <div class="card">
+    <div class="card-header"><h3>Applicant Details</h3></div>
+    <div class="card-body">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div class="avatar" style="width:50px;height:50px;font-size:18px;"><%= member.name.split(' ').map(n=>n[0]).join('') %></div>
+        <div><div style="font-size:16px;font-weight:700;"><%= member.name %></div><div class="text-muted text-sm"><%= member.memberId %> · <%= member.email %></div></div>
+      </div>
+      <div class="info-list">
+        <div class="info-item"><span class="info-key">Phone</span><span class="info-val"><%= member.phone||'—' %></span></div>
+        <div class="info-item"><span class="info-key">National ID</span><span class="info-val"><%= member.nationalId||'—' %></span></div>
+        <div class="info-item"><span class="info-key">Member since</span><span class="info-val"><%= new Date(member.joinDate||member.createdAt).toLocaleDateString() %></span></div>
+        <div class="info-item"><span class="info-key">Monthly contribution</span><span class="info-val">UGX <%= (member.monthlyContribution||0).toLocaleString() %></span></div>
+        <div class="info-item"><span class="info-key">Savings balance</span><span class="info-val text-teal font-semibold">UGX <%= balance.toLocaleString() %></span></div>
+        <div class="info-item"><span class="info-key">Loan eligibility (3×)</span><span class="info-val">UGX <%= (balance*3).toLocaleString() %></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loan Details -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Loan Application</h3>
+      <span class="badge badge-<%= loan.loanType==='emergency'?'danger':loan.loanType==='top_up'?'info':'warning' %>">
+        <%= loan.loanType==='new_loan'?'New Loan':loan.loanType==='top_up'?'Top-Up':'Emergency' %>
+      </span>
+    </div>
+    <div class="card-body">
+      <div class="info-list">
+        <div class="info-item"><span class="info-key">Amount requested</span><span class="info-val font-semibold" style="font-size:18px;">UGX <%= loan.amount.toLocaleString() %></span></div>
+        <div class="info-item"><span class="info-key">Purpose</span><span class="info-val"><%= loan.purpose %></span></div>
+        <div class="info-item"><span class="info-key">Repayment period</span><span class="info-val"><%= loan.repaymentMonths %> months</span></div>
+        <div class="info-item"><span class="info-key">Date applied</span><span class="info-val"><%= new Date(loan.appliedAt).toLocaleString() %></span></div>
+        <div class="info-item"><span class="info-key">Amount vs eligibility</span>
+          <span class="info-val <%= loan.amount <= balance*3 ? 'text-success' : 'text-danger' %>">
+            <%= loan.amount <= balance*3 ? '✓ Within limit' : '✗ Exceeds limit' %>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Approval Pipeline -->
+<div class="card mb-6">
+  <div class="card-header"><h3>Approval Progress</h3></div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+      <%
+        const stages = [
+          { label:'Stage 1: Credit Officer', status: loan.creditOfficerStatus, name: coUser, note: loan.creditOfficerNote, date: loan.creditOfficerAt },
+          { label:'Stage 2: Treasurer',      status: loan.treasurerStatus,     name: trUser, note: loan.treasurerNote,      date: loan.treasurerAt },
+          { label:'Stage 3: Chairperson',    status: loan.chairpersonStatus,   name: chUser, note: loan.chairpersonNote,    date: loan.chairpersonAt },
+        ];
+      %>
+      <% stages.forEach(s => { %>
+      <div style="padding:14px;border-radius:10px;border:2px solid <%= s.status==='approved'?'var(--success)':s.status==='rejected'?'var(--danger)':'var(--border)' %>;background:<%= s.status==='approved'?'var(--success-bg)':s.status==='rejected'?'var(--danger-bg)':'var(--bg)' %>;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;"><%= s.label %></div>
+        <div style="font-size:22px;margin-bottom:6px;"><%= s.status==='approved'?'✅':s.status==='rejected'?'❌':'⏳' %></div>
+        <div style="font-size:13px;font-weight:600;color:<%= s.status==='approved'?'var(--success)':s.status==='rejected'?'var(--danger)':'var(--text-muted)' %>;">
+          <%= s.status.charAt(0).toUpperCase()+s.status.slice(1) %>
+        </div>
+        <% if (s.name) { %><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">By: <%= s.name %></div><% } %>
+        <% if (s.note) { %><div style="font-size:12px;color:var(--text-muted);margin-top:4px;font-style:italic;">"<%= s.note %>"</div><% } %>
+        <% if (s.date) { %><div style="font-size:11px;color:var(--text-sm);margin-top:4px;"><%= new Date(s.date).toLocaleDateString() %></div><% } %>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<!-- Review Form (only show if it's this approver's turn) -->
+<%
+  const myRole = user.role;
+  const canReview =
+    (myRole==='credit_officer' && loan.creditOfficerStatus==='pending') ||
+    (myRole==='treasurer' && loan.creditOfficerStatus==='approved' && loan.treasurerStatus==='pending') ||
+    (myRole==='chairperson' && loan.treasurerStatus==='approved' && loan.chairpersonStatus==='pending');
+%>
+<% if (canReview) { %>
+<div class="card">
+  <div class="card-header"><h3>Submit Your Review</h3></div>
+  <div class="card-body">
+    <form method="POST" action="/approver/loans/<%= loan.id %>/review">
+      <div class="form-group">
+        <label class="form-label">Review Note</label>
+        <textarea name="note" class="form-control" rows="3" placeholder="Add your assessment or reason..."></textarea>
+      </div>
+      <div class="flex gap-3">
+        <button type="submit" name="decision" value="approved" class="btn btn-success">✓ Approve — Pass to Next Stage</button>
+        <button type="submit" name="decision" value="rejected" class="btn btn-danger">✗ Reject Application</button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } else { %>
+<div class="card"><div class="card-body text-muted text-sm">
+  <% if (loan.status==='rejected') { %>This application was rejected.<% } else if (loan.status==='approved' || loan.status==='active') { %>This loan has been fully approved.<% } else { %>This loan is not in your review stage yet.<% } %>
+</div></div>
+<% } %>
+
+<%- include('../partials/foot') %>
