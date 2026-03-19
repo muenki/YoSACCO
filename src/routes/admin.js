@@ -24,7 +24,8 @@ router.get('/dashboard', async (req, res) => {
     const loanPortfolio= loanRows.reduce((s,l) => s + (l.totalRepayable - l.amountRepaid), 0);
     const pendingLoans = await Loan.findAll({ where: { groupId: gid, status: 'pending' }, include: [{ model: User, as: 'member' }], order: [['appliedAt','DESC']] });
     const recentSavings= await Saving.findAll({ where: { groupId: gid }, include: [{ model: User, as: 'member' }], order: [['date','DESC']], limit: 5 });
-    res.render('admin/dashboard', { user: req.user, group, stats: { memberCount, totalSavings, activeLoans, loanPortfolio, pendingLoans: pendingLoans.length }, pendingLoans, recentSavings });
+    const members      = await User.findAll({ where: { groupId: gid, role: 'member' } });
+    res.render('admin/dashboard', { user: req.user, group, stats: { memberCount, totalSavings, activeLoans, loanPortfolio, pendingLoans: pendingLoans.length }, pendingLoans, recentSavings, members });
   } catch (err) { console.error(err); res.render('error', { message: 'Dashboard error', user: req.user }); }
 });
 
