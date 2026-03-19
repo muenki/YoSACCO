@@ -26,27 +26,27 @@
           <div class="payment-methods">
             <label class="payment-option selected" id="opt-mtn" onclick="selectMethod('mtn',this)">
               <input type="radio" name="paymentMethod" value="MTN MoMo" style="display:none" checked>
-              <span class="pm-logo">🟡</span>
+              <img src="/assets/mtn.png" style="height:36px;width:auto;object-fit:contain;margin-bottom:4px;display:block;">
               <div class="pm-label">Mobile Money</div>
               <div class="pm-name" style="font-weight:600;font-size:13px;">MTN MoMo</div>
               <% if(settings && settings.mtnMomoNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.mtnMomoNumber %></div><% } %>
             </label>
             <label class="payment-option" id="opt-airtel" onclick="selectMethod('airtel',this)">
               <input type="radio" name="paymentMethod" value="Airtel Money" style="display:none">
-              <span class="pm-logo">🔴</span>
+              <img src="/assets/airtel.png" style="height:36px;width:auto;object-fit:contain;margin-bottom:4px;display:block;">
               <div class="pm-label">Mobile Money</div>
               <div class="pm-name" style="font-weight:600;font-size:13px;">Airtel Money</div>
               <% if(settings && settings.airtelMoneyNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.airtelMoneyNumber %></div><% } %>
             </label>
             <label class="payment-option" id="opt-card" onclick="selectMethod('card',this)">
               <input type="radio" name="paymentMethod" value="Visa/Mastercard" style="display:none">
-              <span class="pm-logo">💳</span>
+              <img src="/assets/visa.png" style="height:36px;width:auto;object-fit:contain;margin-bottom:4px;display:block;">
               <div class="pm-label">Card Payment</div>
               <div class="pm-name" style="font-weight:600;font-size:13px;">Visa / Mastercard</div>
             </label>
             <label class="payment-option" id="opt-bank" onclick="selectMethod('bank',this)">
               <input type="radio" name="paymentMethod" value="Bank Transfer" style="display:none">
-              <span class="pm-logo">🏦</span>
+              <div style="height:36px;width:auto;display:flex;align-items:center;justify-content:center;margin-bottom:4px;"><span style="font-size:26px;">🏦</span></div>
               <div class="pm-label">Bank Transfer</div>
               <div class="pm-name" style="font-weight:600;font-size:13px;"><%= settings && settings.bankName ? settings.bankName.split(' ')[0] : 'Bank' %></div>
               <% if(settings && settings.accountNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.accountNumber %></div><% } %>
@@ -114,10 +114,10 @@
       <div class="card-body">
         <p class="text-sm font-semibold mb-2">Transaction Fees</p>
         <div style="font-size:13px;display:grid;gap:6px;color:var(--text-muted);">
-          <div>🟡 MTN MoMo: ~1.5%</div>
-          <div>🔴 Airtel Money: ~1.5%</div>
-          <div>💳 Visa/Mastercard: ~2.5%</div>
-          <div>🏦 Bank Transfer: No platform fee</div>
+          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/mtn.png" style="height:20px;"> MTN MoMo: ~1.5%</div>
+          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/airtel.png" style="height:20px;"> Airtel Money: ~1.5%</div>
+          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/visa.png" style="height:20px;"> Visa/Mastercard: ~2.5%</div>
+          <div style="display:flex;align-items:center;gap:8px;"><span>🏦</span> Bank Transfer: No platform fee</div>
         </div>
       </div>
     </div>
