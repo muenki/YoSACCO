@@ -1,7 +1,3 @@
-// ── YoSACCO Database Seeder ───────────────────────────────────────
-// Run once: node src/seeders/seed.js
-// Re-run:   node src/seeders/seed.js --force  (drops & recreates all tables)
-
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { sequelize, Group, User, Saving, Loan, Repayment, AuditLog } = require('../models');
@@ -27,10 +23,9 @@ async function seed() {
       }
     }
 
-    // ── SACCO Groups ──────────────────────────────────────────────
+    // ── Groups ────────────────────────────────────────────────────
     console.log('\n🏦 Creating SACCO groups...');
     const grp1 = await Group.create({
-      id: '11111111-1111-1111-1111-111111111111',
       name: 'Kampala Teachers SACCO',
       slug: 'kampala-teachers',
       accentColor: '#0D7377',
@@ -38,7 +33,6 @@ async function seed() {
       active: true,
     });
     const grp2 = await Group.create({
-      id: '22222222-2222-2222-2222-222222222222',
       name: 'Lira Farmers Cooperative',
       slug: 'lira-farmers',
       accentColor: '#1A7F4B',
@@ -49,8 +43,7 @@ async function seed() {
 
     // ── Users ─────────────────────────────────────────────────────
     console.log('\n👤 Creating users...');
-    await User.create({
-      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    const superAdmin = await User.create({
       name: 'YoSACCO Admin',
       email: 'superadmin@yosacco.coop',
       password: hash('Admin@2025'),
@@ -59,8 +52,7 @@ async function seed() {
       active: true,
     });
 
-    await User.create({
-      id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+    const admin1 = await User.create({
       name: 'Grace Nakato',
       email: 'admin@kteachers.coop',
       password: hash('Admin@2025'),
@@ -70,7 +62,6 @@ async function seed() {
     });
 
     await User.create({
-      id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
       name: 'Moses Okello',
       email: 'admin@lirafarmers.coop',
       password: hash('Admin@2025'),
@@ -80,7 +71,6 @@ async function seed() {
     });
 
     const mem1 = await User.create({
-      id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
       name: 'James Kato',
       email: 'james.kato@gmail.com',
       password: hash('Member@2025'),
@@ -97,7 +87,6 @@ async function seed() {
     });
 
     const mem2 = await User.create({
-      id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
       name: 'Prossy Nabukenya',
       email: 'prossy.n@gmail.com',
       password: hash('Member@2025'),
@@ -114,7 +103,6 @@ async function seed() {
     });
 
     const mem3 = await User.create({
-      id: 'ffffffff-ffff-ffff-ffff-ffffffffffff',
       name: 'Robert Opio',
       email: 'robert.opio@gmail.com',
       password: hash('Member@2025'),
@@ -131,7 +119,6 @@ async function seed() {
     });
 
     const mem4 = await User.create({
-      id: '44444444-4444-4444-4444-444444444444',
       name: 'Aisha Mugisha',
       email: 'aisha.m@gmail.com',
       password: hash('Member@2025'),
@@ -150,24 +137,22 @@ async function seed() {
 
     // ── Savings ───────────────────────────────────────────────────
     console.log('\n💰 Creating savings transactions...');
-    const savingsData = [
-      { memberId: mem1.id, groupId: grp1.id, amount: 50000,  type: 'contribution', description: 'Monthly contribution — March 2025',    date: new Date('2025-03-15'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { memberId: mem1.id, groupId: grp1.id, amount: 50000,  type: 'contribution', description: 'Monthly contribution — February 2025', date: new Date('2025-02-15'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { memberId: mem1.id, groupId: grp1.id, amount: 176000, type: 'interest',      description: 'Annual interest credit (8%)',           date: new Date('2025-02-01'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { memberId: mem1.id, groupId: grp1.id, amount: 50000,  type: 'contribution', description: 'Monthly contribution — January 2025',   date: new Date('2025-01-15'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { memberId: mem2.id, groupId: grp1.id, amount: 30000,  type: 'contribution', description: 'Monthly contribution — March 2025',    date: new Date('2025-03-15'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { memberId: mem2.id, groupId: grp1.id, amount: 30000,  type: 'contribution', description: 'Monthly contribution — February 2025', date: new Date('2025-02-15'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { memberId: mem3.id, groupId: grp1.id, amount: 20000,  type: 'contribution', description: 'Monthly contribution — January 2025',   date: new Date('2025-01-15'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { memberId: mem4.id, groupId: grp1.id, amount: 100000, type: 'contribution', description: 'Monthly contribution — March 2025',    date: new Date('2025-03-15'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { memberId: mem4.id, groupId: grp1.id, amount: 100000, type: 'contribution', description: 'Monthly contribution — February 2025', date: new Date('2025-02-15'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-    ];
-    await Saving.bulkCreate(savingsData);
-    console.log(`✅ Created ${savingsData.length} savings transactions`);
+    await Saving.bulkCreate([
+      { memberId: mem1.id, groupId: grp1.id, amount: 50000,  type: 'contribution', description: 'Monthly contribution — March 2025',    date: new Date('2025-03-15'), postedBy: admin1.id },
+      { memberId: mem1.id, groupId: grp1.id, amount: 50000,  type: 'contribution', description: 'Monthly contribution — February 2025', date: new Date('2025-02-15'), postedBy: admin1.id },
+      { memberId: mem1.id, groupId: grp1.id, amount: 176000, type: 'interest',      description: 'Annual interest credit (8%)',           date: new Date('2025-02-01'), postedBy: admin1.id },
+      { memberId: mem1.id, groupId: grp1.id, amount: 50000,  type: 'contribution', description: 'Monthly contribution — January 2025',   date: new Date('2025-01-15'), postedBy: admin1.id },
+      { memberId: mem2.id, groupId: grp1.id, amount: 30000,  type: 'contribution', description: 'Monthly contribution — March 2025',    date: new Date('2025-03-15'), postedBy: admin1.id },
+      { memberId: mem2.id, groupId: grp1.id, amount: 30000,  type: 'contribution', description: 'Monthly contribution — February 2025', date: new Date('2025-02-15'), postedBy: admin1.id },
+      { memberId: mem3.id, groupId: grp1.id, amount: 20000,  type: 'contribution', description: 'Monthly contribution — January 2025',   date: new Date('2025-01-15'), postedBy: admin1.id },
+      { memberId: mem4.id, groupId: grp1.id, amount: 100000, type: 'contribution', description: 'Monthly contribution — March 2025',    date: new Date('2025-03-15'), postedBy: admin1.id },
+      { memberId: mem4.id, groupId: grp1.id, amount: 100000, type: 'contribution', description: 'Monthly contribution — February 2025', date: new Date('2025-02-15'), postedBy: admin1.id },
+    ]);
+    console.log('✅ Created 9 savings transactions');
 
     // ── Loans ─────────────────────────────────────────────────────
     console.log('\n📋 Creating loans...');
     const loan1 = await Loan.create({
-      id: 'loan1111-1111-1111-1111-111111111111',
       memberId: mem1.id,
       groupId: grp1.id,
       amount: 3000000,
@@ -179,13 +164,12 @@ async function seed() {
       status: 'active',
       appliedAt: new Date('2025-01-20'),
       approvedAt: new Date('2025-01-22'),
-      approvedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      approvedBy: admin1.id,
       disbursedAt: new Date('2025-01-23'),
       notes: 'Approved — member in good standing',
     });
 
     await Loan.create({
-      id: 'loan2222-2222-2222-2222-222222222222',
       memberId: mem3.id,
       groupId: grp1.id,
       amount: 1000000,
@@ -196,7 +180,6 @@ async function seed() {
     });
 
     await Loan.create({
-      id: 'loan3333-3333-3333-3333-333333333333',
       memberId: mem4.id,
       groupId: grp1.id,
       amount: 5000000,
@@ -210,18 +193,18 @@ async function seed() {
     // ── Repayments ────────────────────────────────────────────────
     console.log('\n💳 Creating repayments...');
     await Repayment.bulkCreate([
-      { loanId: loan1.id, memberId: mem1.id, groupId: grp1.id, amount: 540000, date: new Date('2025-02-23'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
-      { loanId: loan1.id, memberId: mem1.id, groupId: grp1.id, amount: 540000, date: new Date('2025-03-23'), postedBy: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' },
+      { loanId: loan1.id, memberId: mem1.id, groupId: grp1.id, amount: 540000, date: new Date('2025-02-23'), postedBy: admin1.id },
+      { loanId: loan1.id, memberId: mem1.id, groupId: grp1.id, amount: 540000, date: new Date('2025-03-23'), postedBy: admin1.id },
     ]);
     console.log('✅ Created 2 repayments');
 
     // ── Audit Log ─────────────────────────────────────────────────
     console.log('\n🔍 Creating audit entries...');
     await AuditLog.bulkCreate([
-      { userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', action: 'CREATE_GROUP', detail: 'Created SACCO group: Kampala Teachers SACCO',  groupId: grp1.id, timestamp: new Date('2025-01-10') },
-      { userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', action: 'CREATE_GROUP', detail: 'Created SACCO group: Lira Farmers Cooperative', groupId: grp2.id, timestamp: new Date('2025-02-01') },
-      { userId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', action: 'ADD_MEMBER',   detail: 'Added member: James Kato (KTS-0042)',           groupId: grp1.id, timestamp: new Date('2025-01-15') },
-      { userId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', action: 'APPROVE_LOAN', detail: 'Approved loan for James Kato — UGX 3,000,000',  groupId: grp1.id, timestamp: new Date('2025-01-22') },
+      { userId: superAdmin.id, action: 'CREATE_GROUP', detail: 'Created SACCO group: Kampala Teachers SACCO',  groupId: grp1.id, timestamp: new Date('2025-01-10') },
+      { userId: superAdmin.id, action: 'CREATE_GROUP', detail: 'Created SACCO group: Lira Farmers Cooperative', groupId: grp2.id, timestamp: new Date('2025-02-01') },
+      { userId: admin1.id,     action: 'ADD_MEMBER',   detail: 'Added member: James Kato (KTS-0042)',           groupId: grp1.id, timestamp: new Date('2025-01-15') },
+      { userId: admin1.id,     action: 'APPROVE_LOAN', detail: 'Approved loan for James Kato — UGX 3,000,000',  groupId: grp1.id, timestamp: new Date('2025-01-22') },
     ]);
     console.log('✅ Created 4 audit entries');
 
@@ -229,7 +212,7 @@ async function seed() {
 ╔══════════════════════════════════════════════════════════╗
 ║              ✅  SEED COMPLETE                           ║
 ╠══════════════════════════════════════════════════════════╣
-║  Database: ${process.env.DB_NAME.padEnd(44)} ║
+║  Database : ${process.env.DB_NAME.padEnd(44)} ║
 ║                                                          ║
 ║  LOGIN CREDENTIALS:                                      ║
 ║  Super Admin : superadmin@yosacco.coop / Admin@2025      ║
