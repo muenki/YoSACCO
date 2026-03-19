@@ -187,7 +187,7 @@
           <tr>
             <td><div class="font-semibold text-sm"><%= m.name %></div><div class="text-xs text-muted"><%= m.memberId %></div></td>
             <td class="text-sm">UGX <%= (m.shareCapitalPaid||0).toLocaleString() %></td>
-            <td class="text-sm">UGX <%= (memberSavings.find(function(ms){return ms.id===m.id;})||{totalBalance:0}).totalBalance.toLocaleString() %></td>
+            <td class="text-sm">UGX <%= (m.totalBalance||0).toLocaleString() %></td>
             <td class="text-sm">UGX <%= (m.weight||0).toLocaleString() %></td>
             <td class="text-sm"><%= totalWeight>0?((m.weight/totalWeight)*100).toFixed(1):'0' %>%</td>
             <td class="font-semibold text-teal">UGX <%= m.interestShare.toLocaleString() %></td>
