@@ -20,6 +20,8 @@ app.use('/super',  require('./src/routes/super'));
 app.use('/admin',  require('./src/routes/admin'));
 app.use('/member',   require('./src/routes/member'));
 app.use('/approver', require('./src/routes/approver'));
+app.use('/admin', require('./src/routes/projects'));
+app.use('/admin/reports',  require('./src/routes/reports'));
 
 app.use((req, res) => res.status(404).render('error', { message: 'Page not found (404)', user: null }));
 

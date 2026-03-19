@@ -1,42 +1,42 @@
 <%- include('../partials/head', { title: 'Members', activePage: 'admin-members', group }) %>
 
+<style>@media print { .sidebar,.topbar,.no-print,.page-footer{display:none!important;} .main{margin-left:0!important;} }</style>
+
 <% const q = locals.query || {}; %>
-<% if (q.success === 'member_added') { %><div class="alert alert-success">Member added successfully. Welcome email sent.</div><% } %>
-<% if (q.error === 'email_exists') { %><div class="alert alert-danger">A user with that email already exists.</div><% } %>
+<% if (q.success === 'member_added')   { %><div class="alert alert-success no-print">Member added. Welcome email sent.</div><% } %>
+<% if (q.success === 'member_updated') { %><div class="alert alert-success no-print">Member updated successfully.</div><% } %>
+<% if (q.error === 'email_exists')     { %><div class="alert alert-danger no-print">A user with that email already exists.</div><% } %>
 
 <div class="grid-2 gap-4 mb-6">
   <!-- Add Member Form -->
-  <div class="card">
+  <div class="card no-print">
     <div class="card-header"><h3>Add New Member</h3></div>
     <div class="card-body">
       <form method="POST" action="/admin/members/add">
-        <div class="form-group">
-          <label class="form-label">Full Name *</label>
-          <input type="text" name="name" class="form-control" placeholder="First and last name" required>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Full Name *</label><input type="text" name="name" class="form-control" required></div>
+          <div class="form-group"><label class="form-label">Email Address *</label><input type="email" name="email" class="form-control" required></div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Email Address *</label>
-          <input type="email" name="email" class="form-control" placeholder="member@email.com" required>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Phone</label><input type="text" name="phone" class="form-control" placeholder="+256 7XX XXX XXX"></div>
+          <div class="form-group"><label class="form-label">National ID</label><input type="text" name="nationalId" class="form-control"></div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Phone Number</label>
-            <input type="text" name="phone" class="form-control" placeholder="+256 7XX XXX XXX">
+            <label class="form-label">Role / Responsibility *</label>
+            <select name="role" class="form-control" required>
+              <option value="member">Member</option>
+              <option value="credit_officer">Credit Officer</option>
+              <option value="treasurer">Treasurer</option>
+              <option value="chairperson">Chairperson</option>
+              <option value="admin">SACCO Admin</option>
+            </select>
           </div>
-          <div class="form-group">
-            <label class="form-label">National ID</label>
-            <input type="text" name="nationalId" class="form-control" placeholder="CM12345678">
-          </div>
+          <div class="form-group"><label class="form-label">Join Date</label><input type="date" name="joinDate" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>"></div>
         </div>
         <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Monthly Contribution (UGX)</label>
-            <input type="number" name="monthlyContribution" class="form-control" value="10000" min="1000">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Share Capital Target (UGX)</label>
-            <input type="number" name="shareCapitalTarget" class="form-control" value="1000000">
-          </div>
+          <div class="form-group"><label class="form-label">Monthly Contribution (UGX)</label><input type="number" name="monthlyContribution" class="form-control" value="10000" min="1000"></div>
+          <div class="form-group"><label class="form-label">Share Capital Target (UGX)</label><input type="number" name="shareCapitalTarget" class="form-control" value="1000000"></div>
         </div>
         <p class="text-xs text-muted mb-4">A temporary password will be generated and emailed to the member.</p>
         <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Add Member & Send Welcome Email</button>
@@ -46,78 +46,72 @@
 
   <!-- Stats -->
   <div>
-    <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
-      <div class="stat-card">
-        <div class="label">Total Members</div>
-        <div class="value"><%= members.length %></div>
-      </div>
-      <div class="stat-card">
-        <div class="label">Active</div>
-        <div class="value"><%= members.filter(m=>m.active).length %></div>
-      </div>
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
+      <div class="stat-card"><div class="label">Total Members</div><div class="value"><%= members.length %></div></div>
+      <div class="stat-card"><div class="label">Active</div><div class="value text-success"><%= members.filter(m=>m.active).length %></div></div>
     </div>
-    <div class="card" style="margin-top:0;">
-      <div class="card-body text-sm text-muted">
-        <p class="mb-2"><strong>Member ID format:</strong> Auto-generated based on group initials + sequential number.</p>
-        <p><strong>Welcome email</strong> sent automatically with login credentials when a member is added.</p>
+    <div class="card">
+      <div class="card-body">
+        <p class="text-sm font-semibold mb-2">Members by Role</p>
+        <% const roleCounts = {}; members.forEach(m => { roleCounts[m.role]=(roleCounts[m.role]||0)+1; }); %>
+        <% Object.entries(roleCounts).forEach(([r,c]) => { %>
+        <div class="flex-between text-sm mb-1"><span class="text-muted capitalize"><%= r.replace('_',' ') %></span><span class="badge badge-info"><%= c %></span></div>
+        <% }) %>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Members Table -->
-<div class="section-head">
+<div class="flex-between mb-3">
   <h2>All Members (<%= members.length %>)</h2>
+  <button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print Member List</button>
 </div>
+
 <div class="card p-0">
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th>Member</th>
-          <th>Member ID</th>
-          <th>Phone</th>
-          <th>Monthly Contrib.</th>
-          <th>Savings Balance</th>
-          <th>Active Loan</th>
-          <th>Status</th>
-          <th>Actions</th>
+          <th>Member</th><th>Member ID</th><th>Role</th><th>Phone</th>
+          <th>Monthly</th><th>Savings</th><th>Share Capital</th><th>Status</th>
+          <th class="no-print">Actions</th>
         </tr>
       </thead>
       <tbody>
-        <% if (members.length === 0) { %>
-        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px;">No members yet. Add the first member above.</td></tr>
+        <% if (!members.length) { %>
+        <tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:32px;">No members yet.</td></tr>
         <% } %>
         <% members.forEach(m => { %>
         <tr>
           <td>
             <div class="member-row">
               <div class="avatar"><%= m.name.split(' ').map(n=>n[0]).join('') %></div>
-              <div>
-                <div class="name"><%= m.name %></div>
-                <div class="id"><%= m.email %></div>
-              </div>
+              <div><div class="name"><%= m.name %></div><div class="id"><%= m.email %></div></div>
             </div>
           </td>
-          <td><code style="font-size:12px;background:#f0f4f8;padding:2px 6px;border-radius:4px;"><%= m.memberId %></code></td>
-          <td class="text-sm"><%= m.phone || '—' %></td>
-          <td>UGX <%= (m.monthlyContribution||0).toLocaleString() %></td>
-          <td class="font-semibold text-teal">UGX <%= (m.savings||0).toLocaleString() %></td>
+          <td><code style="font-size:12px;background:#f0f4f8;padding:2px 6px;border-radius:4px;"><%= m.memberId||'—' %></code></td>
           <td>
-            <% if (m.activeLoan) { %>
-              <span class="badge badge-info">UGX <%= (m.activeLoan.totalRepayable - m.activeLoan.amountRepaid).toLocaleString() %></span>
-            <% } else { %>
-              <span class="text-muted text-sm">None</span>
-            <% } %>
+            <span class="badge badge-<%= m.role==='admin'?'danger':m.role==='chairperson'?'warning':m.role==='treasurer'?'info':m.role==='credit_officer'?'gray':'success' %>" style="font-size:10px;">
+              <%= m.role.replace('_',' ') %>
+            </span>
+          </td>
+          <td class="text-sm"><%= m.phone||'—' %></td>
+          <td class="text-sm">UGX <%= (m.monthlyContribution||0).toLocaleString() %></td>
+          <td class="font-semibold text-teal text-sm">UGX <%= (m.savings||0).toLocaleString() %></td>
+          <td class="text-sm">
+            UGX <%= (m.shareCapitalPaid||0).toLocaleString() %>
+            <div class="progress" style="height:3px;margin-top:3px;"><div class="progress-bar" style="width:<%= Math.min(100,Math.round((m.shareCapitalPaid||0)/(m.shareCapitalTarget||1)*100)) %>%"></div></div>
           </td>
           <td>
-            <% if (m.active) { %><span class="badge badge-success">Active</span><% } else { %><span class="badge badge-danger">Inactive</span><% } %>
+            <% if(m.active){ %><span class="badge badge-success" style="font-size:10px;">Active</span><% } else { %><span class="badge badge-danger" style="font-size:10px;">Inactive</span><% } %>
           </td>
-          <td>
-            <div class="flex gap-2">
-              <a href="/admin/members/<%= m.id %>" class="btn btn-sm btn-outline">View</a>
+          <td class="no-print">
+            <div class="flex gap-1" style="flex-wrap:wrap;">
+              <a href="/admin/members/<%= m.id %>" class="btn btn-sm btn-outline" style="font-size:11px;">View</a>
+              <button onclick="openEdit('<%= m.id %>','<%= m.name %>','<%= m.email %>','<%= m.phone||'' %>','<%= m.nationalId||'' %>','<%= m.role %>','<%= m.monthlyContribution||10000 %>','<%= m.shareCapitalTarget||1000000 %>','<%= m.shareCapitalPaid||0 %>')" class="btn btn-sm btn-outline" style="font-size:11px;">Edit</button>
               <form method="POST" action="/admin/members/<%= m.id %>/toggle" style="display:inline;">
-                <button class="btn btn-sm <%= m.active ? 'btn-outline' : 'btn-success' %>"><%= m.active ? 'Deactivate' : 'Activate' %></button>
+                <button class="btn btn-sm <%= m.active?'btn-outline':'btn-success' %>" style="font-size:11px;"><%= m.active?'Deactivate':'Activate' %></button>
               </form>
             </div>
           </td>
@@ -128,4 +122,58 @@
   </div>
 </div>
 
+<!-- Edit Member Modal -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;align-items:center;justify-content:center;">
+  <div class="card" style="width:520px;max-height:92vh;overflow-y:auto;">
+    <div class="card-header"><h3>Edit Member</h3><button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:18px;">✕</button></div>
+    <div class="card-body">
+      <form id="editForm" method="POST">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Full Name</label><input type="text" name="name" id="e-name" class="form-control" required></div>
+          <div class="form-group"><label class="form-label">Email</label><input type="email" name="email" id="e-email" class="form-control" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Phone</label><input type="text" name="phone" id="e-phone" class="form-control"></div>
+          <div class="form-group"><label class="form-label">National ID</label><input type="text" name="nationalId" id="e-nid" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Role / Responsibility</label>
+            <select name="role" id="e-role" class="form-control">
+              <option value="member">Member</option>
+              <option value="credit_officer">Credit Officer</option>
+              <option value="treasurer">Treasurer</option>
+              <option value="chairperson">Chairperson</option>
+              <option value="admin">SACCO Admin</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Monthly Contribution (UGX)</label><input type="number" name="monthlyContribution" id="e-contrib" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Share Capital Target (UGX)</label><input type="number" name="shareCapitalTarget" id="e-sct" class="form-control"></div>
+          <div class="form-group"><label class="form-label">Share Capital Paid (UGX)</label><input type="number" name="shareCapitalPaid" id="e-scp" class="form-control"></div>
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+          <button type="button" onclick="document.getElementById('editModal').style.display='none'" class="btn btn-outline">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function openEdit(id,name,email,phone,nid,role,contrib,sct,scp) {
+  document.getElementById('editForm').action='/admin/members/'+id+'/edit';
+  document.getElementById('e-name').value=name;
+  document.getElementById('e-email').value=email;
+  document.getElementById('e-phone').value=phone;
+  document.getElementById('e-nid').value=nid;
+  document.getElementById('e-role').value=role;
+  document.getElementById('e-contrib').value=contrib;
+  document.getElementById('e-sct').value=sct;
+  document.getElementById('e-scp').value=scp;
+  document.getElementById('editModal').style.display='flex';
+}
+</script>
 <%- include('../partials/foot') %>

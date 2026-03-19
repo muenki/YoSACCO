@@ -124,12 +124,23 @@ router.post('/groups/:id/edit', async (req, res) => {
   try {
     const group = await Group.findByPk(req.params.id);
     if (!group) return res.redirect('/super/groups?error=not_found');
-    const { name, accentColor, accountNumber, bankName } = req.body;
+    const { name, accentColor, accountNumber, bankName, newAdminName, newAdminEmail, newAdminPassword } = req.body;
     group.name = name || group.name;
     group.accentColor = accentColor || group.accentColor;
     group.accountNumber = accountNumber || group.accountNumber;
     group.bankName = bankName || group.bankName;
     await group.save();
+    // Change admin if new credentials provided
+    if (newAdminEmail && newAdminEmail.trim()) {
+      const existing = await User.findOne({ where: { email: newAdminEmail.toLowerCase() } });
+      if (existing) {
+        existing.groupId = group.id; existing.role = 'admin';
+        if (newAdminPassword) existing.password = require('bcryptjs').hashSync(newAdminPassword, 10);
+        await existing.save();
+      } else if (newAdminName && newAdminPassword) {
+        await User.create({ name: newAdminName, email: newAdminEmail.toLowerCase(), password: require('bcryptjs').hashSync(newAdminPassword, 10), role: 'admin', groupId: group.id, active: true });
+      }
+    }
     await AuditLog.create({ userId: req.user.id, action: 'EDIT_GROUP', detail: `Edited group: ${group.name}` });
     res.redirect('/super/groups?success=group_updated');
   } catch(err) { console.error(err); res.redirect('/super/groups?error=edit_failed'); }

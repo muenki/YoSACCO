@@ -1,0 +1,147 @@
+<%- include('../partials/head', { title: 'Asset Management', activePage: 'admin-assets', group }) %>
+
+<style>@media print { .sidebar,.topbar,.no-print,.page-footer{display:none!important;} .main{margin-left:0!important;} }</style>
+
+<% if (locals.query.success === 'asset_added') { %><div class="alert alert-success no-print">Asset added successfully.</div><% } %>
+<% if (locals.query.success === 'asset_updated') { %><div class="alert alert-success no-print">Asset updated successfully.</div><% } %>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card accent"><div class="label">Total Assets</div><div class="value"><%= assets.filter(a=>a.status==='active').length %></div></div>
+  <div class="stat-card"><div class="label">Purchase Value</div><div class="value" style="font-size:18px;">UGX <%= (totalPurchase/1000000).toFixed(2) %>M</div></div>
+  <div class="stat-card"><div class="label">Current Value</div><div class="value" style="font-size:18px;">UGX <%= (totalCurrent/1000000).toFixed(2) %>M</div></div>
+  <div class="stat-card"><div class="label">Depreciation</div><div class="value" style="font-size:18px;color:var(--danger);">UGX <%= (totalPurchase-totalCurrent).toLocaleString() %></div></div>
+</div>
+
+<div class="grid-2 gap-4 mb-6">
+  <div class="card no-print">
+    <div class="card-header"><h3>Add New Asset</h3></div>
+    <div class="card-body">
+      <form method="POST" action="/admin/assets/add">
+        <div class="form-group"><label class="form-label">Asset Name *</label><input type="text" name="name" class="form-control" placeholder="e.g. Dell Laptop" required></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select name="category" class="form-control">
+              <option value="property">Property / Land</option>
+              <option value="vehicle">Vehicle</option>
+              <option value="equipment">Equipment</option>
+              <option value="furniture">Furniture</option>
+              <option value="investment">Investment</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Condition</label>
+            <select name="condition" class="form-control">
+              <option value="excellent">Excellent</option>
+              <option value="good" selected>Good</option>
+              <option value="fair">Fair</option>
+              <option value="poor">Poor</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Purchase Value (UGX)</label><input type="number" name="purchaseValue" class="form-control" placeholder="e.g. 2500000" required></div>
+          <div class="form-group"><label class="form-label">Current Value (UGX)</label><input type="number" name="currentValue" class="form-control" placeholder="Leave blank to use purchase value"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Purchase Date</label><input type="date" name="purchaseDate" class="form-control"></div>
+          <div class="form-group"><label class="form-label">Location</label><input type="text" name="location" class="form-control" placeholder="e.g. SACCO Office"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="2" placeholder="Brief description..."></textarea></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Add Asset</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3>Asset Summary by Category</h3></div>
+    <div class="card-body">
+      <%
+        const catMap = {};
+        assets.filter(a=>a.status==='active').forEach(a=>{ catMap[a.category]=(catMap[a.category]||0)+a.currentValue; });
+      %>
+      <% Object.entries(catMap).sort((x,y)=>y[1]-x[1]).forEach(([cat,val])=>{ %>
+      <div class="flex-between mb-2">
+        <span class="text-sm capitalize"><%= cat.replace('_',' ') %></span>
+        <span class="text-sm font-semibold">UGX <%= val.toLocaleString() %></span>
+      </div>
+      <% }) %>
+      <% if (!Object.keys(catMap).length) { %><p class="text-muted text-sm">No assets recorded.</p><% } %>
+    </div>
+  </div>
+</div>
+
+<div class="flex-between mb-3 no-print">
+  <h2>All Assets (<%= assets.length %>)</h2>
+  <button onclick="window.print()" class="btn btn-sm btn-outline">🖨 Print Asset Register</button>
+</div>
+
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Asset</th><th>Category</th><th>Purchase Value</th><th>Current Value</th><th>Purchase Date</th><th>Condition</th><th>Status</th><th class="no-print">Actions</th></tr></thead>
+      <tbody>
+        <% assets.forEach(a => { %>
+        <tr>
+          <td><div class="font-semibold text-sm"><%= a.name %></div><% if(a.location){ %><div class="text-xs text-muted"><%= a.location %></div><% } %></td>
+          <td><span class="badge badge-gray text-xs"><%= a.category.replace('_',' ') %></span></td>
+          <td class="text-sm">UGX <%= a.purchaseValue.toLocaleString() %></td>
+          <td class="text-sm font-semibold">UGX <%= a.currentValue.toLocaleString() %></td>
+          <td class="text-sm text-muted"><%= a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : '—' %></td>
+          <td><span class="badge badge-<%= a.condition==='excellent'||a.condition==='good'?'success':a.condition==='fair'?'warning':'danger' %>" style="font-size:10px;"><%= a.condition %></span></td>
+          <td><span class="badge badge-<%= a.status==='active'?'success':'warning' %>" style="font-size:10px;"><%= a.status %></span></td>
+          <td class="no-print">
+            <button onclick="openEditAsset('<%= a.id %>','<%= a.name %>','<%= a.category %>','<%= a.currentValue %>','<%= a.condition %>','<%= a.status %>','<%= a.location||'' %>','<%= (a.description||'').replace(/'/g,\"&apos;\") %>')" class="btn btn-sm btn-outline">Edit</button>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!assets.length) { %><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-muted);">No assets recorded yet.</td></tr><% } %>
+        <tr style="background:var(--bg);font-weight:700;">
+          <td colspan="2" style="padding:10px 16px;text-align:right;">TOTALS</td>
+          <td style="padding:10px 16px;">UGX <%= totalPurchase.toLocaleString() %></td>
+          <td style="padding:10px 16px;">UGX <%= totalCurrent.toLocaleString() %></td>
+          <td colspan="4"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;align-items:center;justify-content:center;">
+  <div class="card" style="width:480px;max-height:90vh;overflow-y:auto;">
+    <div class="card-header"><h3>Edit Asset</h3><button onclick="document.getElementById('editModal').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:18px;">✕</button></div>
+    <div class="card-body">
+      <form id="editForm" method="POST">
+        <div class="form-group"><label class="form-label">Asset Name</label><input type="text" name="name" id="edit-name" class="form-control" required></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Category</label><select name="category" id="edit-category" class="form-control"><option value="property">Property</option><option value="vehicle">Vehicle</option><option value="equipment">Equipment</option><option value="furniture">Furniture</option><option value="investment">Investment</option><option value="other">Other</option></select></div>
+          <div class="form-group"><label class="form-label">Current Value (UGX)</label><input type="number" name="currentValue" id="edit-value" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Condition</label><select name="condition" id="edit-condition" class="form-control"><option value="excellent">Excellent</option><option value="good">Good</option><option value="fair">Fair</option><option value="poor">Poor</option></select></div>
+          <div class="form-group"><label class="form-label">Status</label><select name="status" id="edit-status" class="form-control"><option value="active">Active</option><option value="disposed">Disposed</option><option value="under_maintenance">Under Maintenance</option></select></div>
+        </div>
+        <div class="form-group"><label class="form-label">Location</label><input type="text" name="location" id="edit-location" class="form-control"></div>
+        <div class="form-group"><label class="form-label">Description</label><textarea name="description" id="edit-desc" class="form-control" rows="2"></textarea></div>
+        <div class="flex gap-2"><button type="submit" class="btn btn-primary">Save Changes</button><button type="button" onclick="document.getElementById('editModal').style.display='none'" class="btn btn-outline">Cancel</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function openEditAsset(id,name,cat,val,cond,status,loc,desc) {
+  document.getElementById('editForm').action='/admin/assets/'+id+'/edit';
+  document.getElementById('edit-name').value=name;
+  document.getElementById('edit-category').value=cat;
+  document.getElementById('edit-value').value=val;
+  document.getElementById('edit-condition').value=cond;
+  document.getElementById('edit-status').value=status;
+  document.getElementById('edit-location').value=loc;
+  document.getElementById('edit-desc').value=desc;
+  document.getElementById('editModal').style.display='flex';
+}
+</script>
+<%- include('../partials/foot') %>

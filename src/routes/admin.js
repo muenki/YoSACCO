@@ -139,6 +139,18 @@ router.post('/members/:id/toggle', async (req, res) => {
   } catch (err) { console.error(err); res.redirect('/admin/members'); }
 });
 
+router.post('/members/:id/edit', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const m   = await User.findOne({ where: { id: req.params.id, groupId: gid } });
+    if (!m) return res.redirect('/admin/members?error=not_found');
+    const { name, email, phone, nationalId, role, monthlyContribution, shareCapitalTarget, shareCapitalPaid } = req.body;
+    await m.update({ name, email: email.toLowerCase(), phone, nationalId, role: role||m.role, monthlyContribution: parseInt(monthlyContribution)||m.monthlyContribution, shareCapitalTarget: parseInt(shareCapitalTarget)||m.shareCapitalTarget, shareCapitalPaid: parseInt(shareCapitalPaid)||m.shareCapitalPaid });
+    await AuditLog.create({ userId: req.user.id, action: 'EDIT_MEMBER', detail: `Updated member: ${name}`, groupId: gid });
+    res.redirect('/admin/members?success=member_updated');
+  } catch (err) { console.error(err); res.redirect('/admin/members?error=edit_failed'); }
+});
+
 // ── Savings ───────────────────────────────────────────────────────
 router.get('/savings', async (req, res) => {
   try {

@@ -26,7 +26,7 @@
 </div>
 <% } %>
 
-<div class="section-head"><h2>Invoice History</h2></div>
+<div class="section-head"><h2>Invoice History</h2><button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print Invoices</button></div>
 
 <% invoices.forEach(inv => { %>
 <div class="invoice-card <%= inv.status %>">

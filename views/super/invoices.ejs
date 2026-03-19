@@ -1,3 +1,4 @@
+<style class="print-style">@media print{.sidebar,.topbar,.no-print,.page-footer{display:none!important;}.main{margin-left:0!important;}}</style>
 <%- include('../partials/head', { title: 'Invoices & Revenue', activePage: 'super-invoices' }) %>
 
 <% if (locals.query.success === 'created') { %><div class="alert alert-success">Invoice created and email sent to SACCO admin.</div><% } %>
@@ -97,7 +98,7 @@
 </div>
 
 <!-- All Invoices -->
-<div class="section-head"><h2>All Invoices</h2></div>
+<div class="section-head"><h2>All Invoices</h2><button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print All</button></div>
 <div class="card p-0">
   <div class="table-wrap">
     <table>

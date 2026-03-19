@@ -22,7 +22,19 @@
         <label class="form-label">Bank Name</label>
         <input type="text" name="bankName" class="form-control" value="<%= group.bankName || '' %>" placeholder="e.g. Stanbic Bank Uganda">
       </div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
+      <p class="text-sm font-semibold mb-3">Change Administrator (optional)</p>
       <% if (admin) { %>
+      <div class="card" style="background:var(--bg);margin-bottom:12px;">
+        <div class="card-body"><p class="text-sm"><strong>Current:</strong> <%= admin.name %> · <%= admin.email %></p></div>
+      </div>
+      <% } %>
+      <div class="form-group"><label class="form-label">New Admin Name</label><input type="text" name="newAdminName" class="form-control" placeholder="Full name of new admin"></div>
+      <div class="form-group"><label class="form-label">New Admin Email</label><input type="email" name="newAdminEmail" class="form-control" placeholder="admin@newsacco.coop"></div>
+      <div class="form-group"><label class="form-label">New Admin Password</label><input type="password" name="newAdminPassword" class="form-control" placeholder="Set a strong password"></div>
+      <p class="text-xs text-muted mb-4">Leave blank to keep the current administrator. If the email already exists in the system, that user will be assigned as admin.</p>
+      <% if (false && admin) { %>
+
       <div class="card" style="background:var(--bg);margin-bottom:16px;">
         <div class="card-body">
           <p class="text-sm font-semibold mb-1">Current Administrator</p>

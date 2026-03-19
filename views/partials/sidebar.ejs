@@ -47,9 +47,12 @@ const accentCol = locals.group ? group.accentColor : '#0D7377';
       <div class="nav-section">Settings</div>
       <a href="/admin/loan-terms" class="nav-link <%= isActive('admin-loan-terms') %>"><span class="icon">⚙️</span> Loan Terms</a>
       <a href="/admin/invoices"   class="nav-link <%= isActive('admin-invoices') %>"><span class="icon">🧾</span> Invoices</a>
+      <div class="nav-section">Projects & Assets</div>
+      <a href="/admin/projects"  class="nav-link <%= isActive('admin-projects') %>"><span class="icon">🏗️</span> Projects</a>
+      <a href="/admin/assets"    class="nav-link <%= isActive('admin-assets') %>"><span class="icon">🏛️</span> Asset Register</a>
       <div class="nav-section">Analytics</div>
-      <a href="/admin/reports"    class="nav-link <%= isActive('admin-reports') %>"><span class="icon">📈</span> Reports</a>
-      <a href="/admin/audit"      class="nav-link <%= isActive('admin-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
+      <a href="/admin/reports"   class="nav-link <%= isActive('admin-reports') %>"><span class="icon">📈</span> Reports</a>
+      <a href="/admin/audit"     class="nav-link <%= isActive('admin-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
 
     <% } else { %>
       <div class="nav-section">My Account</div>

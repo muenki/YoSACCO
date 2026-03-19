@@ -1,0 +1,111 @@
+<%- include('../partials/head', { title: 'Projects', activePage: 'admin-projects', group }) %>
+
+<style>@media print { .sidebar,.topbar,.no-print,.page-footer{display:none!important;} .main{margin-left:0!important;} }</style>
+
+<% if (locals.query.success === 'project_added') { %><div class="alert alert-success no-print">Project added successfully.</div><% } %>
+<% if (locals.query.success === 'contribution_posted') { %><div class="alert alert-success no-print">Contribution posted successfully.</div><% } %>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card"><div class="label">Active Projects</div><div class="value"><%= projects.filter(p=>p.status==='active').length %></div></div>
+  <div class="stat-card"><div class="label">Total Raised</div><div class="value" style="font-size:18px;">UGX <%= projects.reduce((t,p)=>t+p.raisedAmount,0).toLocaleString() %></div></div>
+  <div class="stat-card"><div class="label">Target Amount</div><div class="value" style="font-size:18px;">UGX <%= (projects.reduce((t,p)=>t+p.targetAmount,0)/1000000).toFixed(1) %>M</div></div>
+  <div class="stat-card"><div class="label">Total Asset Value</div><div class="value" style="font-size:18px;">UGX <%= totalAssetValue.toLocaleString() %></div></div>
+</div>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Add Project -->
+  <div class="card no-print">
+    <div class="card-header"><h3>Add New Project</h3></div>
+    <div class="card-body">
+      <form method="POST" action="/admin/projects/add">
+        <div class="form-group"><label class="form-label">Project Name *</label><input type="text" name="name" class="form-control" placeholder="e.g. KTS Unit Trust Fund" required></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Project Type</label>
+            <select name="type" class="form-control">
+              <option value="unit_trust">Unit Trust</option>
+              <option value="property">Property / Real Estate</option>
+              <option value="equipment">Equipment / Machinery</option>
+              <option value="other">Other Investment</option>
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Annual Return Rate (%)</label><input type="number" name="returnRate" class="form-control" step="0.1" placeholder="e.g. 12"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Target Amount (UGX)</label><input type="number" name="targetAmount" class="form-control" placeholder="e.g. 50000000"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Start Date</label><input type="date" name="startDate" class="form-control"></div>
+          <div class="form-group"><label class="form-label">End Date (optional)</label><input type="date" name="endDate" class="form-control"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="3" placeholder="Describe the project..."></textarea></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Add Project</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Post Contribution -->
+  <div class="card no-print">
+    <div class="card-header"><h3>Post Member Contribution</h3></div>
+    <div class="card-body">
+      <form method="POST" id="contribForm" action="/admin/projects/__ID__/contribute">
+        <div class="form-group">
+          <label class="form-label">Select Project *</label>
+          <select name="projectId" class="form-control" onchange="document.getElementById('contribForm').action='/admin/projects/'+this.value+'/contribute'" required>
+            <option value="">— Choose project —</option>
+            <% projects.filter(p=>p.status==='active').forEach(p=>{ %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Select Member *</label>
+          <select name="memberId" class="form-control" required>
+            <option value="">— Choose member —</option>
+            <% (locals.members||[]).forEach(m=>{ %><option value="<%= m.id %>"><%= m.name %> (<%= m.memberId %>)</option><% }) %>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Amount (UGX) *</label><input type="number" name="amount" class="form-control" placeholder="e.g. 500000" required></div>
+        <div class="form-group"><label class="form-label">Notes</label><input type="text" name="notes" class="form-control" placeholder="Optional notes"></div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Post Contribution</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Projects List -->
+<div class="flex-between mb-3 no-print">
+  <h2>All Projects (<%= projects.length %>)</h2>
+  <button onclick="window.print()" class="btn btn-sm btn-outline">🖨 Print Projects</button>
+</div>
+
+<% projects.forEach(proj => { const pct = proj.targetAmount>0?Math.round(proj.raisedAmount/proj.targetAmount*100):0; %>
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="flex-between mb-3">
+      <div>
+        <div class="font-semibold" style="font-size:16px;"><%= proj.name %></div>
+        <div class="flex gap-2 mt-1">
+          <span class="badge badge-<%= proj.type==='unit_trust'?'info':proj.type==='property'?'success':'gray' %>"><%= proj.type.replace('_',' ') %></span>
+          <span class="badge badge-<%= proj.status==='active'?'success':'warning' %>"><%= proj.status %></span>
+          <% if(proj.returnRate>0){ %><span class="badge badge-info"><%= proj.returnRate %>% p.a. return</span><% } %>
+        </div>
+      </div>
+      <div style="text-align:right;" class="no-print">
+        <form method="POST" action="/admin/projects/<%= proj.id %>/toggle" style="display:inline;">
+          <button class="btn btn-sm btn-outline"><%= proj.status==='active'?'Suspend':'Activate' %></button>
+        </form>
+      </div>
+    </div>
+    <% if(proj.description){ %><p class="text-sm text-muted mb-3"><%= proj.description %></p><% } %>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
+      <div><div class="text-xs text-muted">Target</div><div class="font-semibold text-sm">UGX <%= proj.targetAmount.toLocaleString() %></div></div>
+      <div><div class="text-xs text-muted">Raised</div><div class="font-semibold text-sm text-teal">UGX <%= proj.raisedAmount.toLocaleString() %></div></div>
+      <div><div class="text-xs text-muted">Contributors</div><div class="font-semibold text-sm"><%= proj.contributorCount %> members</div></div>
+      <div><div class="text-xs text-muted">Progress</div><div class="font-semibold text-sm"><%= pct %>%</div></div>
+    </div>
+    <div class="progress"><div class="progress-bar" style="width:<%= pct %>%"></div></div>
+    <% if(proj.startDate){ %><div class="text-xs text-muted mt-2">Started: <%= new Date(proj.startDate).toLocaleDateString() %><% if(proj.endDate){ %> · Ends: <%= new Date(proj.endDate).toLocaleDateString() %><% } %></div><% } %>
+  </div>
+</div>
+<% }) %>
+
+<% if (!projects.length) { %><div class="card"><div class="card-body text-muted text-sm">No projects yet. Add one above.</div></div><% } %>
+
+<%- include('../partials/foot') %>
