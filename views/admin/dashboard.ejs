@@ -1,0 +1,105 @@
+<%- include('../partials/head', { title: 'Admin Dashboard', activePage: 'admin-dashboard', group }) %>
+
+<% const q = locals.query || {}; %>
+<% if (q.success) { %><div class="alert alert-success">Operation completed successfully.</div><% } %>
+
+<div class="stats-grid">
+  <div class="stat-card accent">
+    <div class="label">Total Members</div>
+    <div class="value"><%= stats.memberCount %></div>
+    <div class="sub" style="color:rgba(255,255,255,0.6);">Registered members</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Savings</div>
+    <div class="value">UGX <%= (stats.totalSavings/1000000).toFixed(2) %>M</div>
+    <div class="sub">Combined deposits</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Loan Portfolio</div>
+    <div class="value">UGX <%= (stats.loanPortfolio/1000000).toFixed(2) %>M</div>
+    <div class="sub"><%= stats.activeLoans %> active loans</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Pending Loan Requests</div>
+    <div class="value"><%= stats.pendingLoans %></div>
+    <div class="sub <%= stats.pendingLoans > 0 ? 'warn' : '' %>"><%= stats.pendingLoans > 0 ? 'Needs review' : 'All clear' %></div>
+  </div>
+</div>
+
+<div class="grid-2 gap-4">
+  <!-- Pending Loans -->
+  <div>
+    <div class="section-head">
+      <h2>Pending Loan Requests</h2>
+      <a href="/admin/loans" class="btn btn-sm btn-outline">View All</a>
+    </div>
+    <% if (pendingLoans.length === 0) { %>
+      <div class="card"><div class="card-body text-muted text-sm">No pending loan requests.</div></div>
+    <% } %>
+    <% pendingLoans.slice(0,3).forEach(loan => {
+      const mem = members.find(m => m.id === loan.memberId);
+    %>
+    <div class="loan-card pending">
+      <div class="flex-between mb-2">
+        <div class="member-row">
+          <div class="avatar"><%= mem ? mem.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
+          <div>
+            <div class="name"><%= mem ? mem.name : 'Unknown' %></div>
+            <div class="id"><%= mem ? mem.memberId : '' %></div>
+          </div>
+        </div>
+        <span class="badge badge-warning">Pending</span>
+      </div>
+      <div class="flex gap-3 text-sm mb-3">
+        <span class="font-semibold">UGX <%= loan.amount.toLocaleString() %></span>
+        <span class="text-muted">·</span>
+        <span><%= loan.purpose %></span>
+        <span class="text-muted">·</span>
+        <span><%= loan.repaymentMonths %> months</span>
+      </div>
+      <div class="flex gap-2">
+        <form method="POST" action="/admin/loans/<%= loan.id %>/approve">
+          <button class="btn btn-success btn-sm">Approve</button>
+        </form>
+        <form method="POST" action="/admin/loans/<%= loan.id %>/decline">
+          <button class="btn btn-danger btn-sm">Decline</button>
+        </form>
+        <a href="/admin/loans" class="btn btn-outline btn-sm">View Details</a>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+
+  <!-- Recent Savings -->
+  <div>
+    <div class="section-head">
+      <h2>Recent Savings Activity</h2>
+      <a href="/admin/savings" class="btn btn-sm btn-outline">Post Savings</a>
+    </div>
+    <div class="card p-0">
+      <table>
+        <thead><tr><th>Member</th><th>Type</th><th>Amount</th><th>Date</th></tr></thead>
+        <tbody>
+          <% if (recentSavings.length === 0) { %>
+          <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">No recent activity.</td></tr>
+          <% } %>
+          <% recentSavings.forEach(s => { %>
+          <tr>
+            <td>
+              <div class="member-row">
+                <div class="avatar" style="width:28px;height:28px;font-size:10px;"><%= s.member ? s.member.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
+                <span class="text-sm"><%= s.member ? s.member.name : 'Unknown' %></span>
+              </div>
+            </td>
+            <td><span class="badge badge-gray text-xs"><%= s.type %></span></td>
+            <td class="amount-positive">+UGX <%= s.amount.toLocaleString() %></td>
+            <td class="text-sm text-muted"><%= new Date(s.date).toLocaleDateString() %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

@@ -1,0 +1,85 @@
+<%- include('../partials/head', { title: 'Platform Dashboard', activePage: 'super-dashboard' }) %>
+
+<div class="stats-grid">
+  <div class="stat-card accent">
+    <div class="label">SACCO Groups</div>
+    <div class="value"><%= activeGroups %></div>
+    <div class="sub" style="color:rgba(255,255,255,0.6);">Active on platform</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Members</div>
+    <div class="value"><%= totalMembers.toLocaleString() %></div>
+    <div class="sub">Across all groups</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Platform Savings</div>
+    <div class="value">UGX <%= (totalSavings/1000000).toFixed(1) %>M</div>
+    <div class="sub">Combined deposits</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Active Loan Portfolio</div>
+    <div class="value">UGX <%= (totalLoans/1000000).toFixed(1) %>M</div>
+    <div class="sub">Outstanding balance</div>
+  </div>
+</div>
+
+<div class="section-head">
+  <h2>All SACCO Groups</h2>
+  <a href="/super/groups" class="btn btn-primary btn-sm">Manage Groups</a>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>SACCO Group</th>
+          <th>Administrator</th>
+          <th>Members</th>
+          <th>Total Savings</th>
+          <th>Active Loans</th>
+          <th>Pending Requests</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% groups.forEach(g => { %>
+        <tr>
+          <td>
+            <div class="font-semibold"><%= g.name %></div>
+            <div class="text-xs text-muted">Created <%= new Date(g.createdAt).toLocaleDateString() %></div>
+          </td>
+          <td>
+            <div class="member-row">
+              <div class="avatar" style="font-size:11px;"><%= g.admin ? g.admin.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
+              <div>
+                <div class="name"><%= g.admin ? g.admin.name : 'No admin' %></div>
+                <div class="id"><%= g.adminEmail %></div>
+              </div>
+            </div>
+          </td>
+          <td><strong><%= g.stats.memberCount %></strong></td>
+          <td class="text-teal font-semibold">UGX <%= g.stats.totalSavings.toLocaleString() %></td>
+          <td><%= g.stats.activeLoans %></td>
+          <td>
+            <% if(g.stats.pendingLoans > 0) { %>
+              <span class="badge badge-warning"><%= g.stats.pendingLoans %> pending</span>
+            <% } else { %>
+              <span class="text-muted text-sm">None</span>
+            <% } %>
+          </td>
+          <td>
+            <% if(g.active) { %>
+              <span class="badge badge-success">Active</span>
+            <% } else { %>
+              <span class="badge badge-danger">Suspended</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

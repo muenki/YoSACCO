@@ -1,0 +1,141 @@
+<%- include('../partials/head', { title: 'Make a Deposit', activePage: 'member-deposit', group }) %>
+
+<div class="grid-2 gap-4">
+  <div class="card">
+    <div class="card-header"><h3>Make a Payment or Deposit</h3></div>
+    <div class="card-body">
+      <form method="POST" action="/member/deposit" id="depositForm">
+        <div class="form-group">
+          <label class="form-label">Payment Type</label>
+          <select name="description" class="form-control" id="payType">
+            <option value="Monthly contribution">Monthly Contribution</option>
+            <option value="Share capital payment">Share Capital Payment</option>
+            <option value="Loan repayment">Loan Repayment</option>
+            <option value="Extra savings deposit">Extra Savings Deposit</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Amount (UGX) *</label>
+          <input type="number" name="amount" id="amountInput" class="form-control" placeholder="e.g. 50000" min="1000" required value="<%= user.monthlyContribution %>">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Payment Method *</label>
+          <div class="payment-methods">
+            <label class="payment-option selected" id="opt-mtn">
+              <input type="radio" name="paymentMethod" value="MTN MoMo" style="display:none" checked onchange="selectMethod(this)">
+              <div class="pm-label">Mobile Money</div>
+              <div class="pm-name">MTN MoMo</div>
+            </label>
+            <label class="payment-option" id="opt-airtel">
+              <input type="radio" name="paymentMethod" value="Airtel Money" style="display:none" onchange="selectMethod(this)">
+              <div class="pm-label">Mobile Money</div>
+              <div class="pm-name">Airtel Money</div>
+            </label>
+            <label class="payment-option" id="opt-card">
+              <input type="radio" name="paymentMethod" value="Visa/Mastercard" style="display:none" onchange="selectMethod(this)">
+              <div class="pm-label">Card Payment</div>
+              <div class="pm-name">Visa / Mastercard</div>
+            </label>
+            <label class="payment-option" id="opt-bank">
+              <input type="radio" name="paymentMethod" value="Bank Transfer" style="display:none" onchange="selectMethod(this)">
+              <div class="pm-label">Bank Transfer</div>
+              <div class="pm-name">EFT / Bank</div>
+            </label>
+          </div>
+        </div>
+
+        <div id="momoField" class="form-group">
+          <label class="form-label">Mobile Money Number</label>
+          <input type="text" class="form-control" placeholder="+256 7XX XXX XXX" value="<%= user.phone || '' %>">
+          <div class="form-hint">You will receive a payment prompt on this number</div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
+
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Amount</span><span class="info-val" id="sumAmt">UGX 0</span></div>
+          <div class="info-item"><span class="info-key">Transaction fee</span><span class="info-val" id="sumFee">UGX 0</span></div>
+          <div class="info-item" style="font-size:15px;"><span class="info-key font-bold">Total charged</span><span class="info-val font-bold" id="sumTotal" style="color:var(--teal);">UGX 0</span></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-4" style="width:100%;justify-content:center;padding:12px;">
+          Confirm & Pay
+        </button>
+        <p class="text-xs text-muted mt-3" style="text-align:center;">A receipt will be emailed to <%= user.email %> upon confirmation.</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Info Panel -->
+  <div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <p class="text-sm font-semibold mb-3">Your Account</p>
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Current balance</span><span class="info-val text-teal">UGX <%= balance.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Monthly contribution</span><span class="info-val">UGX <%= user.monthlyContribution.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Share capital paid</span><span class="info-val">UGX <%= user.shareCapitalPaid.toLocaleString() %></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <p class="text-sm font-semibold mb-3">Payment Options</p>
+        <div style="display:grid;gap:8px;font-size:13px;color:var(--text-muted);">
+          <div>📱 <strong>MTN MoMo / Airtel Money:</strong> ~1.5% transaction fee</div>
+          <div>💳 <strong>Visa / Mastercard:</strong> ~2.5% transaction fee</div>
+          <div>🏦 <strong>Bank Transfer:</strong> No platform fee (bank charges may apply)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <p class="text-sm font-semibold mb-2">After payment</p>
+        <ul style="list-style:none;display:grid;gap:6px;">
+          <li class="text-sm text-muted">✓ Your balance is updated instantly</li>
+          <li class="text-sm text-muted">✓ Receipt emailed to you automatically</li>
+          <li class="text-sm text-muted">✓ Transaction visible in your statement</li>
+          <li class="text-sm text-muted">✓ Admin is notified of your payment</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedMethod = 'mtn';
+const fees = { mtn: 0.015, airtel: 0.015, card: 0.025, bank: 0 };
+
+function selectMethod(radio) {
+  const val = radio.value;
+  selectedMethod = val === 'MTN MoMo' ? 'mtn' : val === 'Airtel Money' ? 'airtel' : val === 'Visa/Mastercard' ? 'card' : 'bank';
+  document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
+  radio.closest('.payment-option').classList.add('selected');
+  document.getElementById('momoField').style.display = (selectedMethod === 'mtn' || selectedMethod === 'airtel') ? 'block' : 'none';
+  updateSummary();
+}
+
+function updateSummary() {
+  const amt = parseInt(document.getElementById('amountInput').value) || 0;
+  const fee = Math.round(amt * (fees[selectedMethod] || 0));
+  document.getElementById('sumAmt').textContent = 'UGX ' + amt.toLocaleString();
+  document.getElementById('sumFee').textContent = 'UGX ' + fee.toLocaleString();
+  document.getElementById('sumTotal').textContent = 'UGX ' + (amt + fee).toLocaleString();
+}
+
+document.getElementById('amountInput').addEventListener('input', updateSummary);
+document.querySelectorAll('.payment-option').forEach(el => {
+  el.addEventListener('click', () => {
+    const radio = el.querySelector('input[type=radio]');
+    radio.checked = true;
+    selectMethod(radio);
+  });
+});
+updateSummary();
+</script>
+
+<%- include('../partials/foot') %>

@@ -1,0 +1,97 @@
+<%- include('../partials/head', { title: member.name, activePage: 'admin-members', group }) %>
+
+<div class="mb-4">
+  <a href="/admin/members" class="btn btn-outline btn-sm">← Back to Members</a>
+</div>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Member Info -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Member Profile</h3>
+      <span class="badge <%= member.active ? 'badge-success' : 'badge-danger' %>"><%= member.active ? 'Active' : 'Inactive' %></span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+        <div class="avatar" style="width:56px;height:56px;font-size:18px;"><%= member.name.split(' ').map(n=>n[0]).join('') %></div>
+        <div>
+          <div style="font-size:18px;font-weight:700;"><%= member.name %></div>
+          <div class="text-muted text-sm"><%= member.email %></div>
+        </div>
+      </div>
+      <div class="info-list">
+        <div class="info-item"><span class="info-key">Member ID</span><span class="info-val"><%= member.memberId %></span></div>
+        <div class="info-item"><span class="info-key">Phone</span><span class="info-val"><%= member.phone || '—' %></span></div>
+        <div class="info-item"><span class="info-key">National ID</span><span class="info-val"><%= member.nationalId || '—' %></span></div>
+        <div class="info-item"><span class="info-key">Join Date</span><span class="info-val"><%= new Date(member.joinDate).toLocaleDateString() %></span></div>
+        <div class="info-item"><span class="info-key">Monthly Contribution</span><span class="info-val">UGX <%= member.monthlyContribution.toLocaleString() %></span></div>
+        <div class="info-item"><span class="info-key">Savings Balance</span><span class="info-val text-teal">UGX <%= balance.toLocaleString() %></span></div>
+        <div class="info-item"><span class="info-key">Share Capital</span><span class="info-val">UGX <%= member.shareCapitalPaid.toLocaleString() %> / <%= member.shareCapitalTarget.toLocaleString() %></span></div>
+      </div>
+      <div class="mt-4">
+        <div class="text-xs text-muted mb-2">Share Capital Progress</div>
+        <div class="progress">
+          <div class="progress-bar" style="width:<%= Math.round(member.shareCapitalPaid/member.shareCapitalTarget*100) %>%"></div>
+        </div>
+        <div class="text-xs text-muted mt-1"><%= Math.round(member.shareCapitalPaid/member.shareCapitalTarget*100) %>% paid</div>
+      </div>
+      <div class="mt-4">
+        <div class="text-xs text-muted mb-2">Loan Eligibility (3× savings)</div>
+        <div class="font-semibold text-teal">UGX <%= (balance * 3).toLocaleString() %></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loans -->
+  <div>
+    <div class="section-head"><h2>Loan History</h2></div>
+    <% if (loans.length === 0) { %>
+      <div class="card"><div class="card-body text-muted text-sm">No loans on record.</div></div>
+    <% } %>
+    <% loans.forEach(loan => { %>
+    <div class="loan-card <%= loan.status %>">
+      <div class="flex-between mb-2">
+        <span class="font-semibold">UGX <%= loan.amount.toLocaleString() %></span>
+        <span class="badge badge-<%= loan.status === 'active' ? 'info' : loan.status === 'pending' ? 'warning' : loan.status === 'repaid' ? 'success' : 'danger' %>">
+          <%= loan.status.charAt(0).toUpperCase() + loan.status.slice(1) %>
+        </span>
+      </div>
+      <div class="text-sm text-muted mb-1">Purpose: <%= loan.purpose %> · <%= loan.repaymentMonths %> months</div>
+      <div class="text-sm text-muted">Applied: <%= new Date(loan.appliedAt).toLocaleDateString() %></div>
+      <% if (loan.status === 'active') { %>
+        <div class="mt-2">
+          <div class="progress">
+            <div class="progress-bar" style="width:<%= Math.round(loan.amountRepaid/loan.totalRepayable*100) %>%;background:var(--success);"></div>
+          </div>
+          <div class="text-xs text-muted mt-1">UGX <%= loan.amountRepaid.toLocaleString() %> repaid of UGX <%= loan.totalRepayable.toLocaleString() %></div>
+        </div>
+      <% } %>
+    </div>
+    <% }) %>
+  </div>
+</div>
+
+<!-- Savings History -->
+<div class="section-head"><h2>Savings Transactions</h2></div>
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
+      <tbody>
+        <% if (savings.length === 0) { %>
+        <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">No transactions yet.</td></tr>
+        <% } %>
+        <% savings.forEach(s => { %>
+        <tr>
+          <td class="text-sm text-muted"><%= new Date(s.date).toLocaleDateString() %></td>
+          <td><%= s.description %></td>
+          <td><span class="badge badge-gray text-xs"><%= s.type %></span></td>
+          <td class="amount-positive font-semibold">+UGX <%= s.amount.toLocaleString() %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

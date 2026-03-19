@@ -1,0 +1,57 @@
+<%- include('../partials/head', { title: 'My Profile', activePage: 'member-profile', group }) %>
+
+<div class="grid-2 gap-4">
+  <div class="card">
+    <div class="card-header"><h3>Account Profile</h3></div>
+    <div class="card-body">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);">
+        <div class="avatar" style="width:60px;height:60px;font-size:22px;"><%= user.name.split(' ').map(n=>n[0]).join('') %></div>
+        <div>
+          <div style="font-size:20px;font-weight:700;"><%= user.name %></div>
+          <div class="text-muted text-sm"><%= user.email %></div>
+          <span class="badge badge-success mt-2">Active Member</span>
+        </div>
+      </div>
+      <div class="info-list">
+        <div class="info-item"><span class="info-key">Member ID</span><span class="info-val"><%= user.memberId %></span></div>
+        <div class="info-item"><span class="info-key">SACCO Group</span><span class="info-val"><%= group.name %></span></div>
+        <div class="info-item"><span class="info-key">Phone</span><span class="info-val"><%= user.phone || 'Not set' %></span></div>
+        <div class="info-item"><span class="info-key">National ID</span><span class="info-val"><%= user.nationalId || 'Not set' %></span></div>
+        <div class="info-item"><span class="info-key">Member Since</span><span class="info-val"><%= new Date(user.joinDate).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></span></div>
+        <div class="info-item"><span class="info-key">Monthly Contribution</span><span class="info-val">UGX <%= user.monthlyContribution.toLocaleString() %></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card mb-4">
+      <div class="card-header"><h3>Share Capital</h3></div>
+      <div class="card-body">
+        <div class="flex-between mb-2">
+          <span class="text-sm">Progress to target</span>
+          <span class="text-sm font-semibold"><%= Math.round(user.shareCapitalPaid/user.shareCapitalTarget*100) %>%</span>
+        </div>
+        <div class="progress mb-3"><div class="progress-bar" style="width:<%= Math.min(100,Math.round(user.shareCapitalPaid/user.shareCapitalTarget*100)) %>%"></div></div>
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Paid</span><span class="info-val text-teal">UGX <%= user.shareCapitalPaid.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Target</span><span class="info-val">UGX <%= user.shareCapitalTarget.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Remaining</span><span class="info-val">UGX <%= (user.shareCapitalTarget - user.shareCapitalPaid).toLocaleString() %></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <p class="text-sm font-semibold mb-3">Quick Links</p>
+        <div style="display:grid;gap:8px;">
+          <a href="/member/savings" class="btn btn-outline" style="justify-content:flex-start;">📄 View Full Statement</a>
+          <a href="/member/loans" class="btn btn-outline" style="justify-content:flex-start;">📋 View Loan History</a>
+          <a href="/member/deposit" class="btn btn-outline" style="justify-content:flex-start;">💳 Make a Deposit</a>
+          <a href="/logout" class="btn btn-outline" style="justify-content:flex-start;color:var(--danger);">🚪 Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

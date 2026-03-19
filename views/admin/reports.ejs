@@ -1,0 +1,101 @@
+<%- include('../partials/head', { title: 'Reports', activePage: 'admin-reports', group }) %>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card accent">
+    <div class="label">Total Members</div>
+    <div class="value"><%= stats.memberCount %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Savings</div>
+    <div class="value" style="font-size:18px;">UGX <%= (stats.totalSavings/1000000).toFixed(2) %>M</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Contributions</div>
+    <div class="value" style="font-size:18px;">UGX <%= (totalContribs/1000000).toFixed(2) %>M</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Loan Portfolio</div>
+    <div class="value" style="font-size:18px;">UGX <%= (stats.loanPortfolio/1000000).toFixed(2) %>M</div>
+  </div>
+</div>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Loan Status Breakdown -->
+  <div class="card">
+    <div class="card-header"><h3>Loan Portfolio Breakdown</h3></div>
+    <div class="card-body">
+      <div class="info-list">
+        <div class="info-item"><span class="info-key">Pending requests</span><span class="info-val"><span class="badge badge-warning"><%= loansByStatus.pending %></span></span></div>
+        <div class="info-item"><span class="info-key">Active loans</span><span class="info-val"><span class="badge badge-info"><%= loansByStatus.active %></span></span></div>
+        <div class="info-item"><span class="info-key">Fully repaid</span><span class="info-val"><span class="badge badge-success"><%= loansByStatus.repaid %></span></span></div>
+        <div class="info-item"><span class="info-key">Declined</span><span class="info-val"><span class="badge badge-danger"><%= loansByStatus.declined %></span></span></div>
+        <div class="info-item"><span class="info-key">Total loans issued</span><span class="info-val"><%= allLoans.length %></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card">
+    <div class="card-header"><h3>Generate Reports</h3></div>
+    <div class="card-body">
+      <p class="text-sm text-muted mb-4">Download reports for your SACCO group records and compliance.</p>
+      <div style="display:grid;gap:10px;">
+        <button onclick="window.print()" class="btn btn-outline" style="justify-content:flex-start;">📄 Print / Save as PDF (this page)</button>
+        <a href="/admin/members" class="btn btn-outline" style="justify-content:flex-start;">👥 View Member Savings Ledger</a>
+        <a href="/admin/loans" class="btn btn-outline" style="justify-content:flex-start;">📋 View Full Loan Register</a>
+        <a href="/admin/audit" class="btn btn-outline" style="justify-content:flex-start;">🔍 View Audit Trail</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Member Savings Summary -->
+<div class="section-head"><h2>Member Savings Summary</h2></div>
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Member ID</th>
+          <th>Monthly Contribution</th>
+          <th>Savings Balance</th>
+          <th>Share Capital Paid</th>
+          <th>Loan Eligible</th>
+          <th>Active Loan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% members.forEach(m => { %>
+        <%
+          const mSavings = /* balance from DB */ 0;
+          // We'll just reference the stored values
+        %>
+        <tr>
+          <td>
+            <div class="member-row">
+              <div class="avatar" style="width:28px;height:28px;font-size:10px;"><%= m.name.split(' ').map(n=>n[0]).join('') %></div>
+              <span class="text-sm"><%= m.name %></span>
+            </div>
+          </td>
+          <td class="text-sm"><%= m.memberId %></td>
+          <td class="text-sm">UGX <%= (m.monthlyContribution||0).toLocaleString() %></td>
+          <td class="font-semibold text-teal">UGX <%= (m.shareCapitalPaid||0).toLocaleString() %></td>
+          <td class="text-sm">UGX <%= m.shareCapitalPaid.toLocaleString() %> / <%= m.shareCapitalTarget.toLocaleString() %></td>
+          <td class="text-sm">—</td>
+          <% const activeLoan = allLoans.find(l => l.memberId === m.id && l.status === 'active'); %>
+          <td>
+            <% if (activeLoan) { %>
+              <span class="badge badge-info">UGX <%= (activeLoan.totalRepayable - activeLoan.amountRepaid).toLocaleString() %></span>
+            <% } else { %>
+              <span class="text-muted text-sm">None</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

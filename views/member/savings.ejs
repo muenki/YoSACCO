@@ -1,0 +1,90 @@
+<%- include('../partials/head', { title: 'My Savings', activePage: 'member-savings', group }) %>
+
+<% const q = locals.query || {}; %>
+<% if (q.success === 'deposit_confirmed') { %>
+<div class="alert alert-success">
+  Deposit confirmed! Transaction reference: <strong>#<%= q.ref || 'N/A' %></strong>. Receipt sent to your email.
+</div>
+<% } %>
+
+<!-- Balance Banner -->
+<div class="card mb-6" style="background:var(--teal);color:#fff;border:none;">
+  <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="font-size:13px;opacity:0.8;margin-bottom:4px;">Current Savings Balance</div>
+      <div style="font-size:36px;font-weight:800;">UGX <%= balance.toLocaleString() %></div>
+      <div style="font-size:13px;opacity:0.7;margin-top:4px;"><%= user.memberId %> · <%= group.name %></div>
+    </div>
+    <div style="text-align:right;">
+      <a href="/member/deposit" class="btn" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);">+ Make Deposit</a>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card">
+    <div class="label">Total Transactions</div>
+    <div class="value"><%= transactions.length %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Monthly Contribution</div>
+    <div class="value" style="font-size:18px;">UGX <%= user.monthlyContribution.toLocaleString() %></div>
+    <div class="sub">Per month</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Share Capital</div>
+    <div class="value" style="font-size:18px;">UGX <%= user.shareCapitalPaid.toLocaleString() %></div>
+    <div class="sub"><%= Math.round(user.shareCapitalPaid/user.shareCapitalTarget*100) %>% of target</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Loan Eligibility</div>
+    <div class="value" style="font-size:18px;">UGX <%= (balance*3).toLocaleString() %></div>
+    <div class="sub">3× savings balance</div>
+  </div>
+</div>
+
+<!-- Statement Table -->
+<div class="section-head">
+  <h2>Account Statement</h2>
+  <button onclick="window.print()" class="btn btn-outline btn-sm">🖨 Print / Export PDF</button>
+</div>
+
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Type</th>
+          <th>Credit</th>
+          <th>Running Balance</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (transactions.length === 0) { %>
+        <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:32px;">No transactions on record yet.</td></tr>
+        <% } %>
+        <% transactions.forEach(t => { %>
+        <tr>
+          <td class="text-sm text-muted"><%= new Date(t.date).toLocaleDateString('en-UG', {year:'numeric',month:'short',day:'numeric'}) %></td>
+          <td><%= t.description %></td>
+          <td><span class="badge badge-gray text-xs"><%= t.type.replace('_',' ') %></span></td>
+          <td class="amount-positive font-semibold">+UGX <%= t.amount.toLocaleString() %></td>
+          <td class="font-semibold">UGX <%= t.runningBalance.toLocaleString() %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+@media print {
+  .sidebar, .topbar, .btn, nav { display: none !important; }
+  .main { margin-left: 0 !important; }
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; }
+}
+</style>
+
+<%- include('../partials/foot') %>

@@ -1,0 +1,126 @@
+<%- include('../partials/head', { title: 'Savings Management', activePage: 'admin-savings', group }) %>
+
+<% const q = locals.query || {}; %>
+<% if (q.success === 'savings_posted') { %><div class="alert alert-success">Savings posted successfully. Receipt email sent to member.</div><% } %>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Post Savings Form -->
+  <div class="card">
+    <div class="card-header"><h3>Post Savings Contribution</h3></div>
+    <div class="card-body">
+      <form method="POST" action="/admin/savings/post">
+        <div class="form-group">
+          <label class="form-label">Select Member *</label>
+          <select name="memberId" class="form-control" required>
+            <option value="">— Choose member —</option>
+            <% members.forEach(m => { %>
+            <option value="<%= m.id %>"><%= m.name %> (<%= m.memberId %>) — UGX <%= m.balance.toLocaleString() %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Amount (UGX) *</label>
+            <input type="number" name="amount" class="form-control" placeholder="e.g. 50000" min="1000" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select name="type" class="form-control">
+              <option value="contribution">Monthly Contribution</option>
+              <option value="share_capital">Share Capital</option>
+              <option value="interest">Interest Credit</option>
+              <option value="dividend">Dividend</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <input type="text" name="description" class="form-control" placeholder="e.g. Monthly contribution — April 2025">
+        </div>
+        <p class="text-xs text-muted mb-4">A receipt email will automatically be sent to the member upon posting.</p>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Post Savings & Send Receipt</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div>
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
+      <div class="stat-card">
+        <div class="label">Total Members</div>
+        <div class="value"><%= members.length %></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Group Total Savings</div>
+        <div class="value" style="font-size:18px;">UGX <%= members.reduce((s,m)=>s+m.balance,0).toLocaleString() %></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <p class="text-sm font-semibold mb-3">Members with arrears</p>
+        <% const arrears = members.filter(m => { const lc = m.lastContrib; if (!lc) return true; const daysSince = (Date.now() - new Date(lc.date)) / (1000*60*60*24); return daysSince > 45; }); %>
+        <% if (arrears.length === 0) { %>
+          <p class="text-sm text-muted">All members are up to date. ✓</p>
+        <% } else { %>
+          <% arrears.forEach(m => { %>
+          <div class="flex-between text-sm mb-2">
+            <span><%= m.name %></span>
+            <span class="badge badge-warning">Overdue</span>
+          </div>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Members Savings Ledger -->
+<div class="section-head"><h2>Savings Ledger</h2></div>
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Member ID</th>
+          <th>Monthly Contribution</th>
+          <th>Last Contribution</th>
+          <th>Total Balance</th>
+          <th>Share Capital</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% members.forEach(m => { %>
+        <tr>
+          <td>
+            <div class="member-row">
+              <div class="avatar"><%= m.name.split(' ').map(n=>n[0]).join('') %></div>
+              <span><%= m.name %></span>
+            </div>
+          </td>
+          <td><code style="font-size:12px;background:#f0f4f8;padding:2px 6px;border-radius:4px;"><%= m.memberId %></code></td>
+          <td>UGX <%= (m.monthlyContribution||0).toLocaleString() %></td>
+          <td class="text-sm text-muted"><%= m.lastContrib ? new Date(m.lastContrib.date).toLocaleDateString() : 'Never' %></td>
+          <td class="font-semibold text-teal">UGX <%= m.balance.toLocaleString() %></td>
+          <td>
+            <div style="font-size:12px;">UGX <%= m.shareCapitalPaid.toLocaleString() %> / <%= m.shareCapitalTarget.toLocaleString() %></div>
+            <div class="progress" style="margin-top:4px;height:4px;">
+              <div class="progress-bar" style="width:<%= Math.min(100,Math.round(m.shareCapitalPaid/m.shareCapitalTarget*100)) %>%"></div>
+            </div>
+          </td>
+          <td>
+            <% const lc = m.lastContrib; const overdue = !lc || (Date.now() - new Date(lc.date)) / (1000*60*60*24) > 45; %>
+            <% if (overdue) { %><span class="badge badge-warning">Overdue</span><% } else { %><span class="badge badge-success">Up to date</span><% } %>
+          </td>
+          <td><a href="/admin/members/<%= m.id %>" class="btn btn-sm btn-outline">View</a></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

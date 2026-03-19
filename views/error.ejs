@@ -1,0 +1,8 @@
+<%- include('./partials/head', { title: 'Error' }) %>
+<div style="text-align:center;padding:60px 20px;">
+  <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+  <h2 style="font-size:22px;margin-bottom:8px;"><%= locals.message || 'Something went wrong' %></h2>
+  <p class="text-muted mb-4">Please go back and try again.</p>
+  <a href="javascript:history.back()" class="btn btn-outline">← Go Back</a>
+</div>
+<%- include('./partials/foot') %>

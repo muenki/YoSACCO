@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= locals.title || 'YoSACCO' %> — YoSACCO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="layout">
+  <%- include('./sidebar', { user, activePage: locals.activePage }) %>
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title"><%= locals.title || 'YoSACCO' %></div>
+      <div class="topbar-right">
+        <% if (locals.group) { %>
+          <span class="badge badge-info"><%= group.name %></span>
+        <% } %>
+        <span class="text-sm text-muted">Hi, <%= user.name.split(' ')[0] %></span>
+      </div>
+    </div>
+    <div class="page-content">

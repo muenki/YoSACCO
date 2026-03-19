@@ -1,0 +1,131 @@
+<%- include('../partials/head', { title: 'Members', activePage: 'admin-members', group }) %>
+
+<% const q = locals.query || {}; %>
+<% if (q.success === 'member_added') { %><div class="alert alert-success">Member added successfully. Welcome email sent.</div><% } %>
+<% if (q.error === 'email_exists') { %><div class="alert alert-danger">A user with that email already exists.</div><% } %>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Add Member Form -->
+  <div class="card">
+    <div class="card-header"><h3>Add New Member</h3></div>
+    <div class="card-body">
+      <form method="POST" action="/admin/members/add">
+        <div class="form-group">
+          <label class="form-label">Full Name *</label>
+          <input type="text" name="name" class="form-control" placeholder="First and last name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address *</label>
+          <input type="email" name="email" class="form-control" placeholder="member@email.com" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="text" name="phone" class="form-control" placeholder="+256 7XX XXX XXX">
+          </div>
+          <div class="form-group">
+            <label class="form-label">National ID</label>
+            <input type="text" name="nationalId" class="form-control" placeholder="CM12345678">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Monthly Contribution (UGX)</label>
+            <input type="number" name="monthlyContribution" class="form-control" value="10000" min="1000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Share Capital Target (UGX)</label>
+            <input type="number" name="shareCapitalTarget" class="form-control" value="1000000">
+          </div>
+        </div>
+        <p class="text-xs text-muted mb-4">A temporary password will be generated and emailed to the member.</p>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Add Member & Send Welcome Email</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div>
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="stat-card">
+        <div class="label">Total Members</div>
+        <div class="value"><%= members.length %></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Active</div>
+        <div class="value"><%= members.filter(m=>m.active).length %></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:0;">
+      <div class="card-body text-sm text-muted">
+        <p class="mb-2"><strong>Member ID format:</strong> Auto-generated based on group initials + sequential number.</p>
+        <p><strong>Welcome email</strong> sent automatically with login credentials when a member is added.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Members Table -->
+<div class="section-head">
+  <h2>All Members (<%= members.length %>)</h2>
+</div>
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Member ID</th>
+          <th>Phone</th>
+          <th>Monthly Contrib.</th>
+          <th>Savings Balance</th>
+          <th>Active Loan</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (members.length === 0) { %>
+        <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:32px;">No members yet. Add the first member above.</td></tr>
+        <% } %>
+        <% members.forEach(m => { %>
+        <tr>
+          <td>
+            <div class="member-row">
+              <div class="avatar"><%= m.name.split(' ').map(n=>n[0]).join('') %></div>
+              <div>
+                <div class="name"><%= m.name %></div>
+                <div class="id"><%= m.email %></div>
+              </div>
+            </div>
+          </td>
+          <td><code style="font-size:12px;background:#f0f4f8;padding:2px 6px;border-radius:4px;"><%= m.memberId %></code></td>
+          <td class="text-sm"><%= m.phone || '—' %></td>
+          <td>UGX <%= (m.monthlyContribution||0).toLocaleString() %></td>
+          <td class="font-semibold text-teal">UGX <%= (m.savings||0).toLocaleString() %></td>
+          <td>
+            <% if (m.activeLoan) { %>
+              <span class="badge badge-info">UGX <%= (m.activeLoan.totalRepayable - m.activeLoan.amountRepaid).toLocaleString() %></span>
+            <% } else { %>
+              <span class="text-muted text-sm">None</span>
+            <% } %>
+          </td>
+          <td>
+            <% if (m.active) { %><span class="badge badge-success">Active</span><% } else { %><span class="badge badge-danger">Inactive</span><% } %>
+          </td>
+          <td>
+            <div class="flex gap-2">
+              <a href="/admin/members/<%= m.id %>" class="btn btn-sm btn-outline">View</a>
+              <form method="POST" action="/admin/members/<%= m.id %>/toggle" style="display:inline;">
+                <button class="btn btn-sm <%= m.active ? 'btn-outline' : 'btn-success' %>"><%= m.active ? 'Deactivate' : 'Activate' %></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

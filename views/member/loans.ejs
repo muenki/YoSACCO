@@ -1,0 +1,131 @@
+<%- include('../partials/head', { title: 'My Loans', activePage: 'member-loans', group }) %>
+
+<% const q = locals.query || {}; %>
+<% if (q.success === 'loan_applied') { %>
+<div class="alert alert-success">Loan application submitted! The SACCO admin has been notified. You'll receive a confirmation email shortly.</div>
+<% } %>
+<% if (q.error === 'existing_loan') { %>
+<div class="alert alert-danger">You already have an active or pending loan. Please wait for it to be resolved before applying again.</div>
+<% } %>
+<% if (q.error === 'exceeds_limit') { %>
+<div class="alert alert-danger">Requested amount exceeds your eligibility (3× savings = UGX <%= (balance*3).toLocaleString() %>).</div>
+<% } %>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Apply Form -->
+  <div class="card">
+    <div class="card-header"><h3>Apply for a Loan</h3></div>
+    <div class="card-body">
+      <% if (hasActiveLoan || hasPendingLoan) { %>
+        <div class="alert alert-warning">
+          <% if (hasPendingLoan) { %>Your loan application is currently under review. You cannot apply for another until it is resolved.<% } %>
+          <% if (hasActiveLoan) { %>You have an active loan. Please repay it fully before applying for a new one.<% } %>
+        </div>
+      <% } else { %>
+        <div class="alert alert-info" style="margin-bottom:16px;">
+          <strong>Your eligibility:</strong> UGX <%= eligibleAmount.toLocaleString() %> (3× your savings of UGX <%= balance.toLocaleString() %>)
+        </div>
+        <form method="POST" action="/member/loans/apply">
+          <div class="form-group">
+            <label class="form-label">Loan Amount (UGX) *</label>
+            <input type="number" name="amount" class="form-control" placeholder="e.g. 1500000" min="50000" max="<%= eligibleAmount %>" required>
+            <div class="form-hint">Maximum: UGX <%= eligibleAmount.toLocaleString() %></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purpose of Loan *</label>
+            <select name="purpose" class="form-control" required>
+              <option value="">— Select purpose —</option>
+              <option>School fees</option>
+              <option>Medical expenses</option>
+              <option>Business capital</option>
+              <option>Home improvement</option>
+              <option>Asset purchase</option>
+              <option>Emergency</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Repayment Period *</label>
+            <select name="repaymentMonths" class="form-control" required>
+              <option value="1">1 month</option>
+              <option value="3">3 months</option>
+              <option value="6" selected>6 months</option>
+              <option value="12">12 months</option>
+              <option value="24">24 months</option>
+            </select>
+          </div>
+          <p class="text-xs text-muted mb-4">Interest rate: 1.5% per month. By submitting, you agree to the loan terms and repayment schedule. A confirmation email will be sent to you and your admin will be notified.</p>
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Submit Loan Application</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Loan Stats -->
+  <div>
+    <div class="stats-grid" style="grid-template-columns:1fr 1fr;margin-bottom:16px;">
+      <div class="stat-card">
+        <div class="label">Total Loans</div>
+        <div class="value"><%= loans.length %></div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Repaid</div>
+        <div class="value" style="font-size:18px;">UGX <%= repayments.reduce((s,r)=>s+r.amount,0).toLocaleString() %></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <p class="text-sm font-semibold mb-2">How loans work</p>
+        <ul style="list-style:none;display:grid;gap:8px;">
+          <li class="text-sm text-muted">✓ Apply online — admin notified instantly by email</li>
+          <li class="text-sm text-muted">✓ Approval decision within 1–3 business days</li>
+          <li class="text-sm text-muted">✓ Interest rate: 1.5% per month (flat)</li>
+          <li class="text-sm text-muted">✓ Maximum: 3× your savings balance</li>
+          <li class="text-sm text-muted">✓ You'll receive email notification of decision</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loan History -->
+<div class="section-head"><h2>My Loan History</h2></div>
+
+<% if (loans.length === 0) { %>
+<div class="card"><div class="card-body text-muted text-sm">No loan history. Apply for your first loan above.</div></div>
+<% } %>
+
+<% loans.forEach(loan => { %>
+<div class="loan-card <%= loan.status %>">
+  <div class="flex-between mb-3">
+    <div>
+      <div class="font-semibold">UGX <%= loan.amount.toLocaleString() %> — <%= loan.purpose %></div>
+      <div class="text-sm text-muted">Applied: <%= new Date(loan.appliedAt).toLocaleDateString() %></div>
+    </div>
+    <span class="badge badge-<%= loan.status==='active'?'info':loan.status==='pending'?'warning':loan.status==='repaid'?'success':'danger' %>">
+      <%= loan.status.charAt(0).toUpperCase()+loan.status.slice(1) %>
+    </span>
+  </div>
+
+  <% if (loan.status === 'active') { %>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;padding:12px;background:var(--bg);border-radius:8px;">
+    <div><div class="text-xs text-muted">Monthly Installment</div><div class="font-semibold">UGX <%= loan.monthlyInstallment.toLocaleString() %></div></div>
+    <div><div class="text-xs text-muted">Amount Repaid</div><div class="font-semibold text-success">UGX <%= loan.amountRepaid.toLocaleString() %></div></div>
+    <div><div class="text-xs text-muted">Outstanding</div><div class="font-semibold text-danger">UGX <%= (loan.totalRepayable - loan.amountRepaid).toLocaleString() %></div></div>
+  </div>
+  <div class="progress mb-1">
+    <div class="progress-bar" style="background:var(--success);width:<%= Math.round(loan.amountRepaid/loan.totalRepayable*100) %>%"></div>
+  </div>
+  <div class="text-xs text-muted mb-2"><%= Math.round(loan.amountRepaid/loan.totalRepayable*100) %>% repaid · <%= loan.repaymentMonths %> month term</div>
+  <p class="text-xs text-muted">To make a repayment, please contact your SACCO admin or use the online deposit feature.</p>
+  <% } else if (loan.status === 'pending') { %>
+    <p class="text-sm text-muted">Your application is under review. You will receive an email once a decision has been made.</p>
+  <% } else if (loan.status === 'repaid') { %>
+    <p class="text-sm text-success">This loan has been fully repaid. 🎉</p>
+  <% } else if (loan.status === 'declined') { %>
+    <p class="text-sm text-danger">Declined<% if(loan.notes) { %>: <%= loan.notes %><% } %></p>
+  <% } %>
+</div>
+<% }) %>
+
+<%- include('../partials/foot') %>

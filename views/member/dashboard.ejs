@@ -1,0 +1,125 @@
+<%- include('../partials/head', { title: 'My Dashboard', activePage: 'member-dashboard', group }) %>
+
+<% if (locals.query && locals.query.success) { %><div class="alert alert-success">Operation completed successfully.</div><% } %>
+
+<!-- Welcome banner -->
+<div class="card mb-6" style="background:linear-gradient(135deg,var(--navy) 0%,#1a3a5c 100%);color:#fff;border:none;">
+  <div class="card-body" style="display:flex;align-items:center;gap:20px;">
+    <div class="avatar" style="width:52px;height:52px;font-size:18px;background:rgba(255,255,255,0.15);color:#fff;"><%= user.name.split(' ').map(n=>n[0]).join('') %></div>
+    <div>
+      <div style="font-size:20px;font-weight:700;">Welcome back, <%= user.name.split(' ')[0] %></div>
+      <div style="font-size:13px;opacity:0.7;"><%= group.name %> · Member <%= user.memberId %></div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div style="font-size:13px;opacity:0.7;">Your Savings Balance</div>
+      <div style="font-size:28px;font-weight:800;">UGX <%= balance.toLocaleString() %></div>
+    </div>
+  </div>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="label">Savings Balance</div>
+    <div class="value">UGX <%= (balance/1000).toFixed(0) %>K</div>
+    <div class="sub">Earning interest annually</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Share Capital</div>
+    <div class="value"><%= Math.round(user.shareCapitalPaid/user.shareCapitalTarget*100) %>%</div>
+    <div class="sub">UGX <%= user.shareCapitalPaid.toLocaleString() %> paid</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Loan Eligibility</div>
+    <div class="value">UGX <%= ((balance*3)/1000000).toFixed(1) %>M</div>
+    <div class="sub">3× your savings</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Monthly Contribution</div>
+    <div class="value" style="font-size:18px;">UGX <%= user.monthlyContribution.toLocaleString() %></div>
+    <div class="sub">Due on 1st of each month</div>
+  </div>
+</div>
+
+<div class="grid-2 gap-4">
+  <!-- Active Loan -->
+  <div>
+    <div class="section-head"><h2>Loan Status</h2><a href="/member/loans" class="btn btn-sm btn-outline">Manage Loans</a></div>
+    <% if (pendingLoan) { %>
+    <div class="loan-card pending">
+      <div class="flex-between mb-2">
+        <span class="font-semibold">Loan Application Pending</span>
+        <span class="badge badge-warning">Under Review</span>
+      </div>
+      <div class="text-sm text-muted mb-1">UGX <%= pendingLoan.amount.toLocaleString() %> · <%= pendingLoan.purpose %></div>
+      <div class="text-sm text-muted">Applied: <%= new Date(pendingLoan.appliedAt).toLocaleDateString() %></div>
+      <p class="text-xs text-muted mt-2">You will receive an email notification when a decision is made.</p>
+    </div>
+    <% } else if (activeLoan) { %>
+    <div class="loan-card active">
+      <div class="flex-between mb-2">
+        <span class="font-semibold">Active Loan</span>
+        <span class="badge badge-info">Active</span>
+      </div>
+      <div class="text-sm mb-3">Purpose: <%= activeLoan.purpose %></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div><div class="text-xs text-muted">Original Amount</div><div class="font-semibold">UGX <%= activeLoan.amount.toLocaleString() %></div></div>
+        <div><div class="text-xs text-muted">Outstanding Balance</div><div class="font-semibold text-danger">UGX <%= (activeLoan.totalRepayable - activeLoan.amountRepaid).toLocaleString() %></div></div>
+        <div><div class="text-xs text-muted">Monthly Installment</div><div class="font-semibold">UGX <%= activeLoan.monthlyInstallment.toLocaleString() %></div></div>
+        <div><div class="text-xs text-muted">Repaid So Far</div><div class="font-semibold text-success">UGX <%= activeLoan.amountRepaid.toLocaleString() %></div></div>
+      </div>
+      <div class="progress mb-1">
+        <div class="progress-bar" style="background:var(--success);width:<%= Math.round(activeLoan.amountRepaid/activeLoan.totalRepayable*100) %>%"></div>
+      </div>
+      <div class="text-xs text-muted"><%= Math.round(activeLoan.amountRepaid/activeLoan.totalRepayable*100) %>% repaid</div>
+    </div>
+    <% } else { %>
+    <div class="card">
+      <div class="card-body">
+        <p class="text-muted text-sm mb-3">You have no active loan. You are eligible for up to:</p>
+        <div style="font-size:22px;font-weight:700;color:var(--teal);margin-bottom:16px;">UGX <%= (balance*3).toLocaleString() %></div>
+        <a href="/member/loans" class="btn btn-primary btn-sm">Apply for a Loan</a>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- Share capital progress -->
+    <div class="card mt-4">
+      <div class="card-body">
+        <div class="flex-between mb-2">
+          <span class="text-sm font-semibold">Share Capital Progress</span>
+          <span class="text-sm text-muted"><%= Math.round(user.shareCapitalPaid/user.shareCapitalTarget*100) %>%</span>
+        </div>
+        <div class="progress mb-2"><div class="progress-bar" style="width:<%= Math.min(100,Math.round(user.shareCapitalPaid/user.shareCapitalTarget*100)) %>%"></div></div>
+        <div class="text-xs text-muted">UGX <%= user.shareCapitalPaid.toLocaleString() %> of UGX <%= user.shareCapitalTarget.toLocaleString() %> target</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Transactions -->
+  <div>
+    <div class="section-head"><h2>Recent Transactions</h2><a href="/member/savings" class="btn btn-sm btn-outline">Full Statement</a></div>
+    <div class="card p-0">
+      <table>
+        <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
+        <tbody>
+          <% if (recentTx.length === 0) { %>
+          <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:24px;">No transactions yet.</td></tr>
+          <% } %>
+          <% recentTx.forEach(t => { %>
+          <tr>
+            <td class="text-xs text-muted"><%= new Date(t.date).toLocaleDateString() %></td>
+            <td class="text-sm"><%= t.description %></td>
+            <td class="amount-positive">+UGX <%= t.amount.toLocaleString() %></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <div class="flex gap-2 mt-4">
+      <a href="/member/deposit" class="btn btn-primary">💳 Make Deposit</a>
+      <a href="/member/loans" class="btn btn-outline">Apply for Loan</a>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>
