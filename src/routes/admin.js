@@ -298,32 +298,6 @@ router.post('/loans/:id/repayment', async (req, res) => {
   } catch (err) { console.error(err); res.redirect('/admin/loans?error=repayment_failed'); }
 });
 
-// ── Reports ───────────────────────────────────────────────────────
-router.get('/reports', async (req, res) => {
-  try {
-    const gid   = req.user.groupId;
-    const group = await Group.findByPk(gid);
-    const members      = await User.findAll({ where: { groupId: gid, role: 'member' } });
-    const savingsRows  = await Saving.findAll({ where: { groupId: gid }, attributes: ['amount'] });
-    const totalSavings = savingsRows.reduce((s, r) => s + r.amount, 0);
-    const contribRows  = await Saving.findAll({ where: { groupId: gid, type: 'contribution' }, attributes: ['amount'] });
-    const totalContribs= contribRows.reduce((s, r) => s + r.amount, 0);
-    const activeLoanRows = await Loan.findAll({ where: { groupId: gid, status: 'active' }, attributes: ['totalRepayable','amountRepaid'] });
-    const loanPortfolio  = activeLoanRows.reduce((s, l) => s + (l.totalRepayable - l.amountRepaid), 0);
-    const allLoans     = await Loan.findAll({ where: { groupId: gid } });
-    const loansByStatus= { pending: 0, under_review: 0, approved: 0, active: 0, repaid: 0, declined: 0, rejected: 0 };
-    allLoans.forEach(l => { if (loansByStatus[l.status] !== undefined) loansByStatus[l.status]++; });
-    res.render('admin/reports', {
-      user: req.user, group,
-      stats: { memberCount: members.length, totalSavings, loanPortfolio, activeLoans: activeLoanRows.length },
-      members: members.map(m => m.toJSON()),
-      totalContribs, allLoans, loansByStatus,
-    });
-  } catch (err) {
-    console.error('Reports error:', err);
-    res.render('error', { message: 'Error loading reports', user: req.user });
-  }
-});
 
 // ── Audit ─────────────────────────────────────────────────────────
 router.get('/audit', async (req, res) => {
