@@ -4,11 +4,12 @@
   <div class="card">
     <div class="card-header"><h3>Make a Payment or Deposit</h3></div>
     <div class="card-body">
-      <form method="POST" action="/member/deposit" id="depositForm">
+      <form method="POST" action="/member/deposit">
         <div class="form-group">
           <label class="form-label">Payment Type</label>
-          <select name="description" class="form-control" id="payType">
+          <select name="description" class="form-control">
             <option value="Monthly contribution">Monthly Contribution</option>
+            <option value="Annual subscription payment">Annual Subscription Payment</option>
             <option value="Share capital payment">Share Capital Payment</option>
             <option value="Loan repayment">Loan Repayment</option>
             <option value="Extra savings deposit">Extra Savings Deposit</option>
@@ -23,25 +24,32 @@
         <div class="form-group">
           <label class="form-label">Payment Method *</label>
           <div class="payment-methods">
-            <label class="payment-option selected" id="opt-mtn">
-              <input type="radio" name="paymentMethod" value="MTN MoMo" style="display:none" checked onchange="selectMethod(this)">
+            <label class="payment-option selected" id="opt-mtn" onclick="selectMethod('mtn',this)">
+              <input type="radio" name="paymentMethod" value="MTN MoMo" style="display:none" checked>
+              <span class="pm-logo">🟡</span>
               <div class="pm-label">Mobile Money</div>
-              <div class="pm-name">MTN MoMo</div>
+              <div class="pm-name" style="font-weight:600;font-size:13px;">MTN MoMo</div>
+              <% if(settings && settings.mtnMomoNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.mtnMomoNumber %></div><% } %>
             </label>
-            <label class="payment-option" id="opt-airtel">
-              <input type="radio" name="paymentMethod" value="Airtel Money" style="display:none" onchange="selectMethod(this)">
+            <label class="payment-option" id="opt-airtel" onclick="selectMethod('airtel',this)">
+              <input type="radio" name="paymentMethod" value="Airtel Money" style="display:none">
+              <span class="pm-logo">🔴</span>
               <div class="pm-label">Mobile Money</div>
-              <div class="pm-name">Airtel Money</div>
+              <div class="pm-name" style="font-weight:600;font-size:13px;">Airtel Money</div>
+              <% if(settings && settings.airtelMoneyNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.airtelMoneyNumber %></div><% } %>
             </label>
-            <label class="payment-option" id="opt-card">
-              <input type="radio" name="paymentMethod" value="Visa/Mastercard" style="display:none" onchange="selectMethod(this)">
+            <label class="payment-option" id="opt-card" onclick="selectMethod('card',this)">
+              <input type="radio" name="paymentMethod" value="Visa/Mastercard" style="display:none">
+              <span class="pm-logo">💳</span>
               <div class="pm-label">Card Payment</div>
-              <div class="pm-name">Visa / Mastercard</div>
+              <div class="pm-name" style="font-weight:600;font-size:13px;">Visa / Mastercard</div>
             </label>
-            <label class="payment-option" id="opt-bank">
-              <input type="radio" name="paymentMethod" value="Bank Transfer" style="display:none" onchange="selectMethod(this)">
+            <label class="payment-option" id="opt-bank" onclick="selectMethod('bank',this)">
+              <input type="radio" name="paymentMethod" value="Bank Transfer" style="display:none">
+              <span class="pm-logo">🏦</span>
               <div class="pm-label">Bank Transfer</div>
-              <div class="pm-name">EFT / Bank</div>
+              <div class="pm-name" style="font-weight:600;font-size:13px;"><%= settings && settings.bankName ? settings.bankName.split(' ')[0] : 'Bank' %></div>
+              <% if(settings && settings.accountNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.accountNumber %></div><% } %>
             </label>
           </div>
         </div>
@@ -49,7 +57,6 @@
         <div id="momoField" class="form-group">
           <label class="form-label">Mobile Money Number</label>
           <input type="text" class="form-control" placeholder="+256 7XX XXX XXX" value="<%= user.phone || '' %>">
-          <div class="form-hint">You will receive a payment prompt on this number</div>
         </div>
 
         <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
@@ -57,7 +64,7 @@
         <div class="info-list">
           <div class="info-item"><span class="info-key">Amount</span><span class="info-val" id="sumAmt">UGX 0</span></div>
           <div class="info-item"><span class="info-key">Transaction fee</span><span class="info-val" id="sumFee">UGX 0</span></div>
-          <div class="info-item" style="font-size:15px;"><span class="info-key font-bold">Total charged</span><span class="info-val font-bold" id="sumTotal" style="color:var(--teal);">UGX 0</span></div>
+          <div class="info-item"><span class="info-key font-bold">Total charged</span><span class="info-val font-bold" id="sumTotal" style="color:var(--teal);">UGX 0</span></div>
         </div>
 
         <button type="submit" class="btn btn-primary mt-4" style="width:100%;justify-content:center;padding:12px;">
@@ -68,74 +75,74 @@
     </div>
   </div>
 
-  <!-- Info Panel -->
+  <!-- Account Details Panel -->
   <div>
     <div class="card mb-4">
+      <div class="card-header"><h3>SACCO Account Details</h3></div>
       <div class="card-body">
-        <p class="text-sm font-semibold mb-3">Your Account</p>
+        <p class="text-sm text-muted mb-3">Use these details to make manual transfers directly to the SACCO account.</p>
         <div class="info-list">
-          <div class="info-item"><span class="info-key">Current balance</span><span class="info-val text-teal">UGX <%= balance.toLocaleString() %></span></div>
-          <div class="info-item"><span class="info-key">Monthly contribution</span><span class="info-val">UGX <%= user.monthlyContribution.toLocaleString() %></span></div>
-          <div class="info-item"><span class="info-key">Share capital paid</span><span class="info-val">UGX <%= user.shareCapitalPaid.toLocaleString() %></span></div>
+          <% if(settings && settings.bankName) { %>
+          <div class="info-item"><span class="info-key">Bank</span><span class="info-val"><%= settings.bankName %></span></div>
+          <% } %>
+          <% if(settings && settings.accountNumber) { %>
+          <div class="info-item"><span class="info-key">Account No.</span><span class="info-val font-semibold"><%= settings.accountNumber %></span></div>
+          <% } %>
+          <div class="info-item"><span class="info-key">Account Name</span><span class="info-val"><%= group.name %></span></div>
+          <% if(settings && settings.mtnMomoNumber) { %>
+          <div class="info-item"><span class="info-key">🟡 MTN MoMo</span><span class="info-val"><%= settings.mtnMomoNumber %></span></div>
+          <% } %>
+          <% if(settings && settings.airtelMoneyNumber) { %>
+          <div class="info-item"><span class="info-key">🔴 Airtel Money</span><span class="info-val"><%= settings.airtelMoneyNumber %></span></div>
+          <% } %>
         </div>
+        <p class="text-xs text-muted mt-3">Always use your <strong>Member ID (<%= user.memberId %>)</strong> as the payment reference.</p>
       </div>
     </div>
 
     <div class="card mb-4">
       <div class="card-body">
-        <p class="text-sm font-semibold mb-3">Payment Options</p>
-        <div style="display:grid;gap:8px;font-size:13px;color:var(--text-muted);">
-          <div>📱 <strong>MTN MoMo / Airtel Money:</strong> ~1.5% transaction fee</div>
-          <div>💳 <strong>Visa / Mastercard:</strong> ~2.5% transaction fee</div>
-          <div>🏦 <strong>Bank Transfer:</strong> No platform fee (bank charges may apply)</div>
+        <p class="text-sm font-semibold mb-2">Your Account</p>
+        <div class="info-list">
+          <div class="info-item"><span class="info-key">Current balance</span><span class="info-val text-teal">UGX <%= balance.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Monthly contribution</span><span class="info-val">UGX <%= user.monthlyContribution.toLocaleString() %></span></div>
         </div>
       </div>
     </div>
 
     <div class="card">
       <div class="card-body">
-        <p class="text-sm font-semibold mb-2">After payment</p>
-        <ul style="list-style:none;display:grid;gap:6px;">
-          <li class="text-sm text-muted">✓ Your balance is updated instantly</li>
-          <li class="text-sm text-muted">✓ Receipt emailed to you automatically</li>
-          <li class="text-sm text-muted">✓ Transaction visible in your statement</li>
-          <li class="text-sm text-muted">✓ Admin is notified of your payment</li>
-        </ul>
+        <p class="text-sm font-semibold mb-2">Transaction Fees</p>
+        <div style="font-size:13px;display:grid;gap:6px;color:var(--text-muted);">
+          <div>🟡 MTN MoMo: ~1.5%</div>
+          <div>🔴 Airtel Money: ~1.5%</div>
+          <div>💳 Visa/Mastercard: ~2.5%</div>
+          <div>🏦 Bank Transfer: No platform fee</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-let selectedMethod = 'mtn';
-const fees = { mtn: 0.015, airtel: 0.015, card: 0.025, bank: 0 };
-
-function selectMethod(radio) {
-  const val = radio.value;
-  selectedMethod = val === 'MTN MoMo' ? 'mtn' : val === 'Airtel Money' ? 'airtel' : val === 'Visa/Mastercard' ? 'card' : 'bank';
-  document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
-  radio.closest('.payment-option').classList.add('selected');
-  document.getElementById('momoField').style.display = (selectedMethod === 'mtn' || selectedMethod === 'airtel') ? 'block' : 'none';
+let selected = 'mtn';
+const fees = { mtn:0.015, airtel:0.015, card:0.025, bank:0 };
+function selectMethod(method, el) {
+  selected = method;
+  document.querySelectorAll('.payment-option').forEach(o => { o.classList.remove('selected'); o.style.border='2px solid var(--border)'; });
+  el.classList.add('selected'); el.style.border='2px solid var(--teal)';
+  document.querySelector('input[value="'+({mtn:'MTN MoMo',airtel:'Airtel Money',card:'Visa/Mastercard',bank:'Bank Transfer'}[method])+'"]').checked=true;
+  document.getElementById('momoField').style.display = (method==='mtn'||method==='airtel') ? 'block' : 'none';
   updateSummary();
 }
-
 function updateSummary() {
-  const amt = parseInt(document.getElementById('amountInput').value) || 0;
-  const fee = Math.round(amt * (fees[selectedMethod] || 0));
-  document.getElementById('sumAmt').textContent = 'UGX ' + amt.toLocaleString();
-  document.getElementById('sumFee').textContent = 'UGX ' + fee.toLocaleString();
-  document.getElementById('sumTotal').textContent = 'UGX ' + (amt + fee).toLocaleString();
+  const amt = parseInt(document.getElementById('amountInput').value)||0;
+  const fee = Math.round(amt*(fees[selected]||0));
+  document.getElementById('sumAmt').textContent   = 'UGX '+amt.toLocaleString();
+  document.getElementById('sumFee').textContent   = 'UGX '+fee.toLocaleString();
+  document.getElementById('sumTotal').textContent = 'UGX '+(amt+fee).toLocaleString();
 }
-
 document.getElementById('amountInput').addEventListener('input', updateSummary);
-document.querySelectorAll('.payment-option').forEach(el => {
-  el.addEventListener('click', () => {
-    const radio = el.querySelector('input[type=radio]');
-    radio.checked = true;
-    selectMethod(radio);
-  });
-});
 updateSummary();
 </script>
-
 <%- include('../partials/foot') %>

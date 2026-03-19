@@ -1,0 +1,41 @@
+<%- include('../partials/head', { title: 'Edit SACCO Group', activePage: 'super-groups' }) %>
+
+<div class="mb-4"><a href="/super/groups" class="btn btn-outline btn-sm">← Back to Groups</a></div>
+
+<div class="card" style="max-width:600px;">
+  <div class="card-header"><h3>Edit — <%= group.name %></h3></div>
+  <div class="card-body">
+    <form method="POST" action="/super/groups/<%= group.id %>/edit">
+      <div class="form-group">
+        <label class="form-label">SACCO Group Name</label>
+        <input type="text" name="name" class="form-control" value="<%= group.name %>" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Accent Colour</label>
+        <input type="color" name="accentColor" class="form-control" value="<%= group.accentColor %>" style="height:40px;padding:4px;">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bank Account Number</label>
+        <input type="text" name="accountNumber" class="form-control" value="<%= group.accountNumber || '' %>" placeholder="e.g. 0012345678901">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bank Name</label>
+        <input type="text" name="bankName" class="form-control" value="<%= group.bankName || '' %>" placeholder="e.g. Stanbic Bank Uganda">
+      </div>
+      <% if (admin) { %>
+      <div class="card" style="background:var(--bg);margin-bottom:16px;">
+        <div class="card-body">
+          <p class="text-sm font-semibold mb-1">Current Administrator</p>
+          <p class="text-sm text-muted"><%= admin.name %> · <%= admin.email %></p>
+        </div>
+      </div>
+      <% } %>
+      <div class="flex gap-3">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="/super/groups" class="btn btn-outline">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

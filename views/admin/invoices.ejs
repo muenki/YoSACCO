@@ -1,0 +1,66 @@
+<%- include('../partials/head', { title: 'My Invoices', activePage: 'admin-invoices', group }) %>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card">
+    <div class="label">Total Invoices</div>
+    <div class="value"><%= invoices.length %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Paid</div>
+    <div class="value text-success"><%= invoices.filter(i=>i.status==='paid').length %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Pending</div>
+    <div class="value" style="color:var(--warning);"><%= invoices.filter(i=>i.status==='pending').length %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Paid</div>
+    <div class="value" style="font-size:18px;">UGX <%= invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+i.paidAmount,0).toLocaleString() %></div>
+  </div>
+</div>
+
+<% if (invoices.filter(i=>i.status==='pending').length > 0) { %>
+<div class="alert alert-warning" style="margin-bottom:24px;">
+  You have <strong><%= invoices.filter(i=>i.status==='pending').length %> pending invoice(s)</strong>.
+  Please pay promptly to avoid service interruption. Contact YoSACCO: <strong>+256 756 683 141</strong>
+</div>
+<% } %>
+
+<div class="section-head"><h2>Invoice History</h2></div>
+
+<% invoices.forEach(inv => { %>
+<div class="invoice-card <%= inv.status %>">
+  <div class="flex-between mb-2">
+    <div>
+      <div class="font-semibold"><%= inv.invoiceNumber %></div>
+      <div class="text-xs text-muted">
+        <%= inv.type === 'annual' ? 'Annual' : 'Monthly' %> Subscription ·
+        <% if(inv.periodStart) { %>Period: <%= new Date(inv.periodStart).toLocaleDateString() %> – <%= new Date(inv.periodEnd).toLocaleDateString() %><% } %>
+      </div>
+    </div>
+    <span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':'warning' %>">
+      <%= inv.status.charAt(0).toUpperCase()+inv.status.slice(1) %>
+    </span>
+  </div>
+  <div class="flex gap-3 text-sm">
+    <span class="font-semibold">UGX <%= inv.amount.toLocaleString() %></span>
+    <span class="text-muted">·</span>
+    <span class="text-muted">Due: <%= new Date(inv.dueDate).toLocaleDateString() %></span>
+    <% if(inv.status==='paid' && inv.paidAt) { %>
+      <span class="text-muted">·</span>
+      <span class="text-success">Paid <%= new Date(inv.paidAt).toLocaleDateString() %></span>
+    <% } %>
+  </div>
+  <% if(inv.status==='paid') { %>
+    <div class="mt-2"><span class="badge badge-success">✓ Receipt available — paid UGX <%= inv.paidAmount.toLocaleString() %></span></div>
+  <% } else { %>
+    <div class="mt-2 text-xs text-muted">To pay: MTN MoMo / Airtel / Bank Transfer to YoSACCO. Reference: <%= inv.invoiceNumber %>. Call: +256 756 683 141</div>
+  <% } %>
+</div>
+<% }) %>
+
+<% if (!invoices.length) { %>
+<div class="card"><div class="card-body text-muted text-sm">No invoices yet.</div></div>
+<% } %>
+
+<%- include('../partials/foot') %>

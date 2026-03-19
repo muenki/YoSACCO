@@ -1,0 +1,110 @@
+<%- include('../partials/head', { title: 'Income & Expenditure', activePage: 'admin-expenditure', group }) %>
+
+<% if (locals.query.success) { %><div class="alert alert-success">Expenditure recorded successfully.</div><% } %>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card" style="border-left:4px solid var(--success);">
+    <div class="label">Total Income (Savings)</div>
+    <div class="value" style="font-size:18px;">UGX <%= totalIncome.toLocaleString() %></div>
+    <div class="sub">All time</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid var(--danger);">
+    <div class="label">Total Expenditure</div>
+    <div class="value" style="font-size:18px;">UGX <%= totalExpend.toLocaleString() %></div>
+    <div class="sub">All time</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid <%= netBalance >= 0 ? 'var(--teal)' : 'var(--danger)' %>;">
+    <div class="label">Net Balance</div>
+    <div class="value" style="font-size:18px;color:<%= netBalance >= 0 ? 'var(--success)' : 'var(--danger)' %>">UGX <%= Math.abs(netBalance).toLocaleString() %></div>
+    <div class="sub"><%= netBalance >= 0 ? 'Surplus' : 'Deficit' %></div>
+  </div>
+</div>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Add Expenditure -->
+  <div class="card">
+    <div class="card-header"><h3>Record Expenditure</h3></div>
+    <div class="card-body">
+      <form method="POST" action="/admin/expenditure/add">
+        <div class="form-group">
+          <label class="form-label">Category *</label>
+          <select name="category" class="form-control" required>
+            <option value="">— Select category —</option>
+            <option>Administration</option>
+            <option>Meetings & AGM</option>
+            <option>Salaries & Allowances</option>
+            <option>YoSACCO Subscription</option>
+            <option>Bank Charges</option>
+            <option>Marketing</option>
+            <option>Office Rent</option>
+            <option>Training & Education</option>
+            <option>Loan Write-offs</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount (UGX) *</label>
+          <input type="number" name="amount" class="form-control" placeholder="e.g. 150000" min="1000" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" name="date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="3" placeholder="Brief description of the expenditure..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Record Expenditure</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Summary by category -->
+  <div class="card">
+    <div class="card-header"><h3>Expenditure by Category</h3></div>
+    <div class="card-body">
+      <%
+        const catTotals = {};
+        expenditures.forEach(e => { catTotals[e.category] = (catTotals[e.category]||0) + e.amount; });
+        const sortedCats = Object.entries(catTotals).sort((a,b) => b[1]-a[1]);
+      %>
+      <% if (sortedCats.length === 0) { %>
+        <p class="text-muted text-sm">No expenditures recorded yet.</p>
+      <% } %>
+      <% sortedCats.forEach(([cat, total]) => { %>
+      <div class="flex-between mb-2">
+        <span class="text-sm"><%= cat %></span>
+        <span class="text-sm font-semibold text-danger">UGX <%= total.toLocaleString() %></span>
+      </div>
+      <div class="progress mb-3" style="height:4px;">
+        <div class="progress-bar" style="width:<%= Math.round(total/totalExpend*100) %>%;background:var(--danger);"></div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<!-- Expenditure History -->
+<div class="section-head"><h2>All Expenditure Records</h2></div>
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
+      <tbody>
+        <% if (!expenditures.length) { %>
+        <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted);">No expenditures recorded yet.</td></tr>
+        <% } %>
+        <% expenditures.forEach(e => { %>
+        <tr>
+          <td class="text-sm text-muted"><%= new Date(e.date).toLocaleDateString('en-UG',{year:'numeric',month:'short',day:'numeric'}) %></td>
+          <td><span class="badge badge-gray"><%= e.category %></span></td>
+          <td class="text-sm"><%= e.description || '—' %></td>
+          <td class="text-sm font-semibold text-danger">- UGX <%= e.amount.toLocaleString() %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

@@ -43,12 +43,24 @@ router.get('/dashboard', async (req, res) => {
 
     const members = await User.findAll({ where: { groupId: gid, role: 'member' } });
 
+    // Build chart data
+    const allGroupSavings = await Saving.findAll({ where: { groupId: gid, type: 'contribution' }, order: [['date','ASC']] });
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mSums = Array(12).fill(0);
+    allGroupSavings.forEach(s => { const m = new Date(s.date).getMonth(); mSums[m] += s.amount; });
+    const qSums = [mSums.slice(0,3).reduce((a,b)=>a+b,0), mSums.slice(3,6).reduce((a,b)=>a+b,0), mSums.slice(6,9).reduce((a,b)=>a+b,0), mSums.slice(9,12).reduce((a,b)=>a+b,0)];
+    const annualTotal = mSums.reduce((a,b)=>a+b,0);
+    const allLoansForChart = await Loan.findAll({ where: { groupId: gid } });
+    const loanChartData = { repaid: allLoansForChart.filter(l=>l.status==='repaid').reduce((s,l)=>s+l.totalRepayable,0), active: allLoansForChart.filter(l=>l.status==='active').reduce((s,l)=>s+(l.totalRepayable-l.amountRepaid),0), pending: allLoansForChart.filter(l=>['pending','under_review','approved'].includes(l.status)).reduce((s,l)=>s+l.amount,0) };
+    const chartData = { savings: { monthly: { labels: months, values: mSums }, quarterly: { labels: ['Q1','Q2','Q3','Q4'], values: qSums }, annual: { labels: [new Date().getFullYear().toString()], values: [annualTotal] } }, loans: loanChartData };
+
     res.render('admin/dashboard', {
       user: req.user, group,
       stats: { memberCount, totalSavings, activeLoans, loanPortfolio, pendingLoans: pendingLoans.length },
       pendingLoans: pendingLoansWithMember,
       recentSavings: recentSavingsWithMember,
       members: members.map(m => m.toJSON()),
+      chartData,
     });
   } catch (err) {
     console.error('Admin dashboard error:', err);
@@ -318,3 +330,62 @@ router.get('/audit', async (req, res) => {
 });
 
 module.exports = router;
+
+// ── Loan Terms Settings ───────────────────────────────────────────
+router.get('/loan-terms', async (req, res) => {
+  try {
+    const gid   = req.user.groupId;
+    const group = await Group.findByPk(gid);
+    const { GroupSettings } = require('../models');
+    let settings = await GroupSettings.findOne({ where: { groupId: gid } });
+    if (!settings) settings = await GroupSettings.create({ groupId: gid });
+    res.render('admin/loan-terms', { user: req.user, group, settings: settings.toJSON(), query: req.query });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error loading loan terms', user: req.user }); }
+});
+
+router.post('/loan-terms', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const { GroupSettings } = require('../models');
+    const { newLoanInterestRate, topupInterestRate, emergencyInterestRate, newLoanMaxMultiplier, emergencyMaxMultiplier, loanProcessingFee, loanTermsText, mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName } = req.body;
+    await GroupSettings.upsert({ groupId: gid, newLoanInterestRate: parseFloat(newLoanInterestRate)||1.5, topupInterestRate: parseFloat(topupInterestRate)||1.5, emergencyInterestRate: parseFloat(emergencyInterestRate)||2.0, newLoanMaxMultiplier: parseFloat(newLoanMaxMultiplier)||3, emergencyMaxMultiplier: parseFloat(emergencyMaxMultiplier)||1, loanProcessingFee: parseFloat(loanProcessingFee)||0, loanTermsText, mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName });
+    await AuditLog.create({ userId: req.user.id, action: 'UPDATE_LOAN_TERMS', detail: 'Updated loan terms and payment settings', groupId: gid });
+    res.redirect('/admin/loan-terms?success=saved');
+  } catch(err) { console.error(err); res.redirect('/admin/loan-terms?error=save_failed'); }
+});
+
+// ── Income & Expenditure ─────────────────────────────────────────
+router.get('/expenditure', async (req, res) => {
+  try {
+    const gid   = req.user.groupId;
+    const group = await Group.findByPk(gid);
+    const { Expenditure } = require('../models');
+    const expenditures = await Expenditure.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
+    const savings  = await Saving.findAll({ where: { groupId: gid }, attributes: ['amount','date'] });
+    const totalIncome = savings.reduce((s,r) => s+r.amount, 0);
+    const totalExpend = expenditures.reduce((s,r) => s+r.amount, 0);
+    res.render('admin/expenditure', { user: req.user, group, expenditures, totalIncome, totalExpend, netBalance: totalIncome - totalExpend, query: req.query });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
+});
+
+router.post('/expenditure/add', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const { Expenditure } = require('../models');
+    const { amount, category, description, date } = req.body;
+    await Expenditure.create({ groupId: gid, amount: parseInt(amount), category, description, date: date ? new Date(date) : new Date(), postedBy: req.user.id });
+    await AuditLog.create({ userId: req.user.id, action: 'ADD_EXPENDITURE', detail: `Added expenditure: UGX ${parseInt(amount).toLocaleString()} — ${category}`, groupId: gid });
+    res.redirect('/admin/expenditure?success=added');
+  } catch(err) { console.error(err); res.redirect('/admin/expenditure?error=add_failed'); }
+});
+
+// ── Admin Invoices ────────────────────────────────────────────────
+router.get('/invoices', async (req, res) => {
+  try {
+    const gid   = req.user.groupId;
+    const group = await Group.findByPk(gid);
+    const { Invoice } = require('../models');
+    const invoices = await Invoice.findAll({ where: { groupId: gid }, order: [['createdAt','DESC']] });
+    res.render('admin/invoices', { user: req.user, group, invoices, query: req.query });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
+});

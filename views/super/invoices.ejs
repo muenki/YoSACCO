@@ -1,0 +1,133 @@
+<%- include('../partials/head', { title: 'Invoices & Revenue', activePage: 'super-invoices' }) %>
+
+<% if (locals.query.success === 'created') { %><div class="alert alert-success">Invoice created and email sent to SACCO admin.</div><% } %>
+<% if (locals.query.success === 'marked_paid') { %><div class="alert alert-success">Invoice marked as paid.</div><% } %>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card accent">
+    <div class="label">Total Revenue Collected</div>
+    <div class="value">UGX <%= (totalRevenue/1000000).toFixed(2) %>M</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Pending Revenue</div>
+    <div class="value" style="color:var(--warning);">UGX <%= pendingRevenue.toLocaleString() %></div>
+    <div class="sub warn"><%= invoices.filter(i=>i.status==='pending').length %> unpaid invoices</div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Paid Invoices</div>
+    <div class="value text-success"><%= invoices.filter(i=>i.status==='paid').length %></div>
+  </div>
+  <div class="stat-card">
+    <div class="label">Total Invoices</div>
+    <div class="value"><%= invoices.length %></div>
+  </div>
+</div>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Create Invoice -->
+  <div class="card">
+    <div class="card-header"><h3>Create New Invoice</h3></div>
+    <div class="card-body">
+      <form method="POST" action="/super/invoices/create">
+        <div class="form-group">
+          <label class="form-label">SACCO Group *</label>
+          <select name="groupId" class="form-control" required>
+            <option value="">— Select group —</option>
+            <% invoices.reduce((groups, inv) => { if(!groups.find(g=>g.id===inv.group?.id) && inv.group) groups.push(inv.group); return groups; }, []).forEach(g => { %>
+              <option value="<%= g.id %>"><%= g.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Invoice Type</label>
+            <select name="type" class="form-control">
+              <option value="monthly">Monthly Subscription</option>
+              <option value="annual">Annual Subscription</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (UGX) *</label>
+            <input type="number" name="amount" class="form-control" placeholder="50000" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Due Date *</label>
+          <input type="date" name="dueDate" class="form-control" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Period Start</label>
+            <input type="date" name="periodStart" class="form-control">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Period End</label>
+            <input type="date" name="periodEnd" class="form-control">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Create & Send Invoice</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Revenue summary -->
+  <div class="card">
+    <div class="card-header"><h3>YoSACCO Revenue Summary</h3></div>
+    <div class="card-body">
+      <% const byGroup = {}; invoices.filter(i=>i.status==='paid').forEach(i => { const n = i.group?.name||'Unknown'; byGroup[n]=(byGroup[n]||0)+i.paidAmount; }); %>
+      <p class="text-sm font-semibold mb-3">Revenue by SACCO Group</p>
+      <% Object.entries(byGroup).forEach(([name, amt]) => { %>
+      <div class="flex-between mb-2">
+        <span class="text-sm"><%= name %></span>
+        <span class="text-sm font-semibold text-teal">UGX <%= amt.toLocaleString() %></span>
+      </div>
+      <% }) %>
+      <% if (!Object.keys(byGroup).length) { %><p class="text-muted text-sm">No payments received yet.</p><% } %>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
+      <div class="flex-between">
+        <span class="font-semibold">Total Collected</span>
+        <span class="font-semibold text-teal">UGX <%= totalRevenue.toLocaleString() %></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- All Invoices -->
+<div class="section-head"><h2>All Invoices</h2></div>
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Invoice #</th><th>SACCO Group</th><th>Type</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        <% invoices.forEach(inv => { %>
+        <tr>
+          <td class="font-semibold text-sm"><%= inv.invoiceNumber %></td>
+          <td class="text-sm"><%= inv.group?.name || '—' %></td>
+          <td><span class="badge badge-gray"><%= inv.type %></span></td>
+          <td class="font-semibold">UGX <%= inv.amount.toLocaleString() %></td>
+          <td class="text-sm text-muted"><%= new Date(inv.dueDate).toLocaleDateString() %></td>
+          <td><span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':'warning' %>"><%= inv.status %></span></td>
+          <td>
+            <% if (inv.status !== 'paid') { %>
+            <form method="POST" action="/super/invoices/<%= inv.id %>/mark-paid" style="display:inline;">
+              <button class="btn btn-sm btn-success">Mark Paid</button>
+            </form>
+            <% } else { %>
+              <span class="text-xs text-muted">Paid <%= new Date(inv.paidAt).toLocaleDateString() %></span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!invoices.length) { %>
+        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">No invoices created yet.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

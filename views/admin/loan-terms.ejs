@@ -1,0 +1,78 @@
+<%- include('../partials/head', { title: 'Loan Terms & Settings', activePage: 'admin-loan-terms', group }) %>
+
+<% if (locals.query.success) { %><div class="alert alert-success">Settings saved successfully.</div><% } %>
+
+<form method="POST" action="/admin/loan-terms">
+<div class="grid-2 gap-4 mb-6">
+
+  <!-- Interest Rates -->
+  <div class="card">
+    <div class="card-header"><h3>⚙️ Loan Interest Rates</h3></div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">New Loan Interest Rate (% per month)</label>
+        <input type="number" name="newLoanInterestRate" class="form-control" step="0.1" min="0" value="<%= settings.newLoanInterestRate %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Top-Up Loan Interest Rate (% per month)</label>
+        <input type="number" name="topupInterestRate" class="form-control" step="0.1" min="0" value="<%= settings.topupInterestRate %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Emergency Loan Interest Rate (% per month)</label>
+        <input type="number" name="emergencyInterestRate" class="form-control" step="0.1" min="0" value="<%= settings.emergencyInterestRate %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Loan Processing Fee (% of loan amount)</label>
+        <input type="number" name="loanProcessingFee" class="form-control" step="0.1" min="0" value="<%= settings.loanProcessingFee || 0 %>">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">New/Top-Up Max Multiplier (× savings)</label>
+          <input type="number" name="newLoanMaxMultiplier" class="form-control" step="0.5" min="1" value="<%= settings.newLoanMaxMultiplier %>">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emergency Max Multiplier (× savings)</label>
+          <input type="number" name="emergencyMaxMultiplier" class="form-control" step="0.5" min="0.5" value="<%= settings.emergencyMaxMultiplier %>">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Details -->
+  <div class="card">
+    <div class="card-header"><h3>💳 Payment Collection Details</h3></div>
+    <div class="card-body">
+      <p class="text-sm text-muted mb-4">These details are shown to members when they make deposits so they can send money to the right account.</p>
+      <div class="form-group">
+        <label class="form-label">Bank Account Number</label>
+        <input type="text" name="accountNumber" class="form-control" placeholder="e.g. 0012345678901" value="<%= settings.accountNumber || group.accountNumber || '' %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bank Name</label>
+        <input type="text" name="bankName" class="form-control" placeholder="e.g. Stanbic Bank Uganda" value="<%= settings.bankName || group.bankName || '' %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">MTN Mobile Money Number</label>
+        <input type="text" name="mtnMomoNumber" class="form-control" placeholder="e.g. 0771234567" value="<%= settings.mtnMomoNumber || '' %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Airtel Money Number</label>
+        <input type="text" name="airtelMoneyNumber" class="form-control" placeholder="e.g. 0701234567" value="<%= settings.airtelMoneyNumber || '' %>">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loan Terms & Conditions -->
+<div class="card mb-6">
+  <div class="card-header"><h3>📄 Loan Terms & Conditions</h3></div>
+  <div class="card-body">
+    <p class="text-sm text-muted mb-3">These terms are shown to members before they submit a loan application. Write each condition on a new line.</p>
+    <textarea name="loanTermsText" class="form-control terms-editor" rows="10"><%= settings.loanTermsText || '' %></textarea>
+  </div>
+</div>
+
+<button type="submit" class="btn btn-primary" style="padding:12px 32px;">Save All Settings</button>
+</form>
+
+<%- include('../partials/foot') %>

@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= locals.title || 'YoSACCO' %> — YoSACCO</title>
+  <title><%= locals.title || 'Dashboard' %> — <%= locals.group ? group.name : 'YoSACCO' %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="layout">
-  <%- include('./sidebar', { user, activePage: locals.activePage }) %>
+  <%- include('./sidebar', { user, activePage: locals.activePage, group: locals.group || null }) %>
   <div class="main">
     <div class="topbar">
-      <div class="topbar-title"><%= locals.title || 'YoSACCO' %></div>
+      <div class="topbar-title"><%= locals.title || 'Dashboard' %></div>
       <div class="topbar-right">
-        <% if (locals.group) { %>
-          <span class="badge badge-info"><%= group.name %></span>
-        <% } %>
+        <% if (locals.group) { %><span class="badge badge-info" style="font-size:11px;"><%= group.name %></span><% } %>
         <span class="text-sm text-muted">Hi, <%= user.name.split(' ')[0] %></span>
       </div>
     </div>

@@ -2,16 +2,21 @@
 const role = user.role;
 const path = locals.activePage || '';
 function isActive(p) { return path === p ? 'active' : ''; }
+const groupName = locals.group ? group.name : (role === 'superadmin' ? 'YoSACCO Platform' : 'YoSACCO');
+const accentCol = locals.group ? group.accentColor : '#0D7377';
 %>
 <div class="sidebar">
-  <div class="sidebar-logo">
-    <h1>Yo<span>SACCO</span></h1>
-    <p>SACCO Management Platform</p>
+  <div class="sidebar-logo" style="padding:16px 20px 14px;">
+    <img src="/assets/logo.png" alt="YoSACCO" onerror="this.style.display='none'">
+    <div style="margin-top:8px;font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);line-height:1.3;"><%= groupName %></div>
+    <% if (role !== 'superadmin') { %><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px;">Powered by YoSACCO</div><% } %>
   </div>
+
   <div class="sidebar-user">
     <div class="user-name"><%= user.name %></div>
-    <div class="user-role">
-      <% if(role==='superadmin') { %>Platform Admin<% } else if(role==='admin') { %>SACCO Admin<% } else { %>Member<% } %>
+    <div class="user-role" style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.05em;">
+      <% const roleLabels = {superadmin:'Platform Admin',admin:'SACCO Admin',credit_officer:'Credit Officer',treasurer:'Treasurer',chairperson:'Chairperson',member:'Member'}; %>
+      <%= roleLabels[role] || role %>
     </div>
   </div>
 
@@ -19,27 +24,40 @@ function isActive(p) { return path === p ? 'active' : ''; }
     <% if (role === 'superadmin') { %>
       <div class="nav-section">Platform</div>
       <a href="/super/dashboard" class="nav-link <%= isActive('super-dashboard') %>"><span class="icon">📊</span> Dashboard</a>
-      <a href="/super/groups" class="nav-link <%= isActive('super-groups') %>"><span class="icon">🏦</span> SACCO Groups</a>
-      <a href="/super/audit" class="nav-link <%= isActive('super-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
+      <a href="/super/groups"    class="nav-link <%= isActive('super-groups') %>"><span class="icon">🏦</span> SACCO Groups</a>
+      <a href="/super/invoices"  class="nav-link <%= isActive('super-invoices') %>"><span class="icon">🧾</span> Invoices</a>
+      <a href="/super/audit"     class="nav-link <%= isActive('super-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
+
     <% } else if (role === 'credit_officer' || role === 'treasurer' || role === 'chairperson') { %>
       <div class="nav-section">Loan Approvals</div>
       <a href="/approver/dashboard" class="nav-link <%= isActive('approver-dashboard') %>"><span class="icon">📋</span> My Review Queue</a>
+      <div class="nav-section">My Account</div>
+      <a href="/member/dashboard" class="nav-link <%= isActive('member-dashboard') %>"><span class="icon">🏠</span> Member Dashboard</a>
+      <a href="/member/savings"   class="nav-link <%= isActive('member-savings') %>"><span class="icon">💰</span> My Savings</a>
+      <a href="/member/loans"     class="nav-link <%= isActive('member-loans') %>"><span class="icon">📋</span> My Loans</a>
+      <a href="/member/deposit"   class="nav-link <%= isActive('member-deposit') %>"><span class="icon">💳</span> Make Deposit</a>
+
     <% } else if (role === 'admin') { %>
       <div class="nav-section">Management</div>
-      <a href="/admin/dashboard" class="nav-link <%= isActive('admin-dashboard') %>"><span class="icon">📊</span> Dashboard</a>
-      <a href="/admin/members" class="nav-link <%= isActive('admin-members') %>"><span class="icon">👥</span> Members</a>
-      <a href="/admin/savings" class="nav-link <%= isActive('admin-savings') %>"><span class="icon">💰</span> Savings</a>
-      <a href="/admin/loans" class="nav-link <%= isActive('admin-loans') %>"><span class="icon">📋</span> Loan Management</a>
+      <a href="/admin/dashboard"  class="nav-link <%= isActive('admin-dashboard') %>"><span class="icon">📊</span> Dashboard</a>
+      <a href="/admin/members"    class="nav-link <%= isActive('admin-members') %>"><span class="icon">👥</span> Members</a>
+      <a href="/admin/savings"    class="nav-link <%= isActive('admin-savings') %>"><span class="icon">💰</span> Savings</a>
+      <a href="/admin/loans"      class="nav-link <%= isActive('admin-loans') %>"><span class="icon">📋</span> Loan Management</a>
+      <a href="/admin/expenditure"class="nav-link <%= isActive('admin-expenditure') %>"><span class="icon">💸</span> Income & Expenditure</a>
+      <div class="nav-section">Settings</div>
+      <a href="/admin/loan-terms" class="nav-link <%= isActive('admin-loan-terms') %>"><span class="icon">⚙️</span> Loan Terms</a>
+      <a href="/admin/invoices"   class="nav-link <%= isActive('admin-invoices') %>"><span class="icon">🧾</span> Invoices</a>
       <div class="nav-section">Analytics</div>
-      <a href="/admin/reports" class="nav-link <%= isActive('admin-reports') %>"><span class="icon">📈</span> Reports</a>
-      <a href="/admin/audit" class="nav-link <%= isActive('admin-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
+      <a href="/admin/reports"    class="nav-link <%= isActive('admin-reports') %>"><span class="icon">📈</span> Reports</a>
+      <a href="/admin/audit"      class="nav-link <%= isActive('admin-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
+
     <% } else { %>
       <div class="nav-section">My Account</div>
       <a href="/member/dashboard" class="nav-link <%= isActive('member-dashboard') %>"><span class="icon">🏠</span> Dashboard</a>
-      <a href="/member/savings" class="nav-link <%= isActive('member-savings') %>"><span class="icon">💰</span> Savings</a>
-      <a href="/member/loans" class="nav-link <%= isActive('member-loans') %>"><span class="icon">📋</span> Loans</a>
-      <a href="/member/deposit" class="nav-link <%= isActive('member-deposit') %>"><span class="icon">💳</span> Make Deposit</a>
-      <a href="/member/profile" class="nav-link <%= isActive('member-profile') %>"><span class="icon">👤</span> Profile</a>
+      <a href="/member/savings"   class="nav-link <%= isActive('member-savings') %>"><span class="icon">💰</span> My Savings</a>
+      <a href="/member/loans"     class="nav-link <%= isActive('member-loans') %>"><span class="icon">📋</span> My Loans</a>
+      <a href="/member/deposit"   class="nav-link <%= isActive('member-deposit') %>"><span class="icon">💳</span> Make Deposit</a>
+      <a href="/member/profile"   class="nav-link <%= isActive('member-profile') %>"><span class="icon">👤</span> Profile</a>
     <% } %>
   </nav>
 

@@ -1,128 +1,132 @@
 <%- include('../partials/head', { title: 'Loan Management', activePage: 'admin-loans', group }) %>
 
 <% const q = locals.query || {}; %>
-<% if (q.success === 'loan_approved') { %><div class="alert alert-success">Loan approved. Approval email sent to member.</div><% } %>
-<% if (q.success === 'loan_declined') { %><div class="alert alert-danger" style="background:var(--warning-bg);color:var(--warning);border-color:#f6e05e;">Loan declined. Member has been notified by email.</div><% } %>
-<% if (q.success === 'repayment_recorded') { %><div class="alert alert-success">Repayment recorded. Receipt email sent to member.</div><% } %>
+<% if (q.success === 'loan_approved')   { %><div class="alert alert-success">Loan approved and email sent to member.</div><% } %>
+<% if (q.success === 'loan_disbursed')  { %><div class="alert alert-success">Loan disbursed successfully. Email sent to member.</div><% } %>
+<% if (q.success === 'loan_declined')   { %><div class="alert alert-danger" style="background:var(--warning-bg);color:var(--warning);border-color:#f6e05e;">Loan declined. Member has been notified.</div><% } %>
+<% if (q.success === 'repayment_recorded') { %><div class="alert alert-success">Repayment recorded. Receipt sent to member.</div><% } %>
 
-<!-- Stats -->
 <div class="stats-grid mb-6">
-  <div class="stat-card">
-    <div class="label">Pending Requests</div>
-    <div class="value"><%= loans.filter(l=>l.status==='pending').length %></div>
-    <div class="sub <%= loans.filter(l=>l.status==='pending').length > 0 ? 'warn' : '' %>">Awaiting review</div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Active Loans</div>
-    <div class="value"><%= loans.filter(l=>l.status==='active').length %></div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Outstanding Balance</div>
-    <div class="value" style="font-size:18px;">UGX <%= loans.filter(l=>l.status==='active').reduce((s,l)=>s+(l.totalRepayable-l.amountRepaid),0).toLocaleString() %></div>
-  </div>
-  <div class="stat-card">
-    <div class="label">Loans Fully Repaid</div>
-    <div class="value"><%= loans.filter(l=>l.status==='repaid').length %></div>
-    <div class="sub">All time</div>
-  </div>
+  <div class="stat-card"><div class="label">Pending / In Review</div><div class="value"><%= loans.filter(l=>['pending','under_review'].includes(l.status)).length %></div></div>
+  <div class="stat-card"><div class="label">Awaiting Disbursement</div><div class="value" style="color:var(--success);"><%= loans.filter(l=>l.status==='approved').length %></div></div>
+  <div class="stat-card"><div class="label">Active Loans</div><div class="value"><%= loans.filter(l=>l.status==='active').length %></div></div>
+  <div class="stat-card"><div class="label">Outstanding</div><div class="value" style="font-size:18px;">UGX <%= loans.filter(l=>l.status==='active').reduce((s,l)=>s+(l.totalRepayable-l.amountRepaid),0).toLocaleString() %></div></div>
 </div>
 
-<!-- PENDING LOANS INBOX -->
-<% const pendingLoans = loans.filter(l => l.status === 'pending'); %>
-<% if (pendingLoans.length > 0) { %>
-<div class="section-head">
-  <h2>Loan Requests Inbox <span class="badge badge-warning" style="margin-left:8px;"><%= pendingLoans.length %> pending</span></h2>
+<!-- Needs action: fully approved, awaiting admin disbursement -->
+<% const toDisburse = loans.filter(l => l.status === 'approved'); %>
+<% if (toDisburse.length > 0) { %>
+<div class="alert alert-info mb-4">
+  <strong><%= toDisburse.length %> loan(s) fully approved</strong> by all 3 officers and awaiting your disbursement.
 </div>
-<% pendingLoans.forEach(loan => { %>
-<div class="loan-card pending" style="background:#fffbeb;">
+<% toDisburse.forEach(loan => { %>
+<div class="loan-card active" style="border-left-color:var(--success);background:#f0fff4;">
   <div class="flex-between mb-3">
     <div class="member-row">
-      <div class="avatar" style="background:#fef3c7;color:#b7791f;"><%= loan.member ? loan.member.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
+      <div class="avatar" style="background:var(--success-bg);color:var(--success);"><%= loan.member ? loan.member.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
       <div>
-        <div class="name"><%= loan.member ? loan.member.name : 'Unknown' %></div>
-        <div class="id"><%= loan.member ? loan.member.memberId : '' %> · Applied <%= new Date(loan.appliedAt).toLocaleDateString() %></div>
+        <div class="name"><%= loan.member ? loan.member.name : 'Unknown' %> — <%= loan.member?.memberId %></div>
+        <div class="id">UGX <%= loan.amount.toLocaleString() %> · <%= loan.purpose %> · <%= loan.repaymentMonths %> months</div>
       </div>
     </div>
-    <span class="badge badge-warning">Pending Review</span>
+    <span class="badge badge-success">✅ All Approved — Disburse Now</span>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;padding:14px;background:white;border-radius:8px;border:1px solid var(--border);">
-    <div><div class="text-xs text-muted">Amount Requested</div><div class="font-semibold">UGX <%= loan.amount.toLocaleString() %></div></div>
+  <form method="POST" action="/admin/loans/<%= loan.id %>/disburse" style="display:flex;gap:8px;align-items:center;">
+    <input type="text" name="notes" class="form-control" style="width:240px;" placeholder="Disbursement note (optional)...">
+    <button type="submit" class="btn btn-success">Disburse Loan</button>
+  </form>
+</div>
+<% }) %>
+<% } %>
+
+<!-- Pending inbox -->
+<% const pendingLoans = loans.filter(l => ['pending','under_review'].includes(l.status)); %>
+<% if (pendingLoans.length > 0) { %>
+<div class="section-head mt-4"><h2>Loan Applications Under Review <span class="badge badge-warning" style="margin-left:8px;"><%= pendingLoans.length %></span></h2></div>
+<% pendingLoans.forEach(loan => { %>
+<div class="loan-card pending">
+  <div class="flex-between mb-3">
+    <div class="member-row">
+      <div class="avatar"><%= loan.member ? loan.member.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
+      <div>
+        <div class="name"><%= loan.member?.name %> · <%= loan.member?.memberId %></div>
+        <div class="id">Applied: <%= new Date(loan.appliedAt).toLocaleDateString() %> · Savings: UGX <%= (loan.savingsBalance||0).toLocaleString() %></div>
+      </div>
+    </div>
+    <span class="badge badge-<%= loan.loanType==='emergency'?'danger':loan.loanType==='top_up'?'info':'warning' %>">
+      <%= loan.loanType==='new_loan'?'New Loan':loan.loanType==='top_up'?'Top-Up':'Emergency' %>
+    </span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px;background:var(--bg);border-radius:8px;margin-bottom:12px;">
+    <div><div class="text-xs text-muted">Amount</div><div class="font-semibold">UGX <%= loan.amount.toLocaleString() %></div></div>
     <div><div class="text-xs text-muted">Purpose</div><div class="font-semibold"><%= loan.purpose %></div></div>
-    <div><div class="text-xs text-muted">Repayment Period</div><div class="font-semibold"><%= loan.repaymentMonths %> months</div></div>
-    <div><div class="text-xs text-muted">Member Savings</div><div class="font-semibold text-teal">UGX <%= (loan.savingsBalance||0).toLocaleString() %></div></div>
+    <div><div class="text-xs text-muted">Repayment</div><div class="font-semibold"><%= loan.repaymentMonths %> months</div></div>
   </div>
+  <!-- 3-stage progress -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+    <% [['Credit Officer',loan.creditOfficerStatus,loan.coUser],['Treasurer',loan.treasurerStatus,loan.trUser],['Chairperson',loan.chairpersonStatus,loan.chUser]].forEach(([label,status,who])=>{ %>
+    <div style="flex:1;min-width:120px;padding:8px;border-radius:8px;background:<%= status==='approved'?'var(--success-bg)':status==='rejected'?'var(--danger-bg)':'var(--bg)' %>;text-align:center;">
+      <div style="font-size:16px;"><%= status==='approved'?'✅':status==='rejected'?'❌':'⏳' %></div>
+      <div style="font-size:11px;font-weight:600;"><%= label %></div>
+      <% if(who){ %><div style="font-size:10px;color:var(--text-muted);"><%= who %></div><% } %>
+    </div>
+    <% }) %>
+  </div>
+  <!-- Admin can override approve/decline -->
   <div class="flex gap-2" style="flex-wrap:wrap;">
-    <form method="POST" action="/admin/loans/<%= loan.id %>/approve" style="display:flex;gap:8px;align-items:center;">
-      <input type="text" name="notes" class="form-control" style="width:240px;" placeholder="Optional note to member...">
-      <button type="submit" class="btn btn-success">✓ Approve Loan</button>
+    <form method="POST" action="/admin/loans/<%= loan.id %>/approve">
+      <button class="btn btn-success btn-sm">Admin Override — Approve</button>
     </form>
-    <form method="POST" action="/admin/loans/<%= loan.id %>/decline" style="display:flex;gap:8px;align-items:center;">
-      <input type="text" name="notes" class="form-control" style="width:200px;" placeholder="Reason for decline...">
-      <button type="submit" class="btn btn-danger">✗ Decline</button>
+    <form method="POST" action="/admin/loans/<%= loan.id %>/decline" style="display:flex;gap:6px;align-items:center;">
+      <input type="text" name="notes" class="form-control" style="width:200px;padding:5px 10px;font-size:12px;" placeholder="Reason for decline *" required>
+      <button class="btn btn-danger btn-sm">Decline</button>
     </form>
   </div>
 </div>
 <% }) %>
 <% } %>
 
-<!-- ALL LOANS TABLE -->
+<!-- All Loans Table -->
 <div class="section-head mt-4"><h2>All Loans</h2></div>
 <div class="card p-0">
   <div class="table-wrap">
     <table>
-      <thead>
-        <tr>
-          <th>Member</th>
-          <th>Amount</th>
-          <th>Purpose</th>
-          <th>Repayment</th>
-          <th>Progress</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Member</th><th>Type</th><th>Amount</th><th>Purpose</th><th>Repayment</th><th>Progress</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody>
-        <% if (loans.length === 0) { %>
-        <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:32px;">No loan records found.</td></tr>
-        <% } %>
+        <% if (!loans.length) { %><tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted);">No loans yet.</td></tr><% } %>
         <% loans.forEach(loan => { %>
         <tr>
           <td>
             <div class="member-row">
               <div class="avatar" style="width:28px;height:28px;font-size:10px;"><%= loan.member ? loan.member.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
-              <div>
-                <div class="text-sm font-semibold"><%= loan.member ? loan.member.name : 'Unknown' %></div>
-                <div class="text-xs text-muted"><%= loan.member ? loan.member.memberId : '' %></div>
-              </div>
+              <div><div class="text-sm font-semibold"><%= loan.member?.name %></div><div class="text-xs text-muted"><%= loan.member?.memberId %></div></div>
             </div>
           </td>
-          <td class="font-semibold">UGX <%= loan.amount.toLocaleString() %></td>
+          <td><span class="badge badge-<%= loan.loanType==='emergency'?'danger':loan.loanType==='top_up'?'info':'gray' %>" style="font-size:10px;"><%= loan.loanType==='new_loan'?'New':loan.loanType==='top_up'?'Top-Up':'Emergency' %></span></td>
+          <td class="font-semibold text-sm">UGX <%= loan.amount.toLocaleString() %></td>
           <td class="text-sm"><%= loan.purpose %></td>
-          <td class="text-sm">
-            <% if (loan.status === 'active') { %>
-              UGX <%= loan.monthlyInstallment.toLocaleString() %>/mo
-            <% } else { %>
-              <%= loan.repaymentMonths %> months
-            <% } %>
-          </td>
-          <td style="min-width:120px;">
-            <% if (loan.status === 'active') { %>
-              <div class="progress"><div class="progress-bar" style="width:<%= Math.round(loan.amountRepaid/loan.totalRepayable*100) %>%;background:var(--success);"></div></div>
-              <div class="text-xs text-muted mt-1">UGX <%= loan.amountRepaid.toLocaleString() %> / <%= loan.totalRepayable.toLocaleString() %></div>
-            <% } else if (loan.status === 'repaid') { %>
-              <div class="progress"><div class="progress-bar" style="width:100%;background:var(--success);"></div></div>
-            <% } else { %>
-              <span class="text-muted text-xs">—</span>
-            <% } %>
+          <td class="text-sm"><%= loan.status==='active' ? 'UGX '+loan.monthlyInstallment.toLocaleString()+'/mo' : loan.repaymentMonths+' months' %></td>
+          <td style="min-width:100px;">
+            <% if (loan.status==='active' && loan.totalRepayable>0) { %>
+              <div class="progress" style="height:4px;"><div class="progress-bar" style="width:<%= Math.round(loan.amountRepaid/loan.totalRepayable*100) %>%;background:var(--success);"></div></div>
+              <div class="text-xs text-muted mt-1"><%= Math.round(loan.amountRepaid/loan.totalRepayable*100) %>%</div>
+            <% } else if (loan.status==='repaid') { %>
+              <span class="text-xs text-success">✓ Cleared</span>
+            <% } else { %>—<% } %>
           </td>
           <td>
-            <span class="badge badge-<%= loan.status==='active'?'info':loan.status==='pending'?'warning':loan.status==='repaid'?'success':'danger' %>">
-              <%= loan.status.charAt(0).toUpperCase()+loan.status.slice(1) %>
+            <span class="badge badge-<%= loan.status==='active'?'info':['pending','under_review'].includes(loan.status)?'warning':loan.status==='approved'?'success':loan.status==='repaid'?'success':'danger' %>" style="font-size:10px;">
+              <%= loan.status==='under_review'?'Review':loan.status==='approved'?'Approved':loan.status.charAt(0).toUpperCase()+loan.status.slice(1) %>
             </span>
+            <% if ((loan.status==='rejected'||loan.status==='declined') && loan.notes) { %>
+              <div style="font-size:10px;color:var(--danger);margin-top:3px;" title="<%= loan.notes %>">Reason: <%= loan.notes.slice(0,30) %><%= loan.notes.length>30?'…':'' %></div>
+            <% } %>
           </td>
           <td>
-            <% if (loan.status === 'active') { %>
-            <button onclick="openRepayModal('<%= loan.id %>')" class="btn btn-sm btn-primary">Record Repayment</button>
+            <% if (loan.status==='active') { %>
+              <button onclick="openRepayModal('<%= loan.id %>')" class="btn btn-sm btn-primary">Repayment</button>
+            <% } else if (loan.status==='approved') { %>
+              <form method="POST" action="/admin/loans/<%= loan.id %>/disburse"><button class="btn btn-sm btn-success">Disburse</button></form>
             <% } %>
           </td>
         </tr>
@@ -134,35 +138,18 @@
 
 <!-- Repayment Modal -->
 <div id="repayModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:999;align-items:center;justify-content:center;">
-  <div class="card" style="width:420px;">
-    <div class="card-header">
-      <h3>Record Loan Repayment</h3>
-      <button onclick="closeRepayModal()" style="background:none;border:none;cursor:pointer;font-size:18px;">✕</button>
-    </div>
+  <div class="card" style="width:400px;">
+    <div class="card-header"><h3>Record Loan Repayment</h3><button onclick="document.getElementById('repayModal').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:18px;">✕</button></div>
     <div class="card-body">
       <form id="repayForm" method="POST">
-        <div class="form-group">
-          <label class="form-label">Repayment Amount (UGX) *</label>
-          <input type="number" name="amount" class="form-control" placeholder="e.g. 540000" required>
-        </div>
+        <div class="form-group"><label class="form-label">Repayment Amount (UGX) *</label><input type="number" name="amount" class="form-control" placeholder="e.g. 540000" required></div>
         <p class="text-xs text-muted mb-4">A receipt email will be sent to the member automatically.</p>
-        <div class="flex gap-2">
-          <button type="submit" class="btn btn-primary">Record Repayment</button>
-          <button type="button" onclick="closeRepayModal()" class="btn btn-outline">Cancel</button>
-        </div>
+        <div class="flex gap-2"><button type="submit" class="btn btn-primary">Record Repayment</button><button type="button" onclick="document.getElementById('repayModal').style.display='none'" class="btn btn-outline">Cancel</button></div>
       </form>
     </div>
   </div>
 </div>
-
 <script>
-function openRepayModal(loanId) {
-  document.getElementById('repayForm').action = '/admin/loans/' + loanId + '/repayment';
-  document.getElementById('repayModal').style.display = 'flex';
-}
-function closeRepayModal() {
-  document.getElementById('repayModal').style.display = 'none';
-}
+function openRepayModal(id) { document.getElementById('repayForm').action='/admin/loans/'+id+'/repayment'; document.getElementById('repayModal').style.display='flex'; }
 </script>
-
 <%- include('../partials/foot') %>

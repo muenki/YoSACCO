@@ -1,18 +1,15 @@
-<%- include('../partials/head', { title: 'Admin Dashboard', activePage: 'admin-dashboard', group }) %>
+<%- include('../partials/head', { title: 'Dashboard', activePage: 'admin-dashboard', group }) %>
 
-<% const q = locals.query || {}; %>
-<% if (q.success) { %><div class="alert alert-success">Operation completed successfully.</div><% } %>
+<% if (locals.query && locals.query.success) { %><div class="alert alert-success">Operation completed successfully.</div><% } %>
 
 <div class="stats-grid">
   <div class="stat-card accent">
     <div class="label">Total Members</div>
     <div class="value"><%= stats.memberCount %></div>
-    <div class="sub" style="color:rgba(255,255,255,0.6);">Registered members</div>
   </div>
   <div class="stat-card">
     <div class="label">Total Savings</div>
     <div class="value">UGX <%= (stats.totalSavings/1000000).toFixed(2) %>M</div>
-    <div class="sub">Combined deposits</div>
   </div>
   <div class="stat-card">
     <div class="label">Loan Portfolio</div>
@@ -26,6 +23,36 @@
   </div>
 </div>
 
+<!-- Charts Row -->
+<div class="grid-2 gap-4 mb-6">
+  <!-- Savings Chart -->
+  <div class="chart-card">
+    <div class="flex-between mb-2">
+      <div>
+        <h3>Monthly Savings</h3>
+        <div class="chart-sub">Member contributions over time</div>
+      </div>
+      <div class="chart-period-btns">
+        <button class="chart-period-btn active" onclick="setSavingsPeriod('monthly',this)">Monthly</button>
+        <button class="chart-period-btn" onclick="setSavingsPeriod('quarterly',this)">Quarterly</button>
+        <button class="chart-period-btn" onclick="setSavingsPeriod('annual',this)">Annual</button>
+      </div>
+    </div>
+    <canvas id="savingsChart" height="120"></canvas>
+  </div>
+
+  <!-- Loan Portfolio Chart -->
+  <div class="chart-card">
+    <div class="flex-between mb-2">
+      <div>
+        <h3>Loan Portfolio</h3>
+        <div class="chart-sub">Cleared vs outstanding loans</div>
+      </div>
+    </div>
+    <canvas id="loanChart" height="120"></canvas>
+  </div>
+</div>
+
 <div class="grid-2 gap-4">
   <!-- Pending Loans -->
   <div>
@@ -36,35 +63,39 @@
     <% if (pendingLoans.length === 0) { %>
       <div class="card"><div class="card-body text-muted text-sm">No pending loan requests.</div></div>
     <% } %>
-    <% pendingLoans.slice(0,3).forEach(loan => {
-      const mem = members.find(m => m.id === loan.memberId);
-    %>
+    <% pendingLoans.slice(0,3).forEach(loan => { %>
     <div class="loan-card pending">
       <div class="flex-between mb-2">
         <div class="member-row">
-          <div class="avatar"><%= mem ? mem.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
+          <div class="avatar"><%= loan.member ? loan.member.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
           <div>
-            <div class="name"><%= mem ? mem.name : 'Unknown' %></div>
-            <div class="id"><%= mem ? mem.memberId : '' %></div>
+            <div class="name"><%= loan.member ? loan.member.name : 'Unknown' %></div>
+            <div class="id"><%= loan.member ? loan.member.memberId : '' %> · <%= new Date(loan.appliedAt).toLocaleDateString() %></div>
           </div>
         </div>
-        <span class="badge badge-warning">Pending</span>
+        <span class="badge badge-<%= loan.status==='approved'?'success':'warning' %>">
+          <%= loan.status==='approved'?'Awaiting Disbursement':'Pending' %>
+        </span>
       </div>
       <div class="flex gap-3 text-sm mb-3">
         <span class="font-semibold">UGX <%= loan.amount.toLocaleString() %></span>
-        <span class="text-muted">·</span>
-        <span><%= loan.purpose %></span>
-        <span class="text-muted">·</span>
-        <span><%= loan.repaymentMonths %> months</span>
+        <span class="text-muted">·</span><span><%= loan.purpose %></span>
+        <span class="text-muted">·</span><span><%= loan.repaymentMonths %>mo</span>
       </div>
       <div class="flex gap-2">
-        <form method="POST" action="/admin/loans/<%= loan.id %>/approve">
-          <button class="btn btn-success btn-sm">Approve</button>
-        </form>
-        <form method="POST" action="/admin/loans/<%= loan.id %>/decline">
-          <button class="btn btn-danger btn-sm">Decline</button>
-        </form>
-        <a href="/admin/loans" class="btn btn-outline btn-sm">View Details</a>
+        <% if (loan.status === 'approved') { %>
+          <form method="POST" action="/admin/loans/<%= loan.id %>/disburse">
+            <button class="btn btn-success btn-sm">Disburse</button>
+          </form>
+        <% } else { %>
+          <form method="POST" action="/admin/loans/<%= loan.id %>/approve">
+            <button class="btn btn-success btn-sm">Approve</button>
+          </form>
+          <form method="POST" action="/admin/loans/<%= loan.id %>/decline" style="display:flex;gap:6px;">
+            <input type="text" name="notes" class="form-control" style="width:160px;padding:5px 10px;font-size:12px;" placeholder="Reason for decline...">
+            <button class="btn btn-danger btn-sm">Decline</button>
+          </form>
+        <% } %>
       </div>
     </div>
     <% }) %>
@@ -78,11 +109,8 @@
     </div>
     <div class="card p-0">
       <table>
-        <thead><tr><th>Member</th><th>Type</th><th>Amount</th><th>Date</th></tr></thead>
+        <thead><tr><th>Member</th><th>Amount</th><th>Date</th></tr></thead>
         <tbody>
-          <% if (recentSavings.length === 0) { %>
-          <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:24px;">No recent activity.</td></tr>
-          <% } %>
           <% recentSavings.forEach(s => { %>
           <tr>
             <td>
@@ -91,15 +119,59 @@
                 <span class="text-sm"><%= s.member ? s.member.name : 'Unknown' %></span>
               </div>
             </td>
-            <td><span class="badge badge-gray text-xs"><%= s.type %></span></td>
-            <td class="amount-positive">+UGX <%= s.amount.toLocaleString() %></td>
+            <td class="amount-positive text-sm">+UGX <%= s.amount.toLocaleString() %></td>
             <td class="text-sm text-muted"><%= new Date(s.date).toLocaleDateString() %></td>
           </tr>
           <% }) %>
+          <% if (!recentSavings.length) { %><tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text-muted);">No recent activity</td></tr><% } %>
         </tbody>
       </table>
     </div>
   </div>
 </div>
+
+<script>
+// Savings chart data from server
+const savingsData = <%- JSON.stringify(chartData.savings) %>;
+const loanData    = <%- JSON.stringify(chartData.loans) %>;
+
+const savingsCtx = document.getElementById('savingsChart').getContext('2d');
+const loanCtx    = document.getElementById('loanChart').getContext('2d');
+
+let savingsChart = new Chart(savingsCtx, {
+  type: 'line',
+  data: {
+    labels: savingsData.monthly.labels,
+    datasets: [{
+      label: 'Monthly Savings (UGX)',
+      data: savingsData.monthly.values,
+      borderColor: '#0D7377', backgroundColor: 'rgba(13,115,119,0.08)',
+      borderWidth: 2, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#0D7377'
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX '+(v/1000).toFixed(0)+'K' } } } }
+});
+
+new Chart(loanCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Repaid', 'Active (Outstanding)', 'Pending Approval'],
+    datasets: [{
+      data: [loanData.repaid, loanData.active, loanData.pending],
+      backgroundColor: ['#1A7F4B','#2B6CB0','#B7791F'],
+      borderWidth: 2
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12 } } } }
+});
+
+function setSavingsPeriod(period, btn) {
+  document.querySelectorAll('.chart-period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  savingsChart.data.labels = savingsData[period].labels;
+  savingsChart.data.datasets[0].data = savingsData[period].values;
+  savingsChart.update();
+}
+</script>
 
 <%- include('../partials/foot') %>

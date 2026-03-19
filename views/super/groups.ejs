@@ -1,10 +1,9 @@
 <%- include('../partials/head', { title: 'SACCO Groups', activePage: 'super-groups' }) %>
 
-<% if (locals.query && locals.query.success) { %>
-  <div class="alert alert-success">SACCO group created successfully. Admin credentials have been set.</div>
-<% } %>
+<% if (locals.query.success === 'group_created') { %><div class="alert alert-success">SACCO group created successfully.</div><% } %>
+<% if (locals.query.success === 'group_updated') { %><div class="alert alert-success">SACCO group updated successfully.</div><% } %>
 
-<div class="grid-2 mb-6">
+<div class="grid-2 gap-4 mb-6">
   <!-- Create Group Form -->
   <div class="card">
     <div class="card-header"><h3>Create New SACCO Group</h3></div>
@@ -15,11 +14,19 @@
           <input type="text" name="name" class="form-control" placeholder="e.g. Kampala Teachers SACCO" required>
         </div>
         <div class="form-group">
+          <label class="form-label">SACCO Bank Account Number</label>
+          <input type="text" name="accountNumber" class="form-control" placeholder="e.g. 0012345678901">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bank Name</label>
+          <input type="text" name="bankName" class="form-control" placeholder="e.g. Stanbic Bank Uganda">
+        </div>
+        <div class="form-group">
           <label class="form-label">Accent Colour</label>
           <input type="color" name="accentColor" class="form-control" value="#0D7377" style="height:40px;padding:4px;">
         </div>
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0;">
-        <p class="text-sm text-muted mb-4"><strong>Administrator Account</strong></p>
+        <p class="text-sm font-semibold mb-3">Administrator Account</p>
         <div class="form-group">
           <label class="form-label">Admin Full Name *</label>
           <input type="text" name="adminName" class="form-control" placeholder="Full name" required>
@@ -41,12 +48,13 @@
   <div>
     <div class="section-head"><h2>All Groups (<%= groups.length %>)</h2></div>
     <% groups.forEach(g => { %>
-    <div class="card mb-4" style="border-left:4px solid <%= g.accentColor || '#0D7377' %>;">
+    <div class="card mb-4" style="border-left:4px solid <%= g.accentColor||'#0D7377' %>;">
       <div class="card-body">
         <div class="flex-between mb-2">
           <div>
             <div class="font-semibold"><%= g.name %></div>
             <div class="text-xs text-muted">Admin: <%= g.admin ? g.admin.name : 'Unassigned' %> · <%= g.adminEmail %></div>
+            <% if(g.accountNumber) { %><div class="text-xs text-muted">Account: <%= g.accountNumber %><% if(g.bankName){ %> · <%= g.bankName %><% } %></div><% } %>
           </div>
           <% if(g.active) { %><span class="badge badge-success">Active</span><% } else { %><span class="badge badge-danger">Suspended</span><% } %>
         </div>
@@ -57,15 +65,17 @@
           <span>·</span>
           <span><%= g.stats.activeLoans %> loans</span>
         </div>
-        <form method="POST" action="/super/groups/<%= g.id %>/toggle" style="display:inline;">
-          <button type="submit" class="btn btn-sm <%= g.active ? 'btn-outline' : 'btn-success' %>">
-            <%= g.active ? 'Suspend Group' : 'Reactivate Group' %>
-          </button>
-        </form>
+        <div class="flex gap-2" style="flex-wrap:wrap;">
+          <a href="/super/groups/<%= g.id %>/edit" class="btn btn-sm btn-outline">✏️ Edit Group</a>
+          <form method="POST" action="/super/groups/<%= g.id %>/toggle" style="display:inline;">
+            <button type="submit" class="btn btn-sm <%= g.active ? 'btn-outline' : 'btn-success' %>">
+              <%= g.active ? 'Suspend' : 'Reactivate' %>
+            </button>
+          </form>
+        </div>
       </div>
     </div>
     <% }) %>
   </div>
 </div>
-
 <%- include('../partials/foot') %>

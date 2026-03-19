@@ -1,6 +1,6 @@
 const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
-const { Group, User, Saving, Loan, AuditLog } = require('../models');
+const { Group, User, Saving, Loan, AuditLog, Invoice, GroupSettings } = require('../models');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 router.use(authenticate, requireRole('superadmin'));
@@ -40,11 +40,11 @@ router.get('/groups', async (req, res) => {
 
 router.post('/groups/create', async (req, res) => {
   try {
-    const { name, adminName, adminEmail, adminPassword, accentColor } = req.body;
+    const { name, adminName, adminEmail, adminPassword, accentColor, accountNumber, bankName } = req.body;
     if (!name || !adminName || !adminEmail || !adminPassword) return res.redirect('/super/groups?error=missing_fields');
     if (await User.findOne({ where: { email: adminEmail.toLowerCase() } })) return res.redirect('/super/groups?error=email_exists');
     const slug  = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const group = await Group.create({ name, slug, accentColor: accentColor||'#0D7377', adminEmail: adminEmail.toLowerCase(), active: true });
+    const group = await Group.create({ name, slug, accentColor: accentColor||'#0D7377', adminEmail: adminEmail.toLowerCase(), accountNumber: accountNumber||null, bankName: bankName||null, active: true });
     await User.create({ name: adminName, email: adminEmail.toLowerCase(), password: bcrypt.hashSync(adminPassword, 10), role: 'admin', groupId: group.id, active: true });
     await AuditLog.create({ userId: req.user.id, action: 'CREATE_GROUP', detail: `Created group: ${name}` });
     res.redirect('/super/groups?success=group_created');
@@ -68,3 +68,69 @@ router.get('/audit', async (req, res) => {
 });
 
 module.exports = router;
+
+// ── Super Admin Invoices ──────────────────────────────────────────
+router.get('/invoices', async (req, res) => {
+  try {
+    const { Invoice } = require('../models');
+    const invoices = await Invoice.findAll({ order: [['createdAt','DESC']] });
+    const enriched = await Promise.all(invoices.map(async i => ({ ...i.toJSON(), group: await Group.findByPk(i.groupId) })));
+    const totalRevenue = invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+i.paidAmount,0);
+    const pendingRevenue = invoices.filter(i=>i.status==='pending').reduce((s,i)=>s+i.amount,0);
+    res.render('super/invoices', { user: req.user, invoices: enriched, totalRevenue, pendingRevenue, query: req.query });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
+});
+
+router.post('/invoices/create', async (req, res) => {
+  try {
+    const { Invoice } = require('../models');
+    const { groupId, type, amount, dueDate, periodStart, periodEnd, notes } = req.body;
+    const count = await Invoice.count();
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count+1).padStart(3,'0')}`;
+    await Invoice.create({ groupId, invoiceNumber, type, amount: parseInt(amount), status: 'pending', dueDate: new Date(dueDate), periodStart: periodStart ? new Date(periodStart) : null, periodEnd: periodEnd ? new Date(periodEnd) : null, notes });
+    // Email to group admin
+    const group = await Group.findByPk(groupId);
+    const admin = await User.findOne({ where: { groupId, role: 'admin' } });
+    if (admin && group) {
+      const { emails } = require('../utils/email');
+      const inv = { invoiceNumber, type, amount: parseInt(amount), dueDate, periodStart, periodEnd };
+      emails.invoiceToAdmin && emails.invoiceToAdmin(admin.toJSON(), group.toJSON(), inv).catch(()=>{});
+    }
+    await AuditLog.create({ userId: req.user.id, action: 'CREATE_INVOICE', detail: `Created invoice ${invoiceNumber} for group ${groupId}` });
+    res.redirect('/super/invoices?success=created');
+  } catch(err) { console.error(err); res.redirect('/super/invoices?error=create_failed'); }
+});
+
+router.post('/invoices/:id/mark-paid', async (req, res) => {
+  try {
+    const { Invoice } = require('../models');
+    const inv = await Invoice.findByPk(req.params.id);
+    if (inv) { inv.status = 'paid'; inv.paidAt = new Date(); inv.paidAmount = inv.amount; await inv.save(); }
+    res.redirect('/super/invoices?success=marked_paid');
+  } catch(err) { console.error(err); res.redirect('/super/invoices'); }
+});
+
+// ── Edit Group ────────────────────────────────────────────────────
+router.get('/groups/:id/edit', async (req, res) => {
+  try {
+    const group = await Group.findByPk(req.params.id);
+    if (!group) return res.redirect('/super/groups?error=not_found');
+    const admin = await User.findOne({ where: { groupId: group.id, role: 'admin' } });
+    res.render('super/edit-group', { user: req.user, group: group.toJSON(), admin: admin?.toJSON()||null });
+  } catch(err) { console.error(err); res.redirect('/super/groups'); }
+});
+
+router.post('/groups/:id/edit', async (req, res) => {
+  try {
+    const group = await Group.findByPk(req.params.id);
+    if (!group) return res.redirect('/super/groups?error=not_found');
+    const { name, accentColor, accountNumber, bankName } = req.body;
+    group.name = name || group.name;
+    group.accentColor = accentColor || group.accentColor;
+    group.accountNumber = accountNumber || group.accountNumber;
+    group.bankName = bankName || group.bankName;
+    await group.save();
+    await AuditLog.create({ userId: req.user.id, action: 'EDIT_GROUP', detail: `Edited group: ${group.name}` });
+    res.redirect('/super/groups?success=group_updated');
+  } catch(err) { console.error(err); res.redirect('/super/groups?error=edit_failed'); }
+});

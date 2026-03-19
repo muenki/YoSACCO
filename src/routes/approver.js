@@ -6,6 +6,7 @@ const { emails } = require('../utils/email');
 
 router.use(authenticate, requireRole('credit_officer','treasurer','chairperson','admin','superadmin'));
 
+
 // ── Dashboard for approvers ───────────────────────────────────────
 router.get('/dashboard', async (req, res) => {
   try {
