@@ -53,10 +53,10 @@
     <div class="card">
       <div class="card-body">
         <p class="text-sm font-semibold mb-2">Members by Role</p>
-        <% const roleCounts = {}; members.forEach(m => { roleCounts[m.role]=(roleCounts[m.role]||0)+1; }); %>
-        <% Object.entries(roleCounts).forEach(([r,c]) => { %>
-        <div class="flex-between text-sm mb-1"><span class="text-muted capitalize"><%= r.replace('_',' ') %></span><span class="badge badge-info"><%= c %></span></div>
-        <% }) %>
+        <% var roleCounts = {}; var roleLabels = {member:"Member",credit_officer:"Credit Officer",treasurer:"Treasurer",chairperson:"Chairperson",admin:"Admin"}; members.forEach(function(m){ roleCounts[m.role]=(roleCounts[m.role]||0)+1; }); %>
+        <% Object.keys(roleCounts).forEach(function(r){ %>
+        <div class="flex-between text-sm mb-1"><span class="text-muted" style="text-transform:capitalize;"><%= (roleLabels[r]||r) %></span><span class="badge badge-info"><%= roleCounts[r] %></span></div>
+        <% }); %>
       </div>
     </div>
   </div>

@@ -18,7 +18,7 @@ router.get('/dashboard', async (req, res) => {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
 
-    const memberCount   = await User.count({ where: { groupId: gid, role: 'member' } });
+    const memberCount   = await User.count({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } } });
     const savingsRows   = await Saving.findAll({ where: { groupId: gid }, attributes: ['amount'] });
     const totalSavings  = savingsRows.reduce((s, r) => s + r.amount, 0);
     const activeLoanRows= await Loan.findAll({ where: { groupId: gid, status: 'active' }, attributes: ['totalRepayable','amountRepaid'] });
@@ -41,7 +41,7 @@ router.get('/dashboard', async (req, res) => {
       ...s.toJSON(), member: (await User.findByPk(s.memberId))?.toJSON() || null,
     })));
 
-    const members = await User.findAll({ where: { groupId: gid, role: 'member' } });
+    const members = await User.findAll({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } } });
 
     // Build chart data
     const allGroupSavings = await Saving.findAll({ where: { groupId: gid, type: 'contribution' }, order: [['date','ASC']] });
@@ -73,7 +73,7 @@ router.get('/members', async (req, res) => {
   try {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
-    const rawMembers = await User.findAll({ where: { groupId: gid, role: 'member' }, order: [['createdAt','ASC']] });
+    const rawMembers = await User.findAll({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } }, order: [['name','ASC']] });
     const members = await Promise.all(rawMembers.map(async m => {
       const balance    = await getBalance(m.id);
       const activeLoan = await Loan.findOne({ where: { memberId: m.id, status: 'active' } });
@@ -92,14 +92,14 @@ router.post('/members/add', async (req, res) => {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
     if (await User.findOne({ where: { email: email.toLowerCase() } })) return res.redirect('/admin/members?error=email_exists');
-    const count    = await User.count({ where: { groupId: gid, role: 'member' } });
+    const count    = await User.count({ where: { groupId: gid } });
     const prefix   = group.name.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase();
     const memberId = `${prefix}-${String(count + 1).padStart(4,'0')}`;
     const tempPass = `Yosacco@${Math.floor(1000 + Math.random() * 9000)}`;
     const newMember = await User.create({
       name, email: email.toLowerCase(), phone, nationalId,
       password: bcrypt.hashSync(tempPass, 10),
-      role: 'member', groupId: gid, memberId,
+      role: req.body.role || 'member', groupId: gid, memberId,
       joinDate: new Date(),
       monthlyContribution: parseInt(monthlyContribution) || 10000,
       shareCapitalTarget:  parseInt(shareCapitalTarget)  || 1000000,
@@ -118,7 +118,7 @@ router.get('/members/:id', async (req, res) => {
   try {
     const gid    = req.user.groupId;
     const group  = await Group.findByPk(gid);
-    const member = await User.findOne({ where: { id: req.params.id, groupId: gid, role: 'member' } });
+    const member = await User.findOne({ where: { id: req.params.id, groupId: gid } });
     if (!member) return res.redirect('/admin/members?error=not_found');
     const savings = await Saving.findAll({ where: { memberId: member.id }, order: [['date','DESC']] });
     const balance = savings.reduce((s, r) => s + r.amount, 0);
@@ -156,7 +156,7 @@ router.get('/savings', async (req, res) => {
   try {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
-    const rawMembers = await User.findAll({ where: { groupId: gid, role: 'member' }, order: [['createdAt','ASC']] });
+    const rawMembers = await User.findAll({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } }, order: [['name','ASC']] });
     const members = await Promise.all(rawMembers.map(async m => {
       const balance    = await getBalance(m.id);
       const lastContrib= await Saving.findOne({ where: { memberId: m.id, type: 'contribution' }, order: [['date','DESC']] });

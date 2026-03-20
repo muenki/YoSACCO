@@ -6,7 +6,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 router.use(authenticate, requireRole('superadmin'));
 
 async function groupStats(gid) {
-  const memberCount  = await User.count({ where: { groupId: gid, role: 'member' } });
+  const memberCount  = await User.count({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } } });
   const savings      = await Saving.findAll({ where: { groupId: gid }, attributes: ['amount'] });
   const totalSavings = savings.reduce((s, r) => s + r.amount, 0);
   const activeLoans  = await Loan.count({ where: { groupId: gid, status: 'active' } });
@@ -21,7 +21,7 @@ router.get('/dashboard', async (req, res) => {
   try {
     const groups = await Group.findAll({ order: [['createdAt','DESC']] });
     const groupsWithStats = await Promise.all(groups.map(async g => ({ ...g.toJSON(), stats: await groupStats(g.id), admin: (await groupStats(g.id)).admin })));
-    const totalMembers = await User.count({ where: { role: 'member' } });
+    const totalMembers = await User.count({ where: { role: { [require('sequelize').Op.notIn]: ['superadmin'] } } });
     const allSavings   = await Saving.findAll({ attributes: ['amount'] });
     const totalSavings = allSavings.reduce((s, r) => s + r.amount, 0);
     const activeL      = await Loan.findAll({ where: { status: 'active' }, attributes: ['totalRepayable','amountRepaid'] });
