@@ -1,21 +1,24 @@
 <%- include('../partials/head', { title: 'My Invoices', activePage: 'admin-invoices', group }) %>
 
 <style>
-/* Hidden by default — never show on screen */
+/* Always hide templates on screen */
 .inv-template { display: none !important; }
 
-/* When printing a specific invoice */
-body.printing .sidebar,
-body.printing .topbar,
-body.printing .main-content,
-body.printing .page-footer,
-body.printing .no-print { display: none !important; }
-
-body.printing .inv-template { display: none !important; }
-body.printing .inv-template.selected { display: block !important; }
+/* When printing — hide EVERYTHING except the selected template */
+@media print {
+  * { visibility: hidden; }
+  .inv-template.selected,
+  .inv-template.selected * { visibility: visible; }
+  .inv-template.selected {
+    display: block !important;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+  }
+}
 </style>
 
-<!-- Printable invoice templates — hidden until print triggered -->
+<!-- One hidden printable block per invoice -->
 <% invoices.forEach(function(inv, idx){ %>
 <div class="inv-template" id="invt-<%= idx %>">
   <div style="max-width:660px;margin:40px auto;font-family:Arial,sans-serif;padding:36px;border:1px solid #ddd;border-radius:8px;">
@@ -102,7 +105,7 @@ body.printing .inv-template.selected { display: block !important; }
 </div>
 <% }); %>
 
-<!-- ── Normal page content ──────────────────────────────────────── -->
+<!-- ── Normal screen content ──────────────────────────────────── -->
 <div class="stats-grid mb-6">
   <div class="stat-card"><div class="label">Total Invoices</div><div class="value"><%= invoices.length %></div></div>
   <div class="stat-card"><div class="label">Paid</div><div class="value text-success"><%= invoices.filter(function(i){return i.status==='paid';}).length %></div></div>
@@ -157,23 +160,20 @@ body.printing .inv-template.selected { display: block !important; }
 
 <script>
 function printInvoice(idx) {
-  // Hide ALL templates first
-  document.querySelectorAll('.inv-template').forEach(function(el) {
-    el.classList.remove('selected');
-  });
-  // Mark only the chosen one
+  // Remove selected from any previous
+  var prev = document.querySelector('.inv-template.selected');
+  if (prev) prev.classList.remove('selected');
+
+  // Mark the chosen one
   var target = document.getElementById('invt-' + idx);
   if (!target) return;
   target.classList.add('selected');
 
-  // Add printing class to body — CSS hides everything except selected template
-  document.body.classList.add('printing');
-
+  // Print — CSS visibility trick ensures only selected shows
   window.print();
 
-  // Cleanup after print dialog closes
+  // Clean up after dialog closes
   setTimeout(function() {
-    document.body.classList.remove('printing');
     target.classList.remove('selected');
   }, 2000);
 }

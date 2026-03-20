@@ -2,13 +2,17 @@
 
 <style>
 .inv-template { display: none !important; }
-body.printing .sidebar,
-body.printing .topbar,
-body.printing .main-content,
-body.printing .page-footer,
-body.printing .no-print { display: none !important; }
-body.printing .inv-template { display: none !important; }
-body.printing .inv-template.selected { display: block !important; }
+@media print {
+  * { visibility: hidden; }
+  .inv-template.selected,
+  .inv-template.selected * { visibility: visible; }
+  .inv-template.selected {
+    display: block !important;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%;
+  }
+}
 </style>
 
 <!-- Hidden printable invoice blocks — one per invoice -->
@@ -264,18 +268,13 @@ body.printing .inv-template.selected { display: block !important; }
 
 <script>
 function printSingleInvoice(idx) {
-  document.querySelectorAll('.inv-template').forEach(function(el) {
-    el.classList.remove('selected');
-  });
+  var prev = document.querySelector('.inv-template.selected');
+  if (prev) prev.classList.remove('selected');
   var target = document.getElementById('invts-' + idx);
   if (!target) return;
   target.classList.add('selected');
-  document.body.classList.add('printing');
   window.print();
-  setTimeout(function() {
-    document.body.classList.remove('printing');
-    target.classList.remove('selected');
-  }, 2000);
+  setTimeout(function() { target.classList.remove('selected'); }, 2000);
 });
   var target = document.getElementById('super-inv-' + idx);
   if(target) target.classList.add('active-print');
