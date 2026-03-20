@@ -107,6 +107,49 @@
 <!-- ── Page Content ──────────────────────────────────────────── -->
 <% const q = locals.query || {}; %>
 <% if (q.success === 'savings_posted') { %><div class="alert alert-success no-print">Savings posted. Receipt email sent to member.</div><% } %>
+<% if (q.success === 'deposit_confirmed') { %><div class="alert alert-success no-print">Deposit confirmed. Receipt sent to member.</div><% } %>
+<% if (q.success === 'deposit_rejected') { %><div class="alert alert-warning no-print">Deposit rejected and removed.</div><% } %>
+
+<% if (locals.pendingDeposits && pendingDeposits.length > 0) { %>
+<div class="card mb-6 no-print" style="border-left:4px solid var(--warning);">
+  <div class="card-header" style="background:#fffbeb;">
+    <h3 style="color:#b7791f;">⏳ Pending Deposits (<%= pendingDeposits.length %>)</h3>
+    <span class="text-sm text-muted">Members have submitted payment intents awaiting your confirmation</span>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <table>
+      <thead><tr><th>Member</th><th>Amount</th><th>Method</th><th>Reference</th><th>Submitted</th><th>Actions</th></tr></thead>
+      <tbody>
+        <% pendingDeposits.forEach(function(dep){ %>
+        <tr>
+          <td>
+            <div class="member-row">
+              <div class="avatar" style="background:#fef3c7;color:#b7791f;"><%= dep.member ? dep.member.name.split(' ').map(function(n){return n[0];}).join('') : '?' %></div>
+              <div><div class="font-semibold text-sm"><%= dep.member ? dep.member.name : 'Unknown' %></div><div class="text-xs text-muted"><%= dep.member ? dep.member.memberId : '' %></div></div>
+            </div>
+          </td>
+          <td class="font-semibold">UGX <%= dep.amount.toLocaleString() %></td>
+          <td class="text-sm"><%= dep.paymentMethod || dep.description %></td>
+          <td class="text-sm text-muted"><%= dep.transactionRef || '—' %></td>
+          <td class="text-sm text-muted"><%= new Date(dep.date).toLocaleDateString() %></td>
+          <td>
+            <div class="flex gap-2">
+              <form method="POST" action="/admin/savings/<%= dep.id %>/confirm" style="display:inline;">
+                <button class="btn btn-sm btn-success">✓ Confirm</button>
+              </form>
+              <form method="POST" action="/admin/savings/<%= dep.id %>/reject" style="display:inline;">
+                <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);">✗ Reject</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
 
 <!-- Print header for full ledger -->
 <div class="print-header" style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #0D7377;">

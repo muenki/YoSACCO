@@ -1,9 +1,16 @@
 <%- include('../partials/head', { title: 'My Savings', activePage: 'member-savings', group }) %>
 
 <% const q = locals.query || {}; %>
+<% if (q.success === 'deposit_pending') { %>
+<div class="alert alert-info" style="background:#fffbeb;border-color:#f6e05e;color:#b7791f;">
+  <strong>✓ Payment intent submitted!</strong><br>
+  Reference: <strong>#<%= q.ref||'N/A' %></strong> · Amount: <strong>UGX <%= parseInt(q.amount||0).toLocaleString() %></strong> · Method: <strong><%= q.method||'' %></strong><br>
+  <span style="font-size:13px;">Please now complete the actual transfer to your SACCO's account using the payment details on the deposit page. Your admin will confirm and credit your account once payment is received.</span>
+</div>
+<% } %>
 <% if (q.success === 'deposit_confirmed') { %>
 <div class="alert alert-success">
-  Deposit confirmed! Transaction reference: <strong>#<%= q.ref || 'N/A' %></strong>. Receipt sent to your email.
+  Deposit confirmed! Reference: <strong>#<%= q.ref||'N/A' %></strong>. Receipt sent to your email.
 </div>
 <% } %>
 

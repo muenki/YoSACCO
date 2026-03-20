@@ -61,6 +61,7 @@ router.get('/dashboard', async (req, res) => {
       recentSavings: recentSavingsWithMember,
       members: members.map(m => m.toJSON()),
       chartData,
+      pendingDepositCount,
     });
   } catch (err) {
     console.error('Admin dashboard error:', err);
@@ -163,7 +164,14 @@ router.get('/savings', async (req, res) => {
       const transactions  = await Saving.findAll({ where: { memberId: m.id }, order: [['date','ASC']] });
       return { ...m.toJSON(), balance, lastContrib: lastContrib?.toJSON() || null, transactions: transactions.map(function(t){return t.toJSON();}) };
     }));
-    res.render('admin/savings', { user: req.user, group, members, query: req.query });
+    const pendingDeposits = await Saving.findAll({
+      where: { groupId: gid, status: 'pending' },
+      order: [['date','DESC']],
+    });
+    const pendingWithMember = await Promise.all(pendingDeposits.map(async s => ({
+      ...s.toJSON(), member: (await User.findByPk(s.memberId))?.toJSON()||null
+    })));
+    res.render('admin/savings', { user: req.user, group, members, pendingDeposits: pendingWithMember, query: req.query });
   } catch (err) {
     console.error('Savings error:', err);
     res.render('error', { message: 'Error loading savings', user: req.user });
@@ -318,6 +326,33 @@ router.get('/audit', async (req, res) => {
 
 module.exports = router;
 
+
+// ── Confirm pending deposit ───────────────────────────────────────
+router.post('/savings/:id/confirm', async (req, res) => {
+  try {
+    const gid  = req.user.groupId;
+    const group = await Group.findByPk(gid);
+    const tx   = await Saving.findOne({ where: { id: req.params.id, groupId: gid, status: 'pending' } });
+    if (!tx) return res.redirect('/admin/savings?error=not_found');
+    const member = await User.findByPk(tx.memberId);
+    tx.status   = 'confirmed';
+    tx.postedBy = req.user.id;
+    await tx.save();
+    await AuditLog.create({ userId: req.user.id, action: 'CONFIRM_DEPOSIT', detail: `Confirmed deposit of UGX ${tx.amount.toLocaleString()} for ${member?.name}`, groupId: gid });
+    const balance = await getBalance(tx.memberId);
+    emails.savingsReceiptToMember(member.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(()=>{});
+    res.redirect('/admin/savings?success=deposit_confirmed');
+  } catch(err) { console.error(err); res.redirect('/admin/savings?error=confirm_failed'); }
+});
+
+router.post('/savings/:id/reject', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const tx  = await Saving.findOne({ where: { id: req.params.id, groupId: gid, status: 'pending' } });
+    if (tx) { await tx.destroy(); await AuditLog.create({ userId: req.user.id, action: 'REJECT_DEPOSIT', detail: 'Rejected pending deposit', groupId: gid }); }
+    res.redirect('/admin/savings?success=deposit_rejected');
+  } catch(err) { console.error(err); res.redirect('/admin/savings?error=reject_failed'); }
+});
 // ── Loan Terms Settings ───────────────────────────────────────────
 router.get('/loan-terms', async (req, res) => {
   try {

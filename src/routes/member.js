@@ -35,8 +35,12 @@ router.get('/savings', async (req, res) => {
     const group = await Group.findByPk(m.groupId);
     const rows  = await Saving.findAll({ where: { memberId: m.id }, order: [['date','ASC']] });
     let running = 0;
-    const transactions = rows.map(t => { running += t.amount; return { ...t.toJSON(), runningBalance: running }; }).reverse();
-    res.render('member/savings', { user: m.toJSON(), group: group.toJSON(), transactions, balance: running });
+    const transactions = rows.map(function(t) {
+      if ((t.status||'confirmed') === 'confirmed') running += t.amount;
+      return { ...t.toJSON(), runningBalance: running };
+    }).reverse();
+    const pendingAmount = rows.filter(function(t){ return t.status==='pending'; }).reduce(function(s,t){return s+t.amount;},0);
+    res.render('member/savings', { user: m.toJSON(), group: group.toJSON(), transactions, balance: running, pendingAmount });
   } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
@@ -121,7 +125,7 @@ router.post('/deposit', async (req, res) => {
     await AuditLog.create({ userId: m.id, action: 'ONLINE_DEPOSIT', detail: `Deposited UGX ${parsedAmount.toLocaleString()} via ${paymentMethod}`, groupId: m.groupId });
     const balance = await getBalance(m.id);
     emails.savingsReceiptToMember(m.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(()=>{});
-    res.redirect(`/member/savings?success=deposit_confirmed&ref=${ref.slice(-6)}`);
+    res.redirect(`/member/savings?success=deposit_pending&ref=${ref.slice(-6)}&method=${encodeURIComponent(paymentMethod)}&amount=${parsedAmount}`);
   } catch (err) { console.error(err); res.redirect('/member/deposit?error=deposit_failed'); }
 });
 

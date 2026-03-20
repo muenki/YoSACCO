@@ -1,6 +1,12 @@
 <%- include('../partials/head', { title: 'Dashboard', activePage: 'admin-dashboard', group }) %>
 
 <% if (locals.query && locals.query.success) { %><div class="alert alert-success">Operation completed successfully.</div><% } %>
+<% if ((locals.pendingDepositCount||0) > 0) { %>
+<div class="alert" style="background:#fffbeb;border:1px solid #f6e05e;color:#b7791f;margin-bottom:16px;">
+  <strong>⏳ <%= pendingDepositCount %> pending deposit(s)</strong> awaiting confirmation.
+  <a href="/admin/savings" style="color:#b7791f;font-weight:700;margin-left:8px;">Review now →</a>
+</div>
+<% } %>
 
 <div class="stats-grid">
   <div class="stat-card accent">
