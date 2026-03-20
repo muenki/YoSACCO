@@ -1,3 +1,4 @@
+const upload = require("../middleware/upload");
 const router  = require('express').Router();
 const bcrypt  = require('bcryptjs');
 const { Group, User, Saving, Loan, AuditLog, Invoice, GroupSettings } = require('../models');
@@ -38,13 +39,14 @@ router.get('/groups', async (req, res) => {
   } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
-router.post('/groups/create', async (req, res) => {
+router.post('/groups/create', upload.single("logo"), async (req, res) => {
   try {
     const { name, adminName, adminEmail, adminPassword, accentColor, accountNumber, bankName } = req.body;
     if (!name || !adminName || !adminEmail || !adminPassword) return res.redirect('/super/groups?error=missing_fields');
     if (await User.findOne({ where: { email: adminEmail.toLowerCase() } })) return res.redirect('/super/groups?error=email_exists');
     const slug  = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const group = await Group.create({ name, slug, accentColor: accentColor||'#0D7377', adminEmail: adminEmail.toLowerCase(), accountNumber: accountNumber||null, bankName: bankName||null, active: true });
+    const logoPath = req.file ? "/uploads/logos/" + req.file.filename : null;
+    const group = await Group.create({ name, slug, accentColor: accentColor||'#0D7377', adminEmail: adminEmail.toLowerCase(), accountNumber: accountNumber||null, bankName: bankName||null, logo: logoPath, active: true });
     await User.create({ name: adminName, email: adminEmail.toLowerCase(), password: bcrypt.hashSync(adminPassword, 10), role: 'admin', groupId: group.id, active: true });
     await AuditLog.create({ userId: req.user.id, action: 'CREATE_GROUP', detail: `Created group: ${name}` });
     res.redirect('/super/groups?success=group_created');
@@ -120,7 +122,7 @@ router.get('/groups/:id/edit', async (req, res) => {
   } catch(err) { console.error(err); res.redirect('/super/groups'); }
 });
 
-router.post('/groups/:id/edit', async (req, res) => {
+router.post('/groups/:id/edit', upload.single("logo"), async (req, res) => {
   try {
     const group = await Group.findByPk(req.params.id);
     if (!group) return res.redirect('/super/groups?error=not_found');
@@ -129,6 +131,7 @@ router.post('/groups/:id/edit', async (req, res) => {
     group.accentColor = accentColor || group.accentColor;
     group.accountNumber = accountNumber || group.accountNumber;
     group.bankName = bankName || group.bankName;
+    if (req.file) group.logo = "/uploads/logos/" + req.file.filename;
     await group.save();
     // Change admin if new credentials provided
     if (newAdminEmail && newAdminEmail.trim()) {

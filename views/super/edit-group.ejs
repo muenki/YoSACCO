@@ -2,46 +2,77 @@
 
 <div class="mb-4"><a href="/super/groups" class="btn btn-outline btn-sm">← Back to Groups</a></div>
 
-<div class="card" style="max-width:600px;">
+<div class="card" style="max-width:620px;">
   <div class="card-header"><h3>Edit — <%= group.name %></h3></div>
   <div class="card-body">
-    <form method="POST" action="/super/groups/<%= group.id %>/edit">
+    <form method="POST" action="/super/groups/<%= group.id %>/edit" enctype="multipart/form-data">
+
       <div class="form-group">
         <label class="form-label">SACCO Group Name</label>
         <input type="text" name="name" class="form-control" value="<%= group.name %>" required>
       </div>
+
+      <!-- Logo -->
+      <div class="form-group">
+        <label class="form-label">SACCO Group Logo</label>
+        <% if (group.logo) { %>
+        <div style="margin-bottom:10px;padding:10px;background:var(--bg);border-radius:8px;display:flex;align-items:center;gap:12px;">
+          <img src="<%= group.logo %>" style="height:48px;width:auto;object-fit:contain;border-radius:4px;">
+          <div>
+            <div class="text-sm font-semibold">Current logo</div>
+            <div class="text-xs text-muted">Upload a new file to replace it</div>
+          </div>
+        </div>
+        <% } %>
+        <input type="file" name="logo" class="form-control" accept="image/*" style="padding:6px;">
+        <div class="form-hint">PNG, JPG or SVG · Max 2MB · Leave blank to keep current</div>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Accent Colour</label>
         <input type="color" name="accentColor" class="form-control" value="<%= group.accentColor %>" style="height:40px;padding:4px;">
       </div>
-      <div class="form-group">
-        <label class="form-label">Bank Account Number</label>
-        <input type="text" name="accountNumber" class="form-control" value="<%= group.accountNumber || '' %>" placeholder="e.g. 0012345678901">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Bank Account Number</label>
+          <input type="text" name="accountNumber" class="form-control" value="<%= group.accountNumber || '' %>" placeholder="e.g. 0012345678901">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bank Name</label>
+          <input type="text" name="bankName" class="form-control" value="<%= group.bankName || '' %>" placeholder="e.g. Stanbic Bank Uganda">
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Bank Name</label>
-        <input type="text" name="bankName" class="form-control" value="<%= group.bankName || '' %>" placeholder="e.g. Stanbic Bank Uganda">
-      </div>
+
       <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
       <p class="text-sm font-semibold mb-3">Change Administrator (optional)</p>
-      <% if (admin) { %>
-      <div class="card" style="background:var(--bg);margin-bottom:12px;">
-        <div class="card-body"><p class="text-sm"><strong>Current:</strong> <%= admin.name %> · <%= admin.email %></p></div>
-      </div>
-      <% } %>
-      <div class="form-group"><label class="form-label">New Admin Name</label><input type="text" name="newAdminName" class="form-control" placeholder="Full name of new admin"></div>
-      <div class="form-group"><label class="form-label">New Admin Email</label><input type="email" name="newAdminEmail" class="form-control" placeholder="admin@newsacco.coop"></div>
-      <div class="form-group"><label class="form-label">New Admin Password</label><input type="password" name="newAdminPassword" class="form-control" placeholder="Set a strong password"></div>
-      <p class="text-xs text-muted mb-4">Leave blank to keep the current administrator. If the email already exists in the system, that user will be assigned as admin.</p>
-      <% if (false && admin) { %>
 
-      <div class="card" style="background:var(--bg);margin-bottom:16px;">
-        <div class="card-body">
-          <p class="text-sm font-semibold mb-1">Current Administrator</p>
-          <p class="text-sm text-muted"><%= admin.name %> · <%= admin.email %></p>
+      <% if (admin) { %>
+      <div class="card mb-3" style="background:var(--bg);">
+        <div class="card-body" style="display:flex;align-items:center;gap:12px;padding:12px 16px;">
+          <div class="avatar"><%= admin.name.split(' ').map(function(n){return n[0];}).join('') %></div>
+          <div>
+            <div class="text-sm font-semibold">Current: <%= admin.name %></div>
+            <div class="text-xs text-muted"><%= admin.email %></div>
+          </div>
         </div>
       </div>
       <% } %>
+
+      <div class="form-group">
+        <label class="form-label">New Admin Name</label>
+        <input type="text" name="newAdminName" class="form-control" placeholder="Full name of new admin">
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Admin Email</label>
+        <input type="email" name="newAdminEmail" class="form-control" placeholder="admin@newsacco.coop">
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Admin Password</label>
+        <input type="password" name="newAdminPassword" class="form-control" placeholder="Set a strong password">
+      </div>
+      <p class="text-xs text-muted mb-4">Leave blank to keep the current administrator.</p>
+
       <div class="flex gap-3">
         <button type="submit" class="btn btn-primary">Save Changes</button>
         <a href="/super/groups" class="btn btn-outline">Cancel</a>

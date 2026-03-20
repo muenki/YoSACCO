@@ -8,10 +8,15 @@
   <div class="card">
     <div class="card-header"><h3>Create New SACCO Group</h3></div>
     <div class="card-body">
-      <form method="POST" action="/super/groups/create">
+      <form method="POST" action="/super/groups/create" enctype="multipart/form-data">
         <div class="form-group">
           <label class="form-label">SACCO Group Name *</label>
           <input type="text" name="name" class="form-control" placeholder="e.g. Kampala Teachers SACCO" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">SACCO Group Logo (optional)</label>
+          <input type="file" name="logo" class="form-control" accept="image/*" style="padding:6px;">
+          <div class="form-hint">PNG, JPG or SVG · Max 2MB</div>
         </div>
         <div class="form-group">
           <label class="form-label">SACCO Bank Account Number</label>
@@ -52,7 +57,7 @@
       <div class="card-body">
         <div class="flex-between mb-2">
           <div>
-            <div class="font-semibold"><%= g.name %></div>
+            <div style="display:flex;align-items:center;gap:10px;"><% if(g.logo){ %><img src="<%= g.logo %>" style="height:32px;width:auto;border-radius:4px;"><% } %><div class="font-semibold"><%= g.name %></div></div>
             <div class="text-xs text-muted">Admin: <%= g.admin ? g.admin.name : 'Unassigned' %> · <%= g.adminEmail %></div>
             <% if(g.accountNumber) { %><div class="text-xs text-muted">Account: <%= g.accountNumber %><% if(g.bankName){ %> · <%= g.bankName %><% } %></div><% } %>
           </div>

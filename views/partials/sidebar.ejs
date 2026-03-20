@@ -7,7 +7,7 @@ const accentCol = locals.group ? group.accentColor : '#0D7377';
 %>
 <div class="sidebar">
   <div class="sidebar-logo" style="padding:16px 20px 14px;">
-    <img src="/assets/logo.png" alt="YoSACCO" style="height:44px;width:auto;object-fit:contain;max-width:180px;" onerror="this.style.display='none'">
+    <% if(locals.group && group.logo){ %><img src="<%= group.logo %>" alt="<%= group.name %>" style="height:44px;width:auto;object-fit:contain;max-width:180px;border-radius:4px;"><% } else { %><img src="/assets/logo.png" alt="YoSACCO" style="height:44px;width:auto;object-fit:contain;max-width:180px;" onerror="this.style.display='none'"><% } %>
     <div style="margin-top:8px;font-size:13px;font-weight:700;color:rgba(255,255,255,0.9);line-height:1.3;"><%= groupName %></div>
     <% if (role !== 'superadmin') { %><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px;">Powered by YoSACCO</div><% } %>
   </div>
