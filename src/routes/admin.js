@@ -159,8 +159,9 @@ router.get('/savings', async (req, res) => {
     const rawMembers = await User.findAll({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } }, order: [['name','ASC']] });
     const members = await Promise.all(rawMembers.map(async m => {
       const balance    = await getBalance(m.id);
-      const lastContrib= await Saving.findOne({ where: { memberId: m.id, type: 'contribution' }, order: [['date','DESC']] });
-      return { ...m.toJSON(), balance, lastContrib: lastContrib?.toJSON() || null };
+      const lastContrib   = await Saving.findOne({ where: { memberId: m.id, type: 'contribution' }, order: [['date','DESC']] });
+      const transactions  = await Saving.findAll({ where: { memberId: m.id }, order: [['date','ASC']] });
+      return { ...m.toJSON(), balance, lastContrib: lastContrib?.toJSON() || null, transactions: transactions.map(function(t){return t.toJSON();}) };
     }));
     res.render('admin/savings', { user: req.user, group, members, query: req.query });
   } catch (err) {
