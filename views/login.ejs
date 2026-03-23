@@ -1,55 +1,495 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YoSACCO — Sign In</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YoSACCO — Online SACCO Management Platform</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/app.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0A2342;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── TOP NAV ───────────────────────────────── */
+    .landing-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 48px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10,35,66,0.95);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .nav-logo img { height: 42px; width: auto; }
+    .nav-cta {
+      background: #0D7377;
+      color: #fff;
+      border: none;
+      padding: 10px 28px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-decoration: none;
+    }
+    .nav-cta:hover { background: #0a5c60; }
+
+    /* ── HERO ──────────────────────────────────── */
+    .hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 72px 48px 64px;
+      gap: 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .hero-text { flex: 1; }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(13,115,119,0.2);
+      color: #4DD9DE;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(13,115,119,0.4);
+      margin-bottom: 20px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .hero-title {
+      font-size: 52px;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+    .hero-title span { color: #0D7377; }
+    .hero-subtitle {
+      font-size: 18px;
+      color: rgba(255,255,255,0.65);
+      line-height: 1.6;
+      margin-bottom: 36px;
+      max-width: 480px;
+    }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn-hero-primary {
+      background: #0D7377;
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-hero-primary:hover { background: #0a5c60; transform: translateY(-1px); }
+    .btn-hero-outline {
+      background: transparent;
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      border: 2px solid rgba(255,255,255,0.25);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-hero-outline:hover { border-color: rgba(255,255,255,0.6); }
+
+    /* ── LOGIN CARD ─────────────────────────────── */
+    .hero-login {
+      flex: 0 0 400px;
+      background: #fff;
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+    }
+    .login-card-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #0A2342;
+      margin-bottom: 6px;
+    }
+    .login-card-sub {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 24px;
+    }
+    .form-label-s { font-size: 13px; font-weight: 600; color: #444; display: block; margin-bottom: 6px; }
+    .form-input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+      color: #0A2342;
+      margin-bottom: 16px;
+    }
+    .form-input:focus { border-color: #0D7377; }
+    .btn-login {
+      width: 100%;
+      background: #0D7377;
+      color: #fff;
+      border: none;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+      margin-top: 4px;
+    }
+    .btn-login:hover { background: #0a5c60; }
+    .alert-s {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .alert-danger-s  { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+    .alert-success-s { background: #f0fff4; color: #1a7f4b; border: 1px solid #9ae6b4; }
+
+    /* ── FEATURES STRIP ────────────────────────── */
+    .features-strip {
+      background: rgba(255,255,255,0.04);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 20px 48px;
+    }
+    .features-strip-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .strip-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,0.7);
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .strip-item .icon { font-size: 16px; }
+
+    /* ── FEATURE CARDS ─────────────────────────── */
+    .features-section {
+      padding: 72px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0D7377;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+    .section-sub {
+      font-size: 16px;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 48px;
+      max-width: 560px;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .feature-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 28px 24px;
+      transition: all 0.2s;
+    }
+    .feature-card:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(13,115,119,0.5);
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(13,115,119,0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      margin-bottom: 16px;
+    }
+    .feature-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .feature-desc {
+      font-size: 13px;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.6;
+    }
+
+    /* ── ROLES SECTION ─────────────────────────── */
+    .roles-section {
+      padding: 64px 48px;
+      background: rgba(255,255,255,0.03);
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .roles-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-top: 36px;
+    }
+    .role-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 20px 14px;
+      text-align: center;
+    }
+    .role-icon { font-size: 28px; margin-bottom: 10px; }
+    .role-name { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .role-desc { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.4; }
+
+    /* ── FOOTER ─────────────────────────────────── */
+    .landing-footer {
+      margin-top: auto;
+      padding: 24px 48px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-text { font-size: 12px; color: rgba(255,255,255,0.35); }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a { font-size: 12px; color: rgba(255,255,255,0.45); text-decoration: none; }
+    .footer-links a:hover { color: #0D7377; }
+
+    @media (max-width: 900px) {
+      .hero { flex-direction: column; padding: 40px 24px; }
+      .hero-login { flex: none; width: 100%; max-width: 420px; }
+      .hero-title { font-size: 36px; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .roles-grid { grid-template-columns: repeat(3, 1fr); }
+      .landing-nav { padding: 16px 24px; }
+      .features-section { padding: 48px 24px; }
+      .roles-section { padding: 48px 24px; }
+    }
+  </style>
 </head>
 <body>
-<div class="login-page">
-  <div style="width:420px;">
-    <div class="login-box">
-      <div class="login-logo" style="text-align:center;margin-bottom:28px;">
-        <img src="/assets/logo.png" alt="YoSACCO" style="height:90px;width:auto;object-fit:contain;max-width:280px;">
-        <p style="color:var(--text-muted);font-size:13px;margin-top:10px;">Online SACCO Management Platform</p>
-      </div>
 
-      <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
-      <% if (success === 'logged_out') { %><div class="alert alert-success">You have been signed out successfully.</div><% } %>
+<!-- ── NAV ──────────────────────────────────────────────────── -->
+<nav class="landing-nav">
+  <div class="nav-logo">
+    <img src="/assets/logo.png" alt="YoSACCO" onerror="this.style.display='none'">
+  </div>
+  <a href="#login" class="nav-cta" onclick="document.getElementById('email').focus();return false;">Sign In →</a>
+</nav>
 
-      <form method="POST" action="/login">
-        <div class="form-group">
-          <label class="form-label">Email address</label>
-          <input type="email" name="email" class="form-control" placeholder="your@email.com" required autofocus>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <input type="password" name="password" class="form-control" placeholder="••••••••" required>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:15px;">
-          Sign in to YoSACCO
-        </button>
-      </form>
-
-      <div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border);">
-        <p style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Demo Accounts</p>
-        <div style="font-size:12px;color:var(--text-muted);display:grid;gap:5px;">
-          <div>🔷 <strong>Super Admin:</strong> superadmin@yosacco.coop / Admin@2025</div>
-          <div>🔶 <strong>SACCO Admin:</strong> admin@kteachers.coop / Admin@2025</div>
-          <div>🔍 <strong>Credit Officer:</strong> credit@kteachers.coop / Admin@2025</div>
-          <div>💰 <strong>Treasurer:</strong> treasurer@kteachers.coop / Admin@2025</div>
-          <div>👑 <strong>Chairperson:</strong> chair@kteachers.coop / Admin@2025</div>
-          <div>👤 <strong>Member:</strong> james.kato@gmail.com / Member@2025</div>
-        </div>
+<!-- ── HERO + LOGIN ──────────────────────────────────────────── -->
+<div style="max-width:1200px;margin:0 auto;width:100%;">
+  <div class="hero">
+    <!-- Left: Hero text -->
+    <div class="hero-text">
+      <div class="hero-badge">🇺🇬 Built for Uganda SACCOs</div>
+      <h1 class="hero-title">Manage Your SACCO<br><span>Smarter & Faster</span></h1>
+      <p class="hero-subtitle">
+        A complete online platform for savings, loans, members, projects and financial reporting —
+        all in one place for your cooperative group.
+      </p>
+      <div class="hero-actions">
+        <a href="#login" class="btn-hero-primary" onclick="document.getElementById('email').focus();return false;">Get Started Free</a>
+        <a href="mailto:info@yosacco.coop" class="btn-hero-outline">Contact Sales</a>
       </div>
     </div>
 
-    <div style="text-align:center;margin-top:16px;font-size:12px;color:rgba(255,255,255,0.5);">
-      Powered by <strong style="color:rgba(255,255,255,0.8);">YoSACCO</strong> &nbsp;·&nbsp;
-      <a href="tel:+256756683141" style="color:rgba(255,255,255,0.6);">+256 756 683 141</a>
+    <!-- Right: Login card -->
+    <div class="hero-login" id="login">
+      <div class="login-card-title">Welcome back</div>
+      <div class="login-card-sub">Sign in to your SACCO dashboard</div>
+
+      <% if (error) { %>
+      <div class="alert-s alert-danger-s"><%= error %></div>
+      <% } %>
+      <% if (success === 'logged_out') { %>
+      <div class="alert-s alert-success-s">You have been signed out successfully.</div>
+      <% } %>
+
+      <form method="POST" action="/login">
+        <label class="form-label-s">Email address</label>
+        <input type="email" name="email" id="email" class="form-input" placeholder="you@sacco.coop" required autofocus>
+        <label class="form-label-s">Password</label>
+        <input type="password" name="password" class="form-input" placeholder="••••••••" required>
+        <button type="submit" class="btn-login">Sign in to YoSACCO →</button>
+      </form>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid #f0f0f0;text-align:center;">
+        <p style="font-size:12px;color:#aaa;">Need access? Contact your SACCO admin or</p>
+        <a href="mailto:info@yosacco.coop" style="font-size:12px;color:#0D7377;font-weight:600;">info@yosacco.coop</a>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- ── QUICK FEATURES STRIP ──────────────────────────────────── -->
+<div class="features-strip">
+  <div class="features-strip-inner">
+    <div class="strip-item"><span class="icon">✅</span> 3-Stage Loan Approval</div>
+    <div class="strip-item"><span class="icon">💰</span> Savings Ledger & Receipts</div>
+    <div class="strip-item"><span class="icon">📊</span> Monthly / Annual Reports</div>
+    <div class="strip-item"><span class="icon">🏗️</span> Projects & Asset Register</div>
+    <div class="strip-item"><span class="icon">📱</span> MTN & Airtel MoMo Payments</div>
+    <div class="strip-item"><span class="icon">🖨️</span> Printable Statements</div>
+    <div class="strip-item"><span class="icon">🔒</span> Role-Based Access Control</div>
+  </div>
+</div>
+
+<!-- ── MAIN FEATURES ─────────────────────────────────────────── -->
+<div class="features-section">
+  <div class="section-label">Platform Features</div>
+  <h2 class="section-title">Everything your SACCO needs</h2>
+  <p class="section-sub">From member registration to annual financial reports — YoSACCO covers the full lifecycle of your cooperative.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <div class="feature-title">Member Management</div>
+      <div class="feature-desc">Register members with roles, track share capital, monthly contributions, and full savings history. Assign Credit Officers, Treasurers, and Chairpersons.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💰</div>
+      <div class="feature-title">Savings & Deposits</div>
+      <div class="feature-desc">Post contributions, track balances, and manage online deposit intents via MTN MoMo, Airtel Money, Visa, or Bank Transfer. Receipts emailed automatically.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📋</div>
+      <div class="feature-title">Loan Management</div>
+      <div class="feature-desc">New loans, top-ups, and emergency loans with a 3-stage approval pipeline. Members track live progress. Rejections require a reason visible to the applicant.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📈</div>
+      <div class="feature-title">Financial Reports</div>
+      <div class="feature-desc">Generate monthly, quarterly, and annual reports for savings, loans, interest distribution, expenditure, projects, assets, and a full summary balance sheet.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏗️</div>
+      <div class="feature-title">Projects & Assets</div>
+      <div class="feature-desc">Manage unit trusts, property, and equipment projects. Track member contributions. Maintain a full asset register with depreciation tracking.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💸</div>
+      <div class="feature-title">Income & Expenditure</div>
+      <div class="feature-desc">Record all SACCO outflows by category. View net balance against total income. Printable expenditure ledger for audit and compliance.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">Interest Distribution</div>
+      <div class="feature-desc">Configure interest distribution by share capital only, savings only, or both combined. System calculates each member's share automatically.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧾</div>
+      <div class="feature-title">Invoicing</div>
+      <div class="feature-desc">YoSACCO platform sends monthly or annual subscription invoices to each SACCO group. Admins can view, pay, and print individual invoice documents.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🖨️</div>
+      <div class="feature-title">Print Everything</div>
+      <div class="feature-desc">Print savings ledgers, individual member statements, loan registers, invoices, receipts, asset registers, and full financial reports — all formatted for paper.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ROLES ─────────────────────────────────────────────────── -->
+<div class="roles-section">
+  <div class="roles-inner">
+    <div class="section-label">User Roles</div>
+    <h2 class="section-title">The right access for everyone</h2>
+    <div class="roles-grid">
+      <div class="role-card">
+        <div class="role-icon">🔷</div>
+        <div class="role-name">Super Admin</div>
+        <div class="role-desc">Manages all SACCO groups on the platform</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">🔶</div>
+        <div class="role-name">SACCO Admin</div>
+        <div class="role-desc">Full control over their SACCO group</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">🔍</div>
+        <div class="role-name">Credit Officer</div>
+        <div class="role-desc">Stage 1 loan reviewer + member access</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">💰</div>
+        <div class="role-name">Treasurer</div>
+        <div class="role-desc">Stage 2 loan reviewer + member access</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">👑</div>
+        <div class="role-name">Chairperson</div>
+        <div class="role-desc">Stage 3 final approver + member access</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">👤</div>
+        <div class="role-name">Member</div>
+        <div class="role-desc">Savings, loans, deposits & projects</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────── -->
+<footer class="landing-footer">
+  <div class="footer-text">© 2026 YoSACCO · Powered by YoSACCO Platform</div>
+  <div class="footer-links">
+    <a href="mailto:info@yosacco.coop">info@yosacco.coop</a>
+    <a href="tel:+256756683141">+256 756 683 141</a>
+    <a href="mailto:info@yosacco.coop">Contact Support</a>
+  </div>
+</footer>
+
 </body>
 </html>
