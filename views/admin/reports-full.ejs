@@ -1,16 +1,42 @@
 <%- include('../partials/head', { title: 'Reports', activePage: 'admin-reports', group }) %>
 
 <style>
+/* Single tab print — visibility trick */
+body.printing-tab .sidebar,
+body.printing-tab .topbar,
+body.printing-tab .page-footer,
+body.printing-tab .no-print,
+body.printing-tab .tab-nav,
+body.printing-tab .form-group { display:none!important; }
+body.printing-tab .main { margin-left:0!important; }
+body.printing-tab .page-content { padding:8px!important; }
+
 @media print {
-  .sidebar,.topbar,.no-print,.page-footer { display:none!important; }
-  .main { margin-left:0!important; }
+  body.printing-tab .sidebar,
+  body.printing-tab .topbar,
+  body.printing-tab .page-footer,
+  body.printing-tab .no-print,
+  body.printing-tab .tab-nav { display:none!important; }
+  body.printing-tab .main { margin-left:0!important; }
+
+  /* Hide ALL tab panes */
+  body.printing-tab .tab-pane { display:none!important; }
+  /* Show ONLY the selected tab */
+  body.printing-tab .tab-pane.printing { display:block!important; }
+
+  /* Print All mode — show everything */
+  body.printing-all .sidebar,
+  body.printing-all .topbar,
+  body.printing-all .page-footer,
+  body.printing-all .no-print,
+  body.printing-all .tab-nav { display:none!important; }
+  body.printing-all .main { margin-left:0!important; }
+  body.printing-all .tab-pane { display:block!important; }
+  body.printing-all .print-header { display:block!important; }
+
   .card { box-shadow:none!important; border:1px solid #ccc!important; break-inside:avoid; }
-  .page-content { padding:0!important; }
-  .print-header { display:block!important; }
-  .tab-pane { display:block!important; }
-  .tab-nav  { display:none!important; }
   table { font-size:11px; }
-  .print-section { page-break-before: always; }
+  .print-header { display:block!important; }
 }
 .print-header { display:none; }
 </style>
@@ -416,18 +442,34 @@ function switchTab(t) {
   });
   document.getElementById('activeTab').value = t;
 }
+
 function printTab(t) {
+  // Switch to the tab first
   switchTab(t);
-  setTimeout(function(){ window.print(); }, 200);
-}
-function printAll() {
-  document.querySelectorAll('.tab-pane').forEach(function(p){p.style.display='block';});
+
+  // Mark the target tab for print-only visibility
+  document.querySelectorAll('.tab-pane').forEach(function(p){ p.classList.remove('printing'); });
+  var target = document.getElementById('tab-' + t);
+  if (!target) return;
+  target.classList.add('printing');
+
+  // Apply printing class to body
+  document.body.classList.add('printing-tab');
   window.print();
-  setTimeout(function(){
-    document.querySelectorAll('.tab-pane').forEach(function(p){p.style.display='';});
-    var active = document.getElementById('tab-' + document.getElementById('activeTab').value);
-    if(active) active.classList.add('active');
-  }, 1000);
+
+  // Cleanup after print dialog closes
+  setTimeout(function() {
+    document.body.classList.remove('printing-tab');
+    target.classList.remove('printing');
+  }, 2000);
+}
+
+function printAll() {
+  document.body.classList.add('printing-all');
+  window.print();
+  setTimeout(function() {
+    document.body.classList.remove('printing-all');
+  }, 2000);
 }
 </script>
 <%- include('../partials/foot') %>
