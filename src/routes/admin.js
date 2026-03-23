@@ -392,6 +392,18 @@ router.get('/expenditure', async (req, res) => {
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
+
+router.post('/expenditure/income/add', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const { OtherIncome } = require('../models');
+    const { amount, source, description, date } = req.body;
+    await OtherIncome.create({ groupId: gid, amount: parseInt(amount), source, description, date: date ? new Date(date) : new Date(), postedBy: req.user.id });
+    await AuditLog.create({ userId: req.user.id, action: 'ADD_INCOME', detail: 'Recorded income: UGX ' + parseInt(amount).toLocaleString() + ' from ' + source, groupId: gid });
+    res.redirect('/admin/expenditure?success=income_added');
+  } catch(err) { console.error(err); res.redirect('/admin/expenditure?error=income_failed'); }
+});
+
 router.post('/expenditure/add', async (req, res) => {
   try {
     const gid = req.user.groupId;

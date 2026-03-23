@@ -1,29 +1,54 @@
 <%- include('../partials/head', { title: 'Income & Expenditure', activePage: 'admin-expenditure', group }) %>
 
-<% if (locals.query.success) { %><div class="alert alert-success">Expenditure recorded successfully.</div><% } %>
+<style>
+@media print {
+  .sidebar,.topbar,.no-print,.page-footer { display:none!important; }
+  .main { margin-left:0!important; }
+  .print-header { display:block!important; }
+}
+.print-header { display:none; text-align:center; margin-bottom:20px; padding-bottom:14px; border-bottom:2px solid #0D7377; }
+</style>
+
+<div class="print-header">
+  <% if(group.logo){ %><img src="<%= group.logo %>" style="height:48px;margin-bottom:6px;"><br><% } %>
+  <h2 style="margin:0;"><%= group.name %></h2>
+  <p style="margin:4px 0;font-size:14px;"><strong>Income & Expenditure Report</strong></p>
+  <p style="font-size:12px;color:#666;">Printed: <%= new Date().toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'}) %></p>
+</div>
+
+<% const q = locals.query || {}; %>
+<% if (q.success === 'added')         { %><div class="alert alert-success no-print">Expenditure recorded successfully.</div><% } %>
+<% if (q.success === 'income_added')  { %><div class="alert alert-success no-print">Other income recorded successfully.</div><% } %>
 
 <div class="stats-grid mb-6">
   <div class="stat-card" style="border-left:4px solid var(--success);">
     <div class="label">Total Income (Savings)</div>
-    <div class="value" style="font-size:18px;">UGX <%= totalIncome.toLocaleString() %></div>
+    <div class="value" style="font-size:17px;">UGX <%= totalSavingsIncome.toLocaleString() %></div>
     <div class="sub">All time</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid var(--teal);">
+    <div class="label">Other Income</div>
+    <div class="value" style="font-size:17px;">UGX <%= totalOtherIncome.toLocaleString() %></div>
+    <div class="sub"><%= otherIncomes.length %> entries</div>
   </div>
   <div class="stat-card" style="border-left:4px solid var(--danger);">
     <div class="label">Total Expenditure</div>
-    <div class="value" style="font-size:18px;">UGX <%= totalExpend.toLocaleString() %></div>
+    <div class="value" style="font-size:17px;">UGX <%= totalExpend.toLocaleString() %></div>
     <div class="sub">All time</div>
   </div>
   <div class="stat-card" style="border-left:4px solid <%= netBalance >= 0 ? 'var(--teal)' : 'var(--danger)' %>;">
     <div class="label">Net Balance</div>
-    <div class="value" style="font-size:18px;color:<%= netBalance >= 0 ? 'var(--success)' : 'var(--danger)' %>">UGX <%= Math.abs(netBalance).toLocaleString() %></div>
+    <div class="value" style="font-size:17px;color:<%= netBalance >= 0 ? 'var(--success)' : 'var(--danger)' %>">
+      UGX <%= Math.abs(netBalance).toLocaleString() %>
+    </div>
     <div class="sub"><%= netBalance >= 0 ? 'Surplus' : 'Deficit' %></div>
   </div>
 </div>
 
-<div class="grid-2 gap-4 mb-6">
-  <!-- Add Expenditure -->
+<div class="grid-2 gap-4 mb-6 no-print">
+  <!-- Record Expenditure -->
   <div class="card">
-    <div class="card-header"><h3>Record Expenditure</h3></div>
+    <div class="card-header"><h3>💸 Record Expenditure</h3></div>
     <div class="card-body">
       <form method="POST" action="/admin/expenditure/add">
         <div class="form-group">
@@ -42,66 +67,159 @@
             <option>Other</option>
           </select>
         </div>
-        <div class="form-group">
-          <label class="form-label">Amount (UGX) *</label>
-          <input type="number" name="amount" class="form-control" placeholder="e.g. 150000" min="1000" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Date</label>
-          <input type="date" name="date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Amount (UGX) *</label>
+            <input type="number" name="amount" class="form-control" placeholder="e.g. 150000" min="1000" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Description</label>
-          <textarea name="description" class="form-control" rows="3" placeholder="Brief description of the expenditure..."></textarea>
+          <textarea name="description" class="form-control" rows="2" placeholder="Brief description of the expenditure..."></textarea>
         </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Record Expenditure</button>
+        <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;">Record Expenditure</button>
       </form>
     </div>
   </div>
 
-  <!-- Summary by category -->
+  <!-- Record Other Income -->
   <div class="card">
-    <div class="card-header"><h3>Expenditure by Category</h3></div>
+    <div class="card-header"><h3>💰 Record Other Income</h3></div>
     <div class="card-body">
-      <%
-        const catTotals = {};
-        expenditures.forEach(e => { catTotals[e.category] = (catTotals[e.category]||0) + e.amount; });
-        const sortedCats = Object.entries(catTotals).sort((a,b) => b[1]-a[1]);
-      %>
-      <% if (sortedCats.length === 0) { %>
-        <p class="text-muted text-sm">No expenditures recorded yet.</p>
-      <% } %>
-      <% sortedCats.forEach(([cat, total]) => { %>
-      <div class="flex-between mb-2">
-        <span class="text-sm"><%= cat %></span>
-        <span class="text-sm font-semibold text-danger">UGX <%= total.toLocaleString() %></span>
-      </div>
-      <div class="progress mb-3" style="height:4px;">
-        <div class="progress-bar" style="width:<%= Math.round(total/totalExpend*100) %>%;background:var(--danger);"></div>
-      </div>
-      <% }) %>
+      <p class="text-sm text-muted mb-3">Record income other than member savings — e.g. donations, grants, rental income, project returns, fines.</p>
+      <form method="POST" action="/admin/expenditure/income/add">
+        <div class="form-group">
+          <label class="form-label">Income Source *</label>
+          <select name="source" class="form-control" required>
+            <option value="">— Select source —</option>
+            <option>Donation / Grant</option>
+            <option>Rental Income</option>
+            <option>Project Returns</option>
+            <option>Investment Returns</option>
+            <option>Loan Processing Fees</option>
+            <option>Member Fines / Penalties</option>
+            <option>Government Support</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Amount (UGX) *</label>
+            <input type="number" name="amount" class="form-control" placeholder="e.g. 500000" min="1000" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" name="date" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea name="description" class="form-control" rows="2" placeholder="Details about this income..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-success" style="width:100%;justify-content:center;">Record Income</button>
+      </form>
     </div>
   </div>
 </div>
 
-<!-- Expenditure History -->
-<div class="section-head"><h2>All Expenditure Records</h2></div>
+<!-- Category Summaries -->
+<div class="grid-2 gap-4 mb-6 no-print">
+  <div class="card">
+    <div class="card-header"><h3>Expenditure by Category</h3></div>
+    <div class="card-body">
+      <%
+        var catTotals = {};
+        expenditures.forEach(function(e){ catTotals[e.category]=(catTotals[e.category]||0)+e.amount; });
+        var sortedCats = Object.keys(catTotals).sort(function(a,b){return catTotals[b]-catTotals[a];});
+      %>
+      <% if (!sortedCats.length) { %><p class="text-muted text-sm">No expenditures yet.</p><% } %>
+      <% sortedCats.forEach(function(cat){ %>
+      <div class="flex-between mb-2">
+        <span class="text-sm"><%= cat %></span>
+        <span class="text-sm font-semibold text-danger">UGX <%= catTotals[cat].toLocaleString() %></span>
+      </div>
+      <div class="progress mb-3" style="height:4px;"><div class="progress-bar" style="width:<%= totalExpend>0?Math.round(catTotals[cat]/totalExpend*100):0 %>%;background:var(--danger);"></div></div>
+      <% }); %>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Other Income by Source</h3></div>
+    <div class="card-body">
+      <%
+        var srcTotals = {};
+        otherIncomes.forEach(function(i){ srcTotals[i.source]=(srcTotals[i.source]||0)+i.amount; });
+        var sortedSrcs = Object.keys(srcTotals).sort(function(a,b){return srcTotals[b]-srcTotals[a];});
+      %>
+      <% if (!sortedSrcs.length) { %><p class="text-muted text-sm">No other income recorded yet.</p><% } %>
+      <% sortedSrcs.forEach(function(src){ %>
+      <div class="flex-between mb-2">
+        <span class="text-sm"><%= src %></span>
+        <span class="text-sm font-semibold text-success">UGX <%= srcTotals[src].toLocaleString() %></span>
+      </div>
+      <div class="progress mb-3" style="height:4px;"><div class="progress-bar" style="width:<%= totalOtherIncome>0?Math.round(srcTotals[src]/totalOtherIncome*100):0 %>%;background:var(--success);"></div></div>
+      <% }); %>
+    </div>
+  </div>
+</div>
+
+<!-- Other Income Table -->
+<div class="flex-between mb-3">
+  <h2>Other Income Records</h2>
+  <button onclick="window.print()" class="btn btn-sm btn-outline no-print">🖨 Print Ledger</button>
+</div>
+<div class="card p-0 mb-6">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Date</th><th>Source</th><th>Description</th><th>Amount (UGX)</th></tr></thead>
+      <tbody>
+        <% if (!otherIncomes.length) { %>
+        <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">No other income recorded yet.</td></tr>
+        <% } %>
+        <% otherIncomes.forEach(function(inc, i){ %>
+        <tr>
+          <td class="text-muted text-sm"><%= i+1 %></td>
+          <td class="text-sm text-muted"><%= new Date(inc.date).toLocaleDateString('en-UG',{year:'numeric',month:'short',day:'numeric'}) %></td>
+          <td><span class="badge badge-success" style="font-size:11px;"><%= inc.source %></span></td>
+          <td class="text-sm"><%= inc.description||'—' %></td>
+          <td class="font-semibold text-success">+ UGX <%= inc.amount.toLocaleString() %></td>
+        </tr>
+        <% }); %>
+        <tr style="background:var(--bg);font-weight:700;">
+          <td colspan="4" style="text-align:right;padding:10px 16px;">TOTAL OTHER INCOME</td>
+          <td style="padding:10px 16px;color:var(--success);">UGX <%= totalOtherIncome.toLocaleString() %></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Expenditure Table -->
+<div class="section-head"><h2>Expenditure Records</h2></div>
 <div class="card p-0">
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr></thead>
+      <thead><tr><th>#</th><th>Date</th><th>Category</th><th>Description</th><th>Amount (UGX)</th></tr></thead>
       <tbody>
         <% if (!expenditures.length) { %>
-        <tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted);">No expenditures recorded yet.</td></tr>
+        <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">No expenditures recorded yet.</td></tr>
         <% } %>
-        <% expenditures.forEach(e => { %>
+        <% expenditures.forEach(function(e, i){ %>
         <tr>
+          <td class="text-muted text-sm"><%= i+1 %></td>
           <td class="text-sm text-muted"><%= new Date(e.date).toLocaleDateString('en-UG',{year:'numeric',month:'short',day:'numeric'}) %></td>
-          <td><span class="badge badge-gray"><%= e.category %></span></td>
-          <td class="text-sm"><%= e.description || '—' %></td>
-          <td class="text-sm font-semibold text-danger">- UGX <%= e.amount.toLocaleString() %></td>
+          <td><span class="badge badge-gray text-xs"><%= e.category %></span></td>
+          <td class="text-sm"><%= e.description||'—' %></td>
+          <td class="font-semibold text-danger">- UGX <%= e.amount.toLocaleString() %></td>
         </tr>
-        <% }) %>
+        <% }); %>
+        <tr style="background:var(--bg);font-weight:700;">
+          <td colspan="4" style="text-align:right;padding:10px 16px;">TOTAL EXPENDITURE</td>
+          <td style="padding:10px 16px;color:var(--danger);">UGX <%= totalExpend.toLocaleString() %></td>
+        </tr>
       </tbody>
     </table>
   </div>

@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { Op }  = require('sequelize');
-const { Group, User, Saving, Loan, Repayment, Expenditure, Project, ProjectContribution, GroupSettings, Asset } = require('../models');
+const { Group, User, Saving, Loan, Repayment, Expenditure, Project, ProjectContribution, GroupSettings, Asset, OtherIncome } = require('../models');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 router.use(authenticate, requireRole('admin','superadmin'));
@@ -121,13 +121,19 @@ router.get('/', async (req, res) => {
       interestShare: totalWeight > 0 ? Math.round((m.weight / totalWeight) * totalInterestPool) : 0,
     }));
 
+    // ── OTHER INCOME ─────────────────────────────────────────────
+    const otherIncomePeriod = await OtherIncome.findAll({ where:{ groupId:gid, date:dateFilter } });
+    const totalOtherIncomePeriod = otherIncomePeriod.reduce((t,i)=>t+i.amount,0);
+    const allOtherIncomeEver = await OtherIncome.findAll({ where:{ groupId:gid }, attributes:['amount'] });
+    const totalOtherIncomeEver = allOtherIncomeEver.reduce((t,i)=>t+i.amount,0);
+
     // ── AVAILABLE BALANCE ─────────────────────────────────────────
     const allSavingsEver  = await Saving.findAll({ where:{ groupId:gid }, attributes:['amount'] });
     const allExpendsEver  = await Expenditure.findAll({ where:{ groupId:gid }, attributes:['amount'] });
     const totalSavingsEver = allSavingsEver.reduce((t,s)=>t+s.amount,0);
     const totalExpendsEver = allExpendsEver.reduce((t,e)=>t+e.amount,0);
     const loanPortfolio    = activeLoansRaw.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0);
-    const availableBalance = totalSavingsEver - totalExpendsEver - loanPortfolio;
+    const availableBalance = totalSavingsEver + totalOtherIncomeEver - totalExpendsEver - loanPortfolio;
 
     // ── ASSETS ────────────────────────────────────────────────────
     const allAssets = await Asset.findAll({ where:{ groupId:gid }, order:[['purchaseDate','DESC']] });
@@ -151,6 +157,8 @@ router.get('/', async (req, res) => {
       totalExpend,
       projects,
       totalProjectContribs,
+      totalOtherIncomePeriod,
+      totalOtherIncomeEver,
       interestDistribution: interestDistributionFinal,
       totalInterestPool,
       method,
