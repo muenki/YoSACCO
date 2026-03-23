@@ -82,7 +82,7 @@
 
 <!-- Tabs -->
 <div class="tab-nav no-print">
-  <% var tabs = [['savings','💰 Savings'],['loans','📋 Loans'],['interest','📊 Interest'],['expenditure','💸 Expenditure'],['projects','🏗️ Projects'],['assets','🏛️ Assets'],['summary','📄 Summary']]; %>
+  <% var tabs = [['savings','💰 Savings'],['loans','📋 Loans'],['interest','📊 Distribution'],['expenditure','💸 Expenditure'],['projects','🏗️ Projects'],['assets','🏛️ Assets'],['summary','📄 Summary']]; %>
   <% tabs.forEach(function(t){ %>
   <button class="tab-btn <%= tab===t[0]?'active':'' %>" onclick="switchTab('<%= t[0] %>')"><%= t[1] %></button>
   <% }); %>
@@ -168,17 +168,23 @@
 <!-- ══ INTEREST ══════════════════════════════════════════════════ -->
 <div class="tab-pane <%= tab==='interest'?'active':'' %>" id="tab-interest">
   <div class="flex-between mb-3">
-    <h3>Interest Distribution</h3>
+    <h3>Income Distribution (Interest + Other Income)</h3>
     <button onclick="printTab('interest')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
   </div>
   <div class="alert alert-info mb-4">
-    <strong>Method:</strong> <%= method==='share_capital_only'?'Share Capital Only':method==='savings_only'?'Savings Only':'Share Capital + Savings' %> &nbsp;·&nbsp;
-    <strong>Total Interest Pool:</strong> UGX <%= totalInterestPool.toLocaleString() %>
+    <strong>Distribution Method:</strong>
+    <%= method==='share_capital_only'?'Share Capital Only':method==='savings_only'?'Savings Only':'Share Capital + Savings' %>
+    &nbsp;·&nbsp;
+    <strong>Loan Interest (Period):</strong> UGX <%= periodInterest.toLocaleString() %>
+    &nbsp;+&nbsp;
+    <strong>Other Income (Period):</strong> UGX <%= (locals.totalOtherIncomePeriod||0).toLocaleString() %>
+    &nbsp;=&nbsp;
+    <strong>Total Pool:</strong> UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %>
   </div>
   <div class="card p-0">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Member</th><th>Share Capital</th><th>Savings Balance</th><th>Weight</th><th>Share %</th><th>Interest Due (UGX)</th></tr></thead>
+        <thead><tr><th>Member</th><th>Share Capital</th><th>Savings Balance</th><th>Weight</th><th>Share %</th><th>Distribution Due (UGX)</th></tr></thead>
         <tbody>
           <%
             var totalWeight = interestDistribution.reduce(function(t,m){return t+m.weight;},0);

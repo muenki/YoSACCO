@@ -14,7 +14,7 @@ function getRange(period, year, quarter, month) {
     const q = parseInt(quarter) || Math.ceil((new Date().getMonth()+1)/3);
     start = new Date(y, (q-1)*3, 1); end = new Date(y, q*3, 0, 23, 59, 59);
   } else {
-    const m = parseInt(month) !== undefined ? parseInt(month) : new Date().getMonth();
+    const m = month !== undefined ? parseInt(month) : new Date().getMonth();
     start = new Date(y, m, 1); end = new Date(y, m+1, 0, 23, 59, 59);
   }
   return { start, end };
@@ -33,24 +33,20 @@ router.get('/', async (req, res) => {
     const { start, end } = getRange(period, y, q, m);
     const dateFilter = { [Op.between]: [start, end] };
 
-    // ── ALL MEMBERS (all roles that have savings) ─────────────────
+    // ── MEMBERS ───────────────────────────────────────────────────
     const allMembers = await User.findAll({
-      where: {
-        groupId: gid,
-        role: { [Op.in]: ['member','credit_officer','treasurer','chairperson','admin'] },
-        active: true,
-      },
+      where: { groupId: gid, role: { [Op.notIn]: ['superadmin'] }, active: true },
       order: [['name','ASC']],
     });
 
     // ── SAVINGS ───────────────────────────────────────────────────
-    const periodSavingsRows = await Saving.findAll({ where:{ groupId:gid, date:dateFilter } });
+    const periodSavingsRows = await Saving.findAll({ where:{ groupId:gid, date:dateFilter, status:{ [Op.ne]:'pending' } } });
     const totalPeriodSavings = periodSavingsRows.reduce((t,s)=>t+s.amount,0);
 
     const memberSavings = await Promise.all(allMembers.map(async mem => {
       const mj = mem.toJSON();
       const periodAmt = periodSavingsRows.filter(s=>s.memberId===mj.id).reduce((t,s)=>t+s.amount,0);
-      const allRows   = await Saving.findAll({ where:{ memberId:mj.id }, attributes:['amount'] });
+      const allRows   = await Saving.findAll({ where:{ memberId:mj.id, status:{ [Op.ne]:'pending' } }, attributes:['amount'] });
       const totalBalance = allRows.reduce((t,s)=>t+s.amount,0);
       return { ...mj, periodSavings: periodAmt, totalBalance };
     }));
@@ -69,20 +65,15 @@ router.get('/', async (req, res) => {
     const repaidLoansRaw  = await Loan.findAll({ where:{ groupId:gid, status:'repaid' } });
 
     // ── INTEREST INCOME ───────────────────────────────────────────
-    // Real interest = sum of (totalRepayable - amount) for all active + repaid loans
     const interestIncome = [...activeLoansRaw, ...repaidLoansRaw]
       .reduce((t,l) => t + Math.max(0, l.totalRepayable - l.amount), 0);
 
-    // Period interest = repayments made in period × average interest rate
     const periodRepayments = await Repayment.findAll({ where:{ groupId:gid, date:dateFilter } });
     const totalRepaid = periodRepayments.reduce((t,r)=>t+r.amount,0);
 
-    // Calculate period interest from actual loan interest rates
     const interestRate = settings ? settings.newLoanInterestRate/100 : 0.015;
-    // Approximate: interest portion of repayments = repayment × (rate/(1+rate))
     const periodInterest = Math.round(totalRepaid * (interestRate / (1 + interestRate)));
 
-    // Fallback: if no repayments, show accrued interest on active loans this period
     const accrualMonths = period==='annual'?12:period==='quarterly'?3:1;
     const accruedInterest = activeLoansRaw.reduce((t,l) => {
       const outstanding = l.totalRepayable - l.amountRepaid;
@@ -94,14 +85,22 @@ router.get('/', async (req, res) => {
     const expenditures = await Expenditure.findAll({ where:{ groupId:gid, date:dateFilter }, order:[['date','ASC']] });
     const totalExpend  = expenditures.reduce((t,e)=>t+e.amount,0);
 
-    // ── PROJECTS ──────────────────────────────────────────────────
+    // ── PROJECTS ─────────────────────────────────────────────────
     const projects = await Project.findAll({ where:{ groupId:gid } });
     const periodProjectContribs = await ProjectContribution.findAll({ where:{ groupId:gid, date:dateFilter } });
     const totalProjectContribs = periodProjectContribs.reduce((t,c)=>t+c.amount,0);
 
-    // ── INTEREST DISTRIBUTION ─────────────────────────────────────
+    // ── OTHER INCOME ──────────────────────────────────────────────
+    const otherIncomePeriod  = await OtherIncome.findAll({ where:{ groupId:gid, date:dateFilter } });
+    const totalOtherIncomePeriod = otherIncomePeriod.reduce((t,i)=>t+i.amount,0);
+    const allOtherIncomeEver = await OtherIncome.findAll({ where:{ groupId:gid }, attributes:['amount'] });
+    const totalOtherIncomeEver = allOtherIncomeEver.reduce((t,i)=>t+i.amount,0);
+
+    // ── DISTRIBUTION POOL (interest + other income) ───────────────
+    // Both loan interest and other income are distributed to members
+    // by the same configured method (share capital, savings, or both)
     const method = settings?.interestDistributionMethod || 'share_capital_and_savings';
-    const totalInterestPool = periodInterestDisplay;
+    const totalDistributionPool = periodInterestDisplay + totalOtherIncomePeriod;
 
     const interestDistribution = memberSavings.map(ms => {
       let weight = 0;
@@ -110,7 +109,6 @@ router.get('/', async (req, res) => {
       } else if (method === 'savings_only') {
         weight = ms.totalBalance || 0;
       } else {
-        // share_capital_and_savings
         weight = (ms.shareCapitalPaid || 0) + (ms.totalBalance || 0);
       }
       return { ...ms, weight };
@@ -118,17 +116,11 @@ router.get('/', async (req, res) => {
     const totalWeight = interestDistribution.reduce((t,m)=>t+m.weight,0);
     const interestDistributionFinal = interestDistribution.map(m => ({
       ...m,
-      interestShare: totalWeight > 0 ? Math.round((m.weight / totalWeight) * totalInterestPool) : 0,
+      interestShare: totalWeight > 0 ? Math.round((m.weight / totalWeight) * totalDistributionPool) : 0,
     }));
 
-    // ── OTHER INCOME ─────────────────────────────────────────────
-    const otherIncomePeriod = await OtherIncome.findAll({ where:{ groupId:gid, date:dateFilter } });
-    const totalOtherIncomePeriod = otherIncomePeriod.reduce((t,i)=>t+i.amount,0);
-    const allOtherIncomeEver = await OtherIncome.findAll({ where:{ groupId:gid }, attributes:['amount'] });
-    const totalOtherIncomeEver = allOtherIncomeEver.reduce((t,i)=>t+i.amount,0);
-
     // ── AVAILABLE BALANCE ─────────────────────────────────────────
-    const allSavingsEver  = await Saving.findAll({ where:{ groupId:gid }, attributes:['amount'] });
+    const allSavingsEver  = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' } }, attributes:['amount'] });
     const allExpendsEver  = await Expenditure.findAll({ where:{ groupId:gid }, attributes:['amount'] });
     const totalSavingsEver = allSavingsEver.reduce((t,s)=>t+s.amount,0);
     const totalExpendsEver = allExpendsEver.reduce((t,e)=>t+e.amount,0);
@@ -157,10 +149,11 @@ router.get('/', async (req, res) => {
       totalExpend,
       projects,
       totalProjectContribs,
+      interestDistribution: interestDistributionFinal,
+      totalInterestPool: totalDistributionPool,
+      totalDistributionPool,
       totalOtherIncomePeriod,
       totalOtherIncomeEver,
-      interestDistribution: interestDistributionFinal,
-      totalInterestPool,
       method,
       availableBalance,
       totalSavingsEver,
