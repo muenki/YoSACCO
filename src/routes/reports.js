@@ -169,4 +169,97 @@ router.get('/', async (req, res) => {
   }
 });
 
+
+// ── Post Distribution to Member Savings ──────────────────────────
+router.post('/distribute', async (req, res) => {
+  try {
+    const gid      = req.user.groupId;
+    const group    = await Group.findByPk(gid);
+    const settings = await GroupSettings.findOne({ where:{ groupId:gid } });
+    const { period, year, quarter, month, description } = req.body;
+
+    // Rebuild the same calculation as the reports route
+    const { start, end } = (() => {
+      const y = parseInt(year) || new Date().getFullYear();
+      const q = parseInt(quarter) || Math.ceil((new Date().getMonth()+1)/3);
+      const m = month !== undefined ? parseInt(month) : new Date().getMonth();
+      if (period === 'annual')    return { start: new Date(y,0,1), end: new Date(y,11,31,23,59,59) };
+      if (period === 'quarterly') return { start: new Date(y,(q-1)*3,1), end: new Date(y,q*3,0,23,59,59) };
+      return { start: new Date(y,m,1), end: new Date(y,m+1,0,23,59,59) };
+    })();
+    const dateFilter = { [Op.between]: [start, end] };
+
+    // Get all members
+    const allMembers = await User.findAll({
+      where:{ groupId:gid, role:{ [Op.notIn]:['superadmin'] }, active:true },
+    });
+
+    // Calculate savings balances
+    const memberSavings = await Promise.all(allMembers.map(async m => {
+      const mj = m.toJSON();
+      const allRows = await Saving.findAll({ where:{ memberId:mj.id, status:{ [Op.ne]:'pending' } }, attributes:['amount'] });
+      return { ...mj, totalBalance: allRows.reduce((t,s)=>t+s.amount,0) };
+    }));
+
+    // Interest
+    const interestRate = settings ? settings.newLoanInterestRate/100 : 0.015;
+    const periodRepayments = await Repayment.findAll({ where:{ groupId:gid, date:dateFilter } });
+    const totalRepaid = periodRepayments.reduce((t,r)=>t+r.amount,0);
+    const periodInterest = Math.round(totalRepaid * (interestRate / (1 + interestRate)));
+    const activeLoansRaw = await Loan.findAll({ where:{ groupId:gid, status:'active' } });
+    const accrualMonths = period==='annual'?12:period==='quarterly'?3:1;
+    const accruedInterest = activeLoansRaw.reduce((t,l)=>t+Math.round((l.totalRepayable-l.amountRepaid)*interestRate*accrualMonths),0);
+    const periodInterestDisplay = periodInterest > 0 ? periodInterest : accruedInterest;
+
+    // Other income
+    const otherIncomes = await OtherIncome.findAll({ where:{ groupId:gid, date:dateFilter }, attributes:['amount'] });
+    const totalOtherIncome = otherIncomes.reduce((t,i)=>t+i.amount,0);
+
+    const totalPool = periodInterestDisplay + totalOtherIncome;
+    if (totalPool <= 0) return res.redirect('/admin/reports?tab=interest&error=nothing_to_distribute&period='+period+'&year='+year);
+
+    // Distribution weights
+    const method = settings?.interestDistributionMethod || 'share_capital_and_savings';
+    const weighted = memberSavings.map(ms => {
+      let w = 0;
+      if (method === 'share_capital_only') w = ms.shareCapitalPaid || 0;
+      else if (method === 'savings_only')  w = ms.totalBalance || 0;
+      else w = (ms.shareCapitalPaid||0) + (ms.totalBalance||0);
+      return { ...ms, weight: w };
+    });
+    const totalWeight = weighted.reduce((t,m)=>t+m.weight,0);
+    if (totalWeight <= 0) return res.redirect('/admin/reports?tab=interest&error=no_weight&period='+period+'&year='+year);
+
+    // Post a savings credit entry for each member
+    const label = description || 'Income distribution — ' + period + ' ' + year;
+    let posted = 0;
+    for (const ms of weighted) {
+      const share = Math.round((ms.weight / totalWeight) * totalPool);
+      if (share <= 0) continue;
+      await Saving.create({
+        memberId: ms.id,
+        groupId: gid,
+        amount: share,
+        type: 'dividend',
+        description: label,
+        date: new Date(),
+        postedBy: req.user.id,
+        status: 'confirmed',
+      });
+      posted++;
+    }
+
+    await AuditLog.create({
+      userId: req.user.id,
+      action: 'INCOME_DISTRIBUTION',
+      detail: 'Distributed UGX ' + totalPool.toLocaleString() + ' to ' + posted + ' members (' + label + ')',
+      groupId: gid,
+    });
+
+    res.redirect('/admin/reports?tab=interest&success=distributed&period='+period+'&year='+year+'&quarter='+quarter+'&month='+month);
+  } catch(err) {
+    console.error('Distribution error:', err);
+    res.redirect('/admin/reports?tab=interest&error=distribution_failed');
+  }
+});
 module.exports = router;

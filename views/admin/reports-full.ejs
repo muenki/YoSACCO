@@ -197,7 +197,17 @@ body.printing-tab .page-content { padding:8px!important; }
     <h3>Income Distribution (Interest + Other Income)</h3>
     <button onclick="printTab('interest')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
   </div>
-  <div class="alert alert-info mb-4">
+
+  <% if (locals.query && locals.query.success === 'distributed') { %>
+  <div class="alert alert-success no-print">
+    ✅ Distribution posted successfully! Each member's savings balance has been credited with their share.
+  </div>
+  <% } %>
+  <% if (locals.query && locals.query.error === 'nothing_to_distribute') { %>
+  <div class="alert alert-warning no-print">No income to distribute in this period.</div>
+  <% } %>
+
+  <div class="alert alert-info mb-3">
     <strong>Distribution Method:</strong>
     <%= method==='share_capital_only'?'Share Capital Only':method==='savings_only'?'Savings Only':'Share Capital + Savings' %>
     &nbsp;·&nbsp;
@@ -207,6 +217,31 @@ body.printing-tab .page-content { padding:8px!important; }
     &nbsp;=&nbsp;
     <strong>Total Pool:</strong> UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %>
   </div>
+
+  <!-- Distribute Button -->
+  <% if ((locals.totalDistributionPool||totalInterestPool) > 0) { %>
+  <div class="card mb-4 no-print" style="border-left:4px solid var(--teal);background:var(--info-bg);">
+    <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div class="font-semibold" style="font-size:15px;">Post Distribution to Member Savings</div>
+        <div class="text-sm text-muted">This will credit each member's savings account with their calculated share. This action cannot be undone.</div>
+      </div>
+      <form method="POST" action="/admin/reports/distribute" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="hidden" name="period"  value="<%= period %>">
+        <input type="hidden" name="year"    value="<%= year %>">
+        <input type="hidden" name="quarter" value="<%= quarter %>">
+        <input type="hidden" name="month"   value="<%= month %>">
+        <input type="text" name="description" class="form-control" style="width:260px;"
+          placeholder="e.g. March 2026 income distribution"
+          value="Income distribution — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %>">
+        <button type="submit" class="btn btn-primary"
+          onclick="return confirm('Post UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %> distribution to all members? This will credit their savings accounts.')">
+          ✓ Post Distribution
+        </button>
+      </form>
+    </div>
+  </div>
+  <% } %>
   <div class="card p-0">
     <div class="table-wrap">
       <table>
