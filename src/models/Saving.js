@@ -39,6 +39,10 @@ const Saving = sequelize.define('Saving', {
     type: DataTypes.UUID,
     allowNull: true,
   },
+  status: {
+    type: DataTypes.ENUM('confirmed', 'pending'),
+    defaultValue: 'confirmed',
+  },
   date: {
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW,

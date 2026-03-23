@@ -8,7 +8,7 @@ const { emails } = require('../utils/email');
 router.use(authenticate, requireRole('admin', 'superadmin'));
 
 const getBalance = async (memberId) => {
-  const rows = await Saving.findAll({ where: { memberId }, attributes: ['amount'] });
+  const rows = await Saving.findAll({ where: { memberId, status: { [Op.ne]: 'pending' } }, attributes: ['amount'] });
   return rows.reduce((s, r) => s + r.amount, 0);
 };
 
@@ -18,7 +18,7 @@ router.get('/dashboard', async (req, res) => {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
 
-    const memberCount   = await User.count({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } } });
+    const memberCount   = await User.count({ where: { groupId: gid, role: { [Op.notIn]: ['superadmin'] } } });
     const savingsRows   = await Saving.findAll({ where: { groupId: gid }, attributes: ['amount'] });
     const totalSavings  = savingsRows.reduce((s, r) => s + r.amount, 0);
     const activeLoanRows= await Loan.findAll({ where: { groupId: gid, status: 'active' }, attributes: ['totalRepayable','amountRepaid'] });
@@ -41,7 +41,7 @@ router.get('/dashboard', async (req, res) => {
       ...s.toJSON(), member: (await User.findByPk(s.memberId))?.toJSON() || null,
     })));
 
-    const members = await User.findAll({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } } });
+    const members = await User.findAll({ where: { groupId: gid, role: { [Op.notIn]: ['superadmin'] } } });
 
     // Build chart data
     const allGroupSavings = await Saving.findAll({ where: { groupId: gid, type: 'contribution' }, order: [['date','ASC']] });
@@ -53,6 +53,8 @@ router.get('/dashboard', async (req, res) => {
     const allLoansForChart = await Loan.findAll({ where: { groupId: gid } });
     const loanChartData = { repaid: allLoansForChart.filter(l=>l.status==='repaid').reduce((s,l)=>s+l.totalRepayable,0), active: allLoansForChart.filter(l=>l.status==='active').reduce((s,l)=>s+(l.totalRepayable-l.amountRepaid),0), pending: allLoansForChart.filter(l=>['pending','under_review','approved'].includes(l.status)).reduce((s,l)=>s+l.amount,0) };
     const chartData = { savings: { monthly: { labels: months, values: mSums }, quarterly: { labels: ['Q1','Q2','Q3','Q4'], values: qSums }, annual: { labels: [new Date().getFullYear().toString()], values: [annualTotal] } }, loans: loanChartData };
+
+    const pendingDepositCount = await Saving.count({ where: { groupId: gid, status: 'pending' } });
 
     res.render('admin/dashboard', {
       user: req.user, group,
@@ -74,7 +76,7 @@ router.get('/members', async (req, res) => {
   try {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
-    const rawMembers = await User.findAll({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } }, order: [['name','ASC']] });
+    const rawMembers = await User.findAll({ where: { groupId: gid, role: { [Op.notIn]: ['superadmin'] } }, order: [['name','ASC']] });
     const members = await Promise.all(rawMembers.map(async m => {
       const balance    = await getBalance(m.id);
       const activeLoan = await Loan.findOne({ where: { memberId: m.id, status: 'active' } });
@@ -157,7 +159,7 @@ router.get('/savings', async (req, res) => {
   try {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
-    const rawMembers = await User.findAll({ where: { groupId: gid, role: { [require('sequelize').Op.notIn]: ['superadmin'] } }, order: [['name','ASC']] });
+    const rawMembers = await User.findAll({ where: { groupId: gid, role: { [Op.notIn]: ['superadmin'] } }, order: [['name','ASC']] });
     const members = await Promise.all(rawMembers.map(async m => {
       const balance    = await getBalance(m.id);
       const lastContrib   = await Saving.findOne({ where: { memberId: m.id, type: 'contribution' }, order: [['date','DESC']] });
