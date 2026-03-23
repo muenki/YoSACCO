@@ -210,12 +210,16 @@ body.printing-tab .page-content { padding:8px!important; }
   <div class="alert alert-info mb-3">
     <strong>Distribution Method:</strong>
     <%= method==='share_capital_only'?'Share Capital Only':method==='savings_only'?'Savings Only':'Share Capital + Savings' %>
-    &nbsp;·&nbsp;
-    <strong>Loan Interest (Period):</strong> UGX <%= periodInterest.toLocaleString() %>
-    &nbsp;+&nbsp;
-    <strong>Other Income (Period):</strong> UGX <%= (locals.totalOtherIncomePeriod||0).toLocaleString() %>
-    &nbsp;=&nbsp;
-    <strong>Total Pool:</strong> UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %>
+    <br>
+    <span style="font-size:13px;">
+      <strong>Loan Interest:</strong> UGX <%= periodInterest.toLocaleString() %>
+      &nbsp;+&nbsp;
+      <strong>Other Income:</strong> UGX <%= (locals.totalOtherIncomePeriod||0).toLocaleString() %>
+      &nbsp;−&nbsp;
+      <strong>Period Expenditure:</strong> UGX <%= totalExpend.toLocaleString() %>
+      &nbsp;=&nbsp;
+      <strong style="color:var(--teal);">Net Distributable Pool: UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %></strong>
+    </span>
   </div>
 
   <!-- Distribute Button -->
@@ -235,7 +239,7 @@ body.printing-tab .page-content { padding:8px!important; }
           placeholder="e.g. March 2026 income distribution"
           value="Income distribution — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %>">
         <button type="submit" class="btn btn-primary"
-          onclick="return confirm('Post UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %> distribution to all members? This will credit their savings accounts.')">
+          onclick="return confirm('Post UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %> net distribution to all members?\n\nFormula: Interest + Other Income − Expenditure\n\nThis will credit their savings accounts.')">
           ✓ Post Distribution
         </button>
       </form>

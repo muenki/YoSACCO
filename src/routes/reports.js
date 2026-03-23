@@ -96,11 +96,11 @@ router.get('/', async (req, res) => {
     const allOtherIncomeEver = await OtherIncome.findAll({ where:{ groupId:gid }, attributes:['amount'] });
     const totalOtherIncomeEver = allOtherIncomeEver.reduce((t,i)=>t+i.amount,0);
 
-    // ── DISTRIBUTION POOL (interest + other income) ───────────────
-    // Both loan interest and other income are distributed to members
-    // by the same configured method (share capital, savings, or both)
+    // ── DISTRIBUTION POOL (interest + other income − expenditure) ───
+    // Net distributable = income earned minus costs incurred in the period
     const method = settings?.interestDistributionMethod || 'share_capital_and_savings';
-    const totalDistributionPool = periodInterestDisplay + totalOtherIncomePeriod;
+    const grossPool = periodInterestDisplay + totalOtherIncomePeriod;
+    const totalDistributionPool = Math.max(0, grossPool - totalExpend);
 
     const interestDistribution = memberSavings.map(ms => {
       let weight = 0;
@@ -215,7 +215,10 @@ router.post('/distribute', async (req, res) => {
     const otherIncomes = await OtherIncome.findAll({ where:{ groupId:gid, date:dateFilter }, attributes:['amount'] });
     const totalOtherIncome = otherIncomes.reduce((t,i)=>t+i.amount,0);
 
-    const totalPool = periodInterestDisplay + totalOtherIncome;
+    // Deduct period expenditure from income before distribution
+    const periodExpenditure = await Expenditure.findAll({ where:{ groupId:gid, date:dateFilter }, attributes:['amount'] });
+    const totalPeriodExpend = periodExpenditure.reduce((t,e)=>t+e.amount,0);
+    const totalPool = Math.max(0, periodInterestDisplay + totalOtherIncome - totalPeriodExpend);
     if (totalPool <= 0) return res.redirect('/admin/reports?tab=interest&error=nothing_to_distribute&period='+period+'&year='+year);
 
     // Distribution weights
