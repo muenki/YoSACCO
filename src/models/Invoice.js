@@ -7,7 +7,7 @@ const Invoice = sequelize.define('Invoice', {
   invoiceNumber:  { type: DataTypes.STRING, allowNull: false, unique: true },
   type:           { type: DataTypes.ENUM('monthly','annual'), defaultValue: 'monthly' },
   amount:         { type: DataTypes.INTEGER, allowNull: false },
-  status:         { type: DataTypes.ENUM('pending','paid','overdue'), defaultValue: 'pending' },
+  status:         { type: DataTypes.ENUM('pending','paid','overdue','cancelled'), defaultValue: 'pending' },
   dueDate:        { type: DataTypes.DATE, allowNull: false },
   paidAt:         { type: DataTypes.DATE, allowNull: true },
   paidAmount:     { type: DataTypes.INTEGER, defaultValue: 0 },

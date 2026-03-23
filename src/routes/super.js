@@ -112,6 +112,65 @@ router.post('/invoices/:id/mark-paid', async (req, res) => {
   } catch(err) { console.error(err); res.redirect('/super/invoices'); }
 });
 
+
+// ── Cancel Invoice ────────────────────────────────────────────────
+router.post('/invoices/:id/cancel', async (req, res) => {
+  try {
+    const { Invoice } = require('../models');
+    const inv = await Invoice.findByPk(req.params.id);
+    if (!inv) return res.redirect('/super/invoices?error=not_found');
+    if (inv.status === 'paid') return res.redirect('/super/invoices?error=cannot_cancel_paid');
+
+    const group = await Group.findByPk(inv.groupId);
+    const admin = await User.findOne({ where: { groupId: inv.groupId, role: 'admin' } });
+
+    inv.status = 'cancelled';
+    await inv.save();
+
+    await AuditLog.create({
+      userId: req.user.id,
+      action: 'CANCEL_INVOICE',
+      detail: 'Cancelled invoice ' + inv.invoiceNumber + ' for ' + (group ? group.name : inv.groupId),
+    });
+
+    // Send cancellation email to SACCO group admin
+    if (admin && group) {
+      const nodemailer = require('nodemailer');
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      });
+      const html = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;">'
+        + '<img src="https://yosacco.coop/assets/logo.png" style="height:40px;margin-bottom:16px;" onerror="this.style.display=none">'
+        + '<h2 style="color:#0A2342;">Invoice Cancelled</h2>'
+        + '<p>Dear ' + admin.name + ',</p>'
+        + '<p>Invoice <strong>' + inv.invoiceNumber + '</strong> for <strong>' + group.name + '</strong> has been <span style="color:#c53030;font-weight:700;">CANCELLED</span> by YoSACCO.</p>'
+        + '<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;">'
+        + '<tr style="background:#f6f8fa;"><td style="padding:10px;font-weight:700;border:1px solid #eee;">Invoice #</td><td style="padding:10px;border:1px solid #eee;">' + inv.invoiceNumber + '</td></tr>'
+        + '<tr><td style="padding:10px;font-weight:700;border:1px solid #eee;">Type</td><td style="padding:10px;border:1px solid #eee;">' + (inv.type === 'annual' ? 'Annual' : 'Monthly') + ' Subscription</td></tr>'
+        + '<tr style="background:#f6f8fa;"><td style="padding:10px;font-weight:700;border:1px solid #eee;">Amount</td><td style="padding:10px;border:1px solid #eee;">UGX ' + inv.amount.toLocaleString() + '</td></tr>'
+        + '<tr><td style="padding:10px;font-weight:700;border:1px solid #eee;">Status</td><td style="padding:10px;border:1px solid #eee;color:#c53030;font-weight:700;">CANCELLED</td></tr>'
+        + '</table>'
+        + '<p style="background:#fff5f5;border-left:4px solid #c53030;padding:12px 16px;font-size:13px;">This invoice has been cancelled. No payment is required. If you believe this is an error, please contact us immediately.</p>'
+        + '<hr style="margin:24px 0;border:none;border-top:1px solid #eee;">'
+        + '<p style="font-size:12px;color:#888;">YoSACCO &middot; info@yosacco.coop &middot; +256 756 683 141</p>'
+        + '</div>';
+
+      transporter.sendMail({
+        from: '"YoSACCO Platform" <' + process.env.EMAIL_USER + '>',
+        to: admin.email,
+        subject: 'Invoice Cancelled: ' + inv.invoiceNumber + ' | YoSACCO',
+        html,
+      }).catch(() => {});
+    }
+
+    res.redirect('/super/invoices?success=cancelled');
+  } catch(err) {
+    console.error('Cancel invoice error:', err);
+    res.redirect('/super/invoices?error=cancel_failed');
+  }
+});
+
 // ── Edit Group ────────────────────────────────────────────────────
 router.get('/groups/:id/edit', async (req, res) => {
   try {

@@ -77,7 +77,7 @@
       <div style="background:#f0f9f0;border:2px solid #0D7377;border-radius:10px;padding:18px 28px;text-align:right;">
         <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;">Total Due</div>
         <div style="font-size:26px;font-weight:800;color:#0D7377;margin:4px 0;">UGX <%= inv.amount.toLocaleString() %></div>
-        <span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:<%= inv.status==='paid'?'#d6f0e4':inv.status==='overdue'?'#fed7d7':'#fefcbf' %>;color:<%= inv.status==='paid'?'#1a7f4b':inv.status==='overdue'?'#c53030':'#b7791f' %>;">
+        <span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:<%= inv.status==='paid'?'#d6f0e4':inv.status==='overdue'?'#fed7d7':inv.status==='cancelled'?'#f0f0f0':'#fefcbf' %>;color:<%= inv.status==='paid'?'#1a7f4b':inv.status==='overdue'?'#c53030':inv.status==='cancelled'?'#666':'#b7791f' %>;">
           <%= inv.status.toUpperCase() %>
         </span>
       </div>
@@ -106,6 +106,8 @@
 <!-- ── Page Content ─────────────────────────────────────────────── -->
 <div class="no-print">
   <% if (locals.query && locals.query.success === 'created') { %><div class="alert alert-success">Invoice created and email sent to SACCO admin.</div><% } %>
+<% if (locals.query && locals.query.success === 'cancelled') { %><div class="alert alert-warning">Invoice cancelled. Notification email sent to the SACCO admin.</div><% } %>
+<% if (locals.query && locals.query.error === 'cannot_cancel_paid') { %><div class="alert alert-danger">Cannot cancel a paid invoice.</div><% } %>
   <% if (locals.query && locals.query.success === 'marked_paid') { %><div class="alert alert-success">Invoice marked as paid.</div><% } %>
 
   <div class="stats-grid mb-6">
@@ -125,6 +127,10 @@
     <div class="stat-card">
       <div class="label">Total Invoices</div>
       <div class="value"><%= invoices.length %></div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Cancelled</div>
+      <div class="value" style="color:var(--text-muted);"><%= invoices.filter(function(i){return i.status==='cancelled';}).length %></div>
     </div>
   </div>
 
@@ -242,19 +248,25 @@
             <td class="font-semibold">UGX <%= inv.amount.toLocaleString() %></td>
             <td class="text-sm text-muted"><%= new Date(inv.dueDate).toLocaleDateString() %></td>
             <td>
-              <span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':'warning' %>">
-                <%= inv.status %>
+              <span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':inv.status==='cancelled'?'gray':'warning' %>">
+                <%= inv.status.charAt(0).toUpperCase()+inv.status.slice(1) %>
               </span>
             </td>
             <td>
-              <div class="flex gap-2">
+              <div class="flex gap-2" style="flex-wrap:wrap;">
                 <button onclick="printSingleInvoice(<%= idx %>)" class="btn btn-sm btn-outline">🖨 Print</button>
-                <% if(inv.status !== 'paid'){ %>
-                <form method="POST" action="/super/invoices/<%= inv.id %>/mark-paid" style="display:inline;">
-                  <button class="btn btn-sm btn-success">Mark Paid</button>
-                </form>
+                <% if(inv.status === 'paid'){ %>
+                  <span class="text-xs text-muted" style="align-self:center;">Paid <%= new Date(inv.paidAt).toLocaleDateString() %></span>
+                <% } else if(inv.status === 'cancelled'){ %>
+                  <span class="badge badge-gray" style="align-self:center;">Cancelled</span>
                 <% } else { %>
-                  <span class="text-xs text-muted">Paid <%= new Date(inv.paidAt).toLocaleDateString() %></span>
+                  <form method="POST" action="/super/invoices/<%= inv.id %>/mark-paid" style="display:inline;">
+                    <button class="btn btn-sm btn-success">Mark Paid</button>
+                  </form>
+                  <form method="POST" action="/super/invoices/<%= inv.id %>/cancel" style="display:inline;"
+                    onsubmit="return confirm('Cancel invoice ' + '<%= inv.invoiceNumber %>' + '? A cancellation email will be sent to the SACCO admin.')">
+                    <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);">✕ Cancel</button>
+                  </form>
                 <% } %>
               </div>
             </td>
