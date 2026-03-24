@@ -186,14 +186,9 @@
     <!-- TOTALS -->
     <div class="totals-wrap">
       <div class="totals">
-        <%
-          var _sub = locals.subtotal || 0;
-          var _vat = locals.vat != null ? locals.vat : Math.round(_sub * 0.18);
-          var _total = _sub + _vat;
-        %>
-        <div class="totals-row"><span>Subtotal</span><span>UGX <%= _sub.toLocaleString() %></span></div>
-        <div class="totals-row"><span>VAT (18%)</span><span>UGX <%= _vat.toLocaleString() %></span></div>
-        <div class="totals-total"><span>TOTAL DUE (inc. VAT)</span><span>UGX <%= _total.toLocaleString() %></span></div>
+        <div class="totals-row"><span>Subtotal</span><span>UGX <%= subtotal.toLocaleString() %></span></div>
+        <div class="totals-row" style="color:#c00;"><span>VAT (18%)</span><span>UGX <%= Math.round(subtotal * 0.18).toLocaleString() %></span></div>
+        <div class="totals-total"><span>TOTAL DUE (inc. VAT)</span><span>UGX <%= (subtotal + Math.round(subtotal * 0.18)).toLocaleString() %></span></div>
       </div>
     </div>
 
