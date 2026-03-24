@@ -229,7 +229,7 @@ router.post('/invoices/:id/cancel', async (req, res) => {
         + '</table>'
         + '<p style="background:#fff5f5;border-left:4px solid #c53030;padding:12px 16px;font-size:13px;">This invoice has been cancelled. No payment is required. If you believe this is an error, please contact us immediately.</p>'
         + '<hr style="margin:24px 0;border:none;border-top:1px solid #eee;">'
-        + '<p style="font-size:12px;color:#888;">YoSACCO &middot; info@yosacco.coop &middot; +256 756 683 141</p>'
+        + '<p style="font-size:12px;color:#888;">YoSACCO &middot; muenkinvestments@gmail.com &middot; +256 756 683 141</p>'
         + '</div>';
 
       transporter.sendMail({
