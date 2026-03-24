@@ -334,8 +334,6 @@ router.get('/audit', async (req, res) => {
   }
 });
 
-module.exports = router;
-
 
 // ── Confirm pending deposit ───────────────────────────────────────
 router.post('/savings/:id/confirm', async (req, res) => {
@@ -524,3 +522,5 @@ router.get('/invoices', async (req, res) => {
     res.render('admin/invoices', { user: req.user, group, invoices, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
+
+module.exports = router;
