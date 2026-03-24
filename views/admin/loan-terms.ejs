@@ -1,8 +1,8 @@
 <%- include('../partials/head', { title: 'Loan Terms & Settings', activePage: 'admin-loan-terms', group }) %>
 
-<% if (locals.query.success) { %><div class="alert alert-success">Settings saved successfully.</div><% } %>
+<% if (locals.query && locals.query.success) { %><div class="alert alert-success">Settings saved. Loan terms & conditions updated to reflect new rates.</div><% } %>
 
-<form method="POST" action="/admin/loan-terms">
+<form method="POST" action="/admin/loan-terms" id="loanTermsForm">
 <div class="grid-2 gap-4 mb-6">
 
   <!-- Interest Rates -->
@@ -11,29 +11,40 @@
     <div class="card-body">
       <div class="form-group">
         <label class="form-label">New Loan Interest Rate (% per month)</label>
-        <input type="number" name="newLoanInterestRate" class="form-control" step="0.1" min="0" value="<%= settings.newLoanInterestRate %>">
+        <input type="number" name="newLoanInterestRate" id="newRate" class="form-control" step="0.1" min="0" value="<%= settings.newLoanInterestRate %>" oninput="regenerateTerms()">
       </div>
       <div class="form-group">
         <label class="form-label">Top-Up Loan Interest Rate (% per month)</label>
-        <input type="number" name="topupInterestRate" class="form-control" step="0.1" min="0" value="<%= settings.topupInterestRate %>">
+        <input type="number" name="topupInterestRate" id="topRate" class="form-control" step="0.1" min="0" value="<%= settings.topupInterestRate %>" oninput="regenerateTerms()">
       </div>
       <div class="form-group">
         <label class="form-label">Emergency Loan Interest Rate (% per month)</label>
-        <input type="number" name="emergencyInterestRate" class="form-control" step="0.1" min="0" value="<%= settings.emergencyInterestRate %>">
+        <input type="number" name="emergencyInterestRate" id="emerRate" class="form-control" step="0.1" min="0" value="<%= settings.emergencyInterestRate %>" oninput="regenerateTerms()">
       </div>
       <div class="form-group">
         <label class="form-label">Loan Processing Fee (% of loan amount)</label>
-        <input type="number" name="loanProcessingFee" class="form-control" step="0.1" min="0" value="<%= settings.loanProcessingFee || 0 %>">
+        <input type="number" name="loanProcessingFee" id="procFee" class="form-control" step="0.1" min="0" value="<%= settings.loanProcessingFee || 0 %>" oninput="regenerateTerms()">
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">New/Top-Up Max Multiplier (× savings)</label>
-          <input type="number" name="newLoanMaxMultiplier" class="form-control" step="0.5" min="1" value="<%= settings.newLoanMaxMultiplier %>">
+          <label class="form-label">New/Top-Up Max (× savings)</label>
+          <input type="number" name="newLoanMaxMultiplier" id="newMult" class="form-control" step="0.5" min="1" value="<%= settings.newLoanMaxMultiplier %>" oninput="regenerateTerms()">
         </div>
         <div class="form-group">
-          <label class="form-label">Emergency Max Multiplier (× savings)</label>
-          <input type="number" name="emergencyMaxMultiplier" class="form-control" step="0.5" min="0.5" value="<%= settings.emergencyMaxMultiplier %>">
+          <label class="form-label">Emergency Max (× savings)</label>
+          <input type="number" name="emergencyMaxMultiplier" id="emerMult" class="form-control" step="0.5" min="0.5" value="<%= settings.emergencyMaxMultiplier %>" oninput="regenerateTerms()">
         </div>
+      </div>
+
+      <!-- Interest Distribution -->
+      <div class="form-group">
+        <label class="form-label">Interest Distribution Method</label>
+        <select name="interestDistributionMethod" class="form-control">
+          <option value="share_capital_and_savings" <%= (settings.interestDistributionMethod||'share_capital_and_savings')==='share_capital_and_savings'?'selected':'' %>>Share Capital + Savings Balance</option>
+          <option value="share_capital_only" <%= settings.interestDistributionMethod==='share_capital_only'?'selected':'' %>>Share Capital Only</option>
+          <option value="savings_only" <%= settings.interestDistributionMethod==='savings_only'?'selected':'' %>>Savings Balance Only</option>
+        </select>
+        <div class="form-hint">Determines how interest and other income is distributed to members</div>
       </div>
     </div>
   </div>
@@ -42,7 +53,7 @@
   <div class="card">
     <div class="card-header"><h3>💳 Payment Collection Details</h3></div>
     <div class="card-body">
-      <p class="text-sm text-muted mb-4">These details are shown to members when they make deposits so they can send money to the right account.</p>
+      <p class="text-sm text-muted mb-4">These details are shown to members when they make deposits.</p>
       <div class="form-group">
         <label class="form-label">Bank Account Number</label>
         <input type="text" name="accountNumber" class="form-control" placeholder="e.g. 0012345678901" value="<%= settings.accountNumber || group.accountNumber || '' %>">
@@ -65,14 +76,62 @@
 
 <!-- Loan Terms & Conditions -->
 <div class="card mb-6">
-  <div class="card-header"><h3>📄 Loan Terms & Conditions</h3></div>
+  <div class="card-header">
+    <h3>📄 Loan Terms & Conditions</h3>
+    <button type="button" onclick="regenerateTerms(true)" class="btn btn-sm btn-outline">🔄 Regenerate from Rates</button>
+  </div>
   <div class="card-body">
-    <p class="text-sm text-muted mb-3">These terms are shown to members before they submit a loan application. Write each condition on a new line.</p>
-    <textarea name="loanTermsText" class="form-control terms-editor" rows="10"><%= settings.loanTermsText || '' %></textarea>
+    <div class="alert alert-info mb-3" style="font-size:13px;">
+      These terms are shown to members before they apply for a loan.
+      They are <strong>automatically updated</strong> when you save new interest rates.
+      You can also edit them manually below, or click <strong>Regenerate from Rates</strong> to rebuild from current values.
+    </div>
+    <textarea name="loanTermsText" id="loanTermsText" class="form-control terms-editor" rows="12"><%= settings.loanTermsText || '' %></textarea>
   </div>
 </div>
 
 <button type="submit" class="btn btn-primary" style="padding:12px 32px;">Save All Settings</button>
+<span class="text-sm text-muted" style="margin-left:12px;">Loan terms will be updated automatically from your rate settings.</span>
 </form>
+
+<script>
+function buildTerms() {
+  var newRate  = parseFloat(document.getElementById('newRate').value)   || 1.5;
+  var emerRate = parseFloat(document.getElementById('emerRate').value)  || 2.0;
+  var newMult  = parseFloat(document.getElementById('newMult').value)   || 3;
+  var emerMult = parseFloat(document.getElementById('emerMult').value)  || 1;
+  var procFee  = parseFloat(document.getElementById('procFee').value)   || 0;
+
+  return [
+    '1. All loans must be repaid within the agreed repayment period.',
+    '2. New loans and top-up loans attract an interest rate of ' + newRate + '% per month on the outstanding balance.',
+    '3. Emergency loans attract an interest rate of ' + emerRate + '% per month on the outstanding balance.',
+    '4. Members may borrow up to ' + newMult + '\u00d7 their total savings balance for new and top-up loans.',
+    '5. Emergency loans are limited to ' + emerMult + '\u00d7 the member\u2019s total savings balance.',
+    procFee > 0
+      ? '6. A loan processing fee of ' + procFee + '% of the loan amount is charged at disbursement.'
+      : '6. No processing fee is charged on loans.',
+    '7. Guarantors must be active members in good standing with no outstanding overdue obligations.',
+    '8. Defaulting members will be reported to the credit reference bureau and may have their membership suspended.',
+    '9. Top-up loans are only available to members with an existing active loan in good standing.',
+    '10. The SACCO reserves the right to recover outstanding loan balances from the member\u2019s savings.',
+  ].join('\n');
+}
+
+function regenerateTerms(force) {
+  // Always regenerate on button click (force=true)
+  // On input change, only update if terms look auto-generated (starts with "1. All loans")
+  var ta = document.getElementById('loanTermsText');
+  if (force || !ta.value.trim() || ta.value.trim().startsWith('1. All loans')) {
+    ta.value = buildTerms();
+  }
+}
+
+// Regenerate on page load only if terms are empty
+window.addEventListener('load', function() {
+  var ta = document.getElementById('loanTermsText');
+  if (!ta.value.trim()) ta.value = buildTerms();
+});
+</script>
 
 <%- include('../partials/foot') %>

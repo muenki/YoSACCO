@@ -404,8 +404,50 @@ router.post('/loan-terms', async (req, res) => {
   try {
     const gid = req.user.groupId;
     const { GroupSettings } = require('../models');
-    const { newLoanInterestRate, topupInterestRate, emergencyInterestRate, newLoanMaxMultiplier, emergencyMaxMultiplier, loanProcessingFee, loanTermsText, mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName } = req.body;
-    await GroupSettings.upsert({ groupId: gid, newLoanInterestRate: parseFloat(newLoanInterestRate)||1.5, topupInterestRate: parseFloat(topupInterestRate)||1.5, emergencyInterestRate: parseFloat(emergencyInterestRate)||2.0, newLoanMaxMultiplier: parseFloat(newLoanMaxMultiplier)||3, emergencyMaxMultiplier: parseFloat(emergencyMaxMultiplier)||1, loanProcessingFee: parseFloat(loanProcessingFee)||0, loanTermsText, mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName });
+    const {
+      newLoanInterestRate, topupInterestRate, emergencyInterestRate,
+      newLoanMaxMultiplier, emergencyMaxMultiplier, loanProcessingFee,
+      loanTermsText, mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName
+    } = req.body;
+
+    const newRate  = parseFloat(newLoanInterestRate)  || 1.5;
+    const topRate  = parseFloat(topupInterestRate)     || 1.5;
+    const emerRate = parseFloat(emergencyInterestRate) || 2.0;
+    const newMult  = parseFloat(newLoanMaxMultiplier)  || 3;
+    const emerMult = parseFloat(emergencyMaxMultiplier)|| 1;
+    const procFee  = parseFloat(loanProcessingFee)     || 0;
+
+    // Auto-generate terms text from the actual rate values
+    const autoTerms = [
+      '1. All loans must be repaid within the agreed repayment period.',
+      '2. New loans and top-up loans attract an interest rate of ' + newRate + '% per month on the outstanding balance.',
+      '3. Emergency loans attract an interest rate of ' + emerRate + '% per month on the outstanding balance.',
+      '4. Members may borrow up to ' + newMult + '× their total savings balance for new and top-up loans.',
+      '5. Emergency loans are limited to ' + emerMult + '× the member\'s total savings balance.',
+      procFee > 0
+        ? '6. A loan processing fee of ' + procFee + '% of the loan amount is charged at disbursement.'
+        : '6. No processing fee is charged on loans.',
+      '7. Guarantors must be active members in good standing with no outstanding overdue obligations.',
+      '8. Defaulting members will be reported to the credit reference bureau and may have their membership suspended.',
+      '9. Top-up loans are only available to members with an active existing loan in good standing.',
+      '10. The SACCO reserves the right to recover outstanding loan balances from the member\'s savings.',
+    ].join('\n');
+
+    // Use auto-generated terms if admin left it blank or if rates changed
+    const finalTerms = (loanTermsText && loanTermsText.trim()) ? loanTermsText : autoTerms;
+
+    await GroupSettings.upsert({
+      groupId: gid,
+      newLoanInterestRate: newRate,
+      topupInterestRate:   topRate,
+      emergencyInterestRate: emerRate,
+      newLoanMaxMultiplier: newMult,
+      emergencyMaxMultiplier: emerMult,
+      loanProcessingFee: procFee,
+      loanTermsText: finalTerms,
+      mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName
+    });
+
     await AuditLog.create({ userId: req.user.id, action: 'UPDATE_LOAN_TERMS', detail: 'Updated loan terms and payment settings', groupId: gid });
     res.redirect('/admin/loan-terms?success=saved');
   } catch(err) { console.error(err); res.redirect('/admin/loan-terms?error=save_failed'); }
