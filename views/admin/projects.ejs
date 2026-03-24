@@ -1,20 +1,77 @@
 <%- include('../partials/head', { title: 'Projects', activePage: 'admin-projects', group }) %>
 
-<style>@media print { .sidebar,.topbar,.no-print,.page-footer{display:none!important;} .main{margin-left:0!important;} }</style>
+<style>
+@media print { .sidebar,.topbar,.no-print,.page-footer{display:none!important;} .main{margin-left:0!important;} }
+</style>
 
-<% if (locals.query.success === 'project_added') { %><div class="alert alert-success no-print">Project added successfully.</div><% } %>
-<% if (locals.query.success === 'contribution_posted') { %><div class="alert alert-success no-print">Contribution posted successfully.</div><% } %>
+<% const q = locals.query||{}; %>
+<% if(q.success==='project_added')          { %><div class="alert alert-success no-print">Project added.</div><% } %>
+<% if(q.success==='contribution_confirmed') { %><div class="alert alert-success no-print">Contribution confirmed and posted to project.</div><% } %>
+<% if(q.success==='contribution_rejected')  { %><div class="alert alert-warning no-print">Contribution rejected.</div><% } %>
 
 <div class="stats-grid mb-6">
-  <div class="stat-card"><div class="label">Active Projects</div><div class="value"><%= projects.filter(p=>p.status==='active').length %></div></div>
-  <div class="stat-card"><div class="label">Total Raised</div><div class="value" style="font-size:18px;">UGX <%= projects.reduce((t,p)=>t+p.raisedAmount,0).toLocaleString() %></div></div>
-  <div class="stat-card"><div class="label">Target Amount</div><div class="value" style="font-size:18px;">UGX <%= (projects.reduce((t,p)=>t+p.targetAmount,0)/1000000).toFixed(1) %>M</div></div>
-  <div class="stat-card"><div class="label">Total Asset Value</div><div class="value" style="font-size:18px;">UGX <%= totalAssetValue.toLocaleString() %></div></div>
+  <div class="stat-card accent"><div class="label">Active Projects</div><div class="value"><%= projects.filter(function(p){return p.status==='active';}).length %></div></div>
+  <div class="stat-card"><div class="label">Total Raised</div><div class="value" style="font-size:18px;">UGX <%= projects.reduce(function(t,p){return t+p.raisedAmount;},0).toLocaleString() %></div></div>
+  <div class="stat-card"><div class="label">Total Target</div><div class="value" style="font-size:18px;">UGX <%= (projects.reduce(function(t,p){return t+p.targetAmount;},0)/1000000).toFixed(1) %>M</div></div>
+  <div class="stat-card"><div class="label">Pending Approvals</div>
+    <div class="value" style="color:var(--warning);"><%= projects.reduce(function(t,p){return t+(p.pendingContribs||[]).length;},0) %></div>
+  </div>
 </div>
 
-<div class="grid-2 gap-4 mb-6">
+<!-- Pending Contributions Inbox -->
+<%
+  var allPending = [];
+  projects.forEach(function(p){ (p.pendingContribs||[]).forEach(function(c){ allPending.push({...c, projectName: p.name}); }); });
+%>
+<% if(allPending.length > 0) { %>
+<div class="card mb-6 no-print" style="border-left:4px solid var(--warning);">
+  <div class="card-header" style="background:#fffbeb;">
+    <h3 style="color:#b7791f;">⏳ Pending Project Contributions (<%= allPending.length %>)</h3>
+    <span class="text-sm text-muted">Members have submitted payment intents awaiting confirmation</span>
+  </div>
+  <div class="card-body p-0">
+    <table>
+      <thead><tr><th>Member</th><th>Project</th><th>Amount</th><th>Method</th><th>Reference</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>
+        <% allPending.forEach(function(c){ %>
+        <tr>
+          <td>
+            <div class="member-row">
+              <div class="avatar" style="background:#fef3c7;color:#b7791f;width:32px;height:32px;font-size:11px;">
+                <%= c.member ? c.member.name.split(' ').map(function(n){return n[0];}).join('') : '?' %>
+              </div>
+              <div>
+                <div class="font-semibold text-sm"><%= c.member ? c.member.name : 'Unknown' %></div>
+                <div class="text-xs text-muted"><%= c.member ? c.member.memberId : '' %></div>
+              </div>
+            </div>
+          </td>
+          <td class="text-sm font-semibold"><%= c.projectName %></td>
+          <td class="font-semibold">UGX <%= c.amount.toLocaleString() %></td>
+          <td class="text-sm"><%= c.paymentMethod||'—' %></td>
+          <td class="text-sm text-muted"><%= c.transactionRef||'—' %></td>
+          <td class="text-sm text-muted"><%= new Date(c.date).toLocaleDateString() %></td>
+          <td>
+            <div class="flex gap-2">
+              <form method="POST" action="/admin/projects/pending/<%= c.id %>/confirm" style="display:inline;">
+                <button class="btn btn-sm btn-success">✓ Confirm</button>
+              </form>
+              <form method="POST" action="/admin/projects/pending/<%= c.id %>/reject" style="display:inline;">
+                <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);">✗ Reject</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<div class="grid-2 gap-4 mb-6 no-print">
   <!-- Add Project -->
-  <div class="card no-print">
+  <div class="card">
     <div class="card-header"><h3>Add New Project</h3></div>
     <div class="card-body">
       <form method="POST" action="/admin/projects/add">
@@ -42,23 +99,25 @@
     </div>
   </div>
 
-  <!-- Post Contribution -->
-  <div class="card no-print">
-    <div class="card-header"><h3>Post Member Contribution</h3></div>
+  <!-- Post Manual Contribution -->
+  <div class="card">
+    <div class="card-header"><h3>Post Contribution (Manual)</h3></div>
     <div class="card-body">
       <form method="POST" id="contribForm" action="/admin/projects/__ID__/contribute">
         <div class="form-group">
           <label class="form-label">Select Project *</label>
-          <select name="projectId" class="form-control" onchange="document.getElementById('contribForm').action='/admin/projects/'+this.value+'/contribute'" required>
+          <select class="form-control" onchange="document.getElementById('contribForm').action='/admin/projects/'+this.value+'/contribute'" required>
             <option value="">— Choose project —</option>
-            <% projects.filter(p=>p.status==='active').forEach(p=>{ %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
+            <% projects.filter(function(p){return p.status==='active';}).forEach(function(p){ %>
+            <option value="<%= p.id %>"><%= p.name %></option>
+            <% }); %>
           </select>
         </div>
         <div class="form-group">
           <label class="form-label">Select Member *</label>
           <select name="memberId" class="form-control" required>
             <option value="">— Choose member —</option>
-            <% (locals.members||[]).forEach(m=>{ %><option value="<%= m.id %>"><%= m.name %> (<%= m.memberId %>)</option><% }) %>
+            <% (locals.members||[]).forEach(function(m){ %><option value="<%= m.id %>"><%= m.name %> (<%= m.memberId %>)</option><% }); %>
           </select>
         </div>
         <div class="form-group"><label class="form-label">Amount (UGX) *</label><input type="number" name="amount" class="form-control" placeholder="e.g. 500000" required></div>
@@ -75,37 +134,93 @@
   <button onclick="window.print()" class="btn btn-sm btn-outline">🖨 Print Projects</button>
 </div>
 
-<% projects.forEach(proj => { const pct = proj.targetAmount>0?Math.round(proj.raisedAmount/proj.targetAmount*100):0; %>
-<div class="card mb-4">
+<% projects.forEach(function(proj) {
+  var pct = proj.targetAmount>0 ? Math.round(proj.raisedAmount/proj.targetAmount*100) : 0;
+%>
+<div class="card mb-6">
   <div class="card-body">
+    <!-- Project Header -->
     <div class="flex-between mb-3">
       <div>
-        <div class="font-semibold" style="font-size:16px;"><%= proj.name %></div>
+        <div class="font-semibold" style="font-size:17px;"><%= proj.name %></div>
         <div class="flex gap-2 mt-1">
-          <span class="badge badge-<%= proj.type==='unit_trust'?'info':proj.type==='property'?'success':'gray' %>"><%= proj.type.replace('_',' ') %></span>
+          <span class="badge badge-<%= proj.type==='unit_trust'?'info':proj.type==='property'?'success':'gray' %>" style="text-transform:capitalize;"><%= proj.type.replace(/_/g,' ') %></span>
           <span class="badge badge-<%= proj.status==='active'?'success':'warning' %>"><%= proj.status %></span>
-          <% if(proj.returnRate>0){ %><span class="badge badge-info"><%= proj.returnRate %>% p.a. return</span><% } %>
+          <% if(proj.returnRate>0){ %><span class="badge badge-warning"><%= proj.returnRate %>% p.a. return</span><% } %>
         </div>
       </div>
-      <div style="text-align:right;" class="no-print">
+      <div class="no-print">
         <form method="POST" action="/admin/projects/<%= proj.id %>/toggle" style="display:inline;">
           <button class="btn btn-sm btn-outline"><%= proj.status==='active'?'Suspend':'Activate' %></button>
         </form>
       </div>
     </div>
+
     <% if(proj.description){ %><p class="text-sm text-muted mb-3"><%= proj.description %></p><% } %>
+
+    <!-- Progress -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
       <div><div class="text-xs text-muted">Target</div><div class="font-semibold text-sm">UGX <%= proj.targetAmount.toLocaleString() %></div></div>
       <div><div class="text-xs text-muted">Raised</div><div class="font-semibold text-sm text-teal">UGX <%= proj.raisedAmount.toLocaleString() %></div></div>
-      <div><div class="text-xs text-muted">Contributors</div><div class="font-semibold text-sm"><%= proj.contributorCount %> members</div></div>
+      <div><div class="text-xs text-muted">Per Member (<%= proj.totalMembers %> members)</div><div class="font-semibold text-sm" style="color:var(--warning);">UGX <%= proj.memberShare.toLocaleString() %></div></div>
       <div><div class="text-xs text-muted">Progress</div><div class="font-semibold text-sm"><%= pct %>%</div></div>
     </div>
-    <div class="progress"><div class="progress-bar" style="width:<%= pct %>%"></div></div>
-    <% if(proj.startDate){ %><div class="text-xs text-muted mt-2">Started: <%= new Date(proj.startDate).toLocaleDateString() %><% if(proj.endDate){ %> · Ends: <%= new Date(proj.endDate).toLocaleDateString() %><% } %></div><% } %>
+    <div class="progress mb-3"><div class="progress-bar" style="width:<%= pct %>%"></div></div>
+
+    <!-- Contributors Table -->
+    <% if(proj.contributions && proj.contributions.length > 0) { %>
+    <div>
+      <div class="text-sm font-semibold mb-2">Contributors List</div>
+      <div class="card p-0" style="border:1px solid var(--border);">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Member</th><th>Member ID</th><th>Amount Contributed</th>
+              <th>% of Target</th><th>Remaining Share</th><th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <%
+              // Group contributions by member
+              var byMember = {};
+              proj.contributions.forEach(function(c) {
+                var key = c.memberId;
+                if (!byMember[key]) byMember[key] = { member: c.member, total: 0, lastDate: c.date };
+                byMember[key].total += c.amount;
+                if (new Date(c.date) > new Date(byMember[key].lastDate)) byMember[key].lastDate = c.date;
+              });
+              var memberRows = Object.values(byMember).sort(function(a,b){ return b.total-a.total; });
+            %>
+            <% memberRows.forEach(function(row, i){ %>
+            <tr>
+              <td class="text-muted text-sm"><%= i+1 %></td>
+              <td class="font-semibold text-sm"><%= row.member ? row.member.name : 'Unknown' %></td>
+              <td class="text-sm"><%= row.member ? row.member.memberId : '—' %></td>
+              <td class="font-semibold text-teal">UGX <%= row.total.toLocaleString() %></td>
+              <td class="text-sm"><%= proj.targetAmount>0 ? ((row.total/proj.targetAmount)*100).toFixed(1) : '0' %>%</td>
+              <td class="text-sm text-danger">
+                UGX <%= Math.max(0, proj.memberShare - row.total).toLocaleString() %>
+              </td>
+              <td class="text-sm text-muted"><%= new Date(row.lastDate).toLocaleDateString() %></td>
+            </tr>
+            <% }); %>
+            <tr style="background:var(--bg);font-weight:700;">
+              <td colspan="3" style="text-align:right;padding:10px 16px;">TOTAL RAISED</td>
+              <td style="padding:10px 16px;color:var(--teal);">UGX <%= proj.raisedAmount.toLocaleString() %></td>
+              <td style="padding:10px 16px;"><%= proj.targetAmount>0?(proj.raisedAmount/proj.targetAmount*100).toFixed(1):0 %>%</td>
+              <td colspan="2"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <% } else { %>
+    <p class="text-sm text-muted">No contributions yet.</p>
+    <% } %>
   </div>
 </div>
-<% }) %>
+<% }); %>
 
-<% if (!projects.length) { %><div class="card"><div class="card-body text-muted text-sm">No projects yet. Add one above.</div></div><% } %>
+<% if(!projects.length){ %><div class="card"><div class="card-body text-muted text-sm">No projects yet. Add one above.</div></div><% } %>
 
 <%- include('../partials/foot') %>

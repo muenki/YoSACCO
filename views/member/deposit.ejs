@@ -25,7 +25,7 @@
           <select name="projectId" id="projectId" class="form-control">
             <option value="">— Choose a project —</option>
             <% (locals.projects||[]).forEach(function(p){ %>
-            <option value="<%= p.id %>" data-raised="<%= p.raisedAmount %>" data-target="<%= p.targetAmount %>" data-mine="<%= p.myTotal %>">
+            <option value="<%= p.id %>" data-raised="<%= p.raisedAmount %>" data-target="<%= p.targetAmount %>" data-mine="<%= p.myTotal %>" data-share="<%= p.memberShare||0 %>" data-remaining="<%= Math.max(0,(p.memberShare||0)-p.myTotal) %>">
               <%= p.name %> — <%= p.type.replace(/_/g,' ') %>
               <% if(p.targetAmount > 0){ %> (UGX <%= p.raisedAmount.toLocaleString() %> / <%= p.targetAmount.toLocaleString() %>)<% } %>
             </option>
@@ -224,8 +224,13 @@ function onProjectChange(sel) {
   var target = parseInt(opt.dataset.target)||0;
   var mine   = parseInt(opt.dataset.mine)||0;
   var pct    = target > 0 ? ((raised/target)*100).toFixed(1) : 0;
-  document.getElementById('projectInfo').textContent =
-    'Progress: UGX ' + raised.toLocaleString() + ' / ' + target.toLocaleString() + ' (' + pct + '%) · Your total: UGX ' + mine.toLocaleString();
+  var share     = parseInt(opt.dataset.share)||0;
+  var remaining = parseInt(opt.dataset.remaining)||0;
+  document.getElementById('projectInfo').innerHTML =
+    'Progress: UGX ' + raised.toLocaleString() + ' / ' + target.toLocaleString() + ' (' + pct + '%)<br>' +
+    '<strong>Your target share: UGX ' + share.toLocaleString() + '</strong> · Paid: UGX ' + mine.toLocaleString() + ' · <span style="color:var(--danger)">Remaining: UGX ' + remaining.toLocaleString() + '</span>';
+  // Pre-fill the remaining amount
+  if (remaining > 0) { document.getElementById('amountInput').value = remaining; updateSummary(); }
 }
 
 // Attach project change listener

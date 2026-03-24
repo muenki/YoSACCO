@@ -7,6 +7,11 @@
 }
 </style>
 
+<% var q = locals.query||{}; %>
+<% if(q.success==='contrib_pending'){ %>
+<div class="alert alert-success">✅ Payment intent submitted for <strong><%= q.project %></strong> (UGX <%= parseInt(q.amount||0).toLocaleString() %>). Your admin will confirm once payment is received.</div>
+<% } %>
+
 <!-- Summary -->
 <div class="stats-grid mb-6">
   <div class="stat-card accent">
@@ -56,15 +61,20 @@
           <% } %>
         </div>
       </div>
-      <% if (proj.myContributions > 0) { %>
       <div style="text-align:right;">
-        <div class="text-xs text-muted">My contribution</div>
-        <div style="font-size:20px;font-weight:700;color:var(--teal);">UGX <%= proj.myContributions.toLocaleString() %></div>
-        <div class="text-xs text-muted"><%= myPct %>% of total raised</div>
+        <div class="text-xs text-muted">Your target share</div>
+        <div style="font-size:16px;font-weight:700;color:var(--navy);">UGX <%= proj.memberShare.toLocaleString() %></div>
+        <div class="text-xs text-muted">÷ <%= proj.totalMembers %> members</div>
+        <% if(proj.myContributions > 0){ %>
+        <div style="margin-top:6px;"><div class="text-xs text-muted">Paid so far</div><div style="font-weight:700;color:var(--teal);">UGX <%= proj.myContributions.toLocaleString() %></div></div>
+        <% } %>
+        <% if(proj.myPendingTotal > 0){ %>
+        <div style="margin-top:4px;"><span class="badge badge-warning" style="font-size:10px;">⏳ UGX <%= proj.myPendingTotal.toLocaleString() %> pending</span></div>
+        <% } %>
+        <% if(proj.memberShare > 0 && proj.myContributions < proj.memberShare){ %>
+        <div style="margin-top:4px;font-size:11px;color:var(--danger);">Remaining: UGX <%= (proj.memberShare - proj.myContributions).toLocaleString() %></div>
+        <% } %>
       </div>
-      <% } else { %>
-      <span class="badge badge-gray">Not yet contributed</span>
-      <% } %>
     </div>
 
     <% if (proj.description) { %>

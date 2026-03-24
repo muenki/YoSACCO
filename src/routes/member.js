@@ -110,14 +110,20 @@ router.get('/deposit', async (req, res) => {
     const group    = await Group.findByPk(m.groupId);
     const settings = await getSettings(m.groupId);
     const balance  = await getBalance(m.id);
-    const { Project, ProjectContribution, Loan: LoanModel } = require('../models');
-    const projects  = await Project.findAll({ where: { groupId: m.groupId, status: 'active' } });
+    const { Project, ProjectContribution, ProjectPendingContrib, Loan: LoanModel, User: UserModel } = require('../models');
+    const projects   = await Project.findAll({ where: { groupId: m.groupId, status: 'active' } });
     const activeLoan = await LoanModel.findOne({ where: { memberId: m.id, status: 'active' } });
-    // Enrich projects with member's total contribution
+    const totalMembers = await UserModel.count({ where: { groupId: m.groupId, active: true, role: { [require('sequelize').Op.notIn]: ['superadmin'] } } });
+    // Enrich projects
     const enriched = await Promise.all(projects.map(async p => {
-      const myContribs = await ProjectContribution.findAll({ where: { projectId: p.id, memberId: m.id } });
-      const myTotal = myContribs.reduce((t,c)=>t+c.amount,0);
-      return { ...p.toJSON(), myTotal };
+      const allContribs = await ProjectContribution.findAll({ where: { projectId: p.id } });
+      const myContribs  = allContribs.filter(c=>c.memberId===m.id);
+      const myTotal     = myContribs.reduce((t,c)=>t+c.amount,0);
+      const raisedAmount = allContribs.reduce((t,c)=>t+c.amount,0);
+      // Per-member equal share = target / total members
+      const memberShare = p.targetAmount > 0 && totalMembers > 0 ? Math.ceil(p.targetAmount / totalMembers) : 0;
+      const myPending   = await ProjectPendingContrib.findOne({ where: { projectId: p.id, memberId: m.id, status: 'pending' } });
+      return { ...p.toJSON(), myTotal, raisedAmount, memberShare, totalMembers, hasPending: !!myPending };
     }));
     res.render('member/deposit', { user: m.toJSON(), group: group.toJSON(), settings, balance, projects: enriched, activeLoan: activeLoan?.toJSON()||null });
   } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
@@ -149,29 +155,26 @@ router.get('/projects', async (req, res) => {
   try {
     const m     = req.user;
     const group = await Group.findByPk(m.groupId);
-    const { Project, ProjectContribution } = require('../models');
+    const { Project, ProjectContribution, ProjectPendingContrib, User: UserModel } = require('../models');
+    const { Op } = require('sequelize');
 
-    const rawProjects = await Project.findAll({ where: { groupId: m.groupId }, order: [['createdAt','DESC']] });
+    const totalMembers = await UserModel.count({ where: { groupId: m.groupId, active: true, role: { [Op.notIn]: ['superadmin'] } } });
+    const rawProjects  = await Project.findAll({ where: { groupId: m.groupId }, order: [['createdAt','DESC']] });
 
     const projects = await Promise.all(rawProjects.map(async function(p) {
-      // All contributions to this project
-      const allContribs = await ProjectContribution.findAll({ where: { projectId: p.id } });
+      const allContribs    = await ProjectContribution.findAll({ where: { projectId: p.id } });
       const raisedAmount   = allContribs.reduce(function(t,c){return t+c.amount;},0);
       const contributorCount = [...new Set(allContribs.map(function(c){return c.memberId;}))].length;
-
-      // This member's contributions
-      const myHistory = await ProjectContribution.findAll({
-        where: { projectId: p.id, memberId: m.id },
-        order: [['date','ASC']],
-      });
+      const myHistory      = await ProjectContribution.findAll({ where: { projectId: p.id, memberId: m.id }, order: [['date','ASC']] });
       const myContributions = myHistory.reduce(function(t,c){return t+c.amount;},0);
-
-      return { ...p.toJSON(), raisedAmount, contributorCount, myContributions, myHistory: myHistory.map(function(c){return c.toJSON();}) };
+      const memberShare    = p.targetAmount > 0 && totalMembers > 0 ? Math.ceil(p.targetAmount / totalMembers) : 0;
+      const myPending      = await ProjectPendingContrib.findAll({ where: { projectId: p.id, memberId: m.id, status: 'pending' } });
+      const myPendingTotal = myPending.reduce(function(t,c){return t+c.amount;},0);
+      return { ...p.toJSON(), raisedAmount, contributorCount, myContributions, myPendingTotal, memberShare, totalMembers, myHistory: myHistory.map(function(c){return c.toJSON();}) };
     }));
 
     const myTotalContributions = projects.reduce(function(t,p){return t+p.myContributions;},0);
-
-    res.render('member/projects', { user: m.toJSON(), group: group.toJSON(), projects, myTotalContributions });
+    res.render('member/projects', { user: m.toJSON(), group: group.toJSON(), projects, myTotalContributions, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error loading projects', user: req.user }); }
 });
 

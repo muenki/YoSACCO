@@ -11,7 +11,8 @@ const Invoice            = require('./Invoice');
 const Project            = require('./Project');
 const ProjectContribution= require('./ProjectContribution');
 const Asset              = require('./Asset');
-const OtherIncome        = require('./OtherIncome');
+const OtherIncome            = require('./OtherIncome');
+const ProjectPendingContrib  = require('./ProjectPendingContrib');
 
 // Associations
 Group.hasMany(User,               { foreignKey: 'groupId', as: 'members' });
@@ -33,6 +34,9 @@ Project.hasMany(ProjectContribution, { foreignKey: 'projectId' });
 ProjectContribution.belongsTo(Project, { foreignKey: 'projectId' });
 ProjectContribution.belongsTo(User,    { foreignKey: 'memberId', as: 'member' });
 Group.hasMany(Asset,              { foreignKey: 'groupId' });
-Group.hasMany(OtherIncome,         { foreignKey: 'groupId' });
+Group.hasMany(OtherIncome,              { foreignKey: 'groupId' });
+Project.hasMany(ProjectPendingContrib,  { foreignKey: 'projectId' });
+ProjectPendingContrib.belongsTo(Project, { foreignKey: 'projectId' });
+ProjectPendingContrib.belongsTo(User,    { foreignKey: 'memberId', as: 'member' });
 
-module.exports = { sequelize, Group, User, Saving, Loan, Repayment, AuditLog, GroupSettings, Expenditure, Invoice, Project, ProjectContribution, Asset, OtherIncome };
+module.exports = { sequelize, Group, User, Saving, Loan, Repayment, AuditLog, GroupSettings, Expenditure, Invoice, Project, ProjectContribution, ProjectPendingContrib, Asset, OtherIncome };

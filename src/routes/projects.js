@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { Group, User, Project, ProjectContribution, Asset, Saving, AuditLog, GroupSettings } = require('../models');
+const { Group, User, Project, ProjectContribution, ProjectPendingContrib, Asset, Saving, AuditLog, GroupSettings } = require('../models');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 router.use(authenticate, requireRole('admin','superadmin'));
@@ -10,11 +10,15 @@ router.get('/projects', async (req, res) => {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
     const projects = await Project.findAll({ where: { groupId: gid }, order: [['createdAt','DESC']] });
+    const { Op } = require('sequelize');
+    const totalMembers = await User.count({ where: { groupId: gid, active: true, role: { [Op.notIn]: ['superadmin'] } } });
     const enriched = await Promise.all(projects.map(async p => {
-      const contributions = await ProjectContribution.findAll({ where: { projectId: p.id } });
+      const contributions   = await ProjectContribution.findAll({ where: { projectId: p.id }, include: [{ model: User, as: 'member', attributes: ['id','name','memberId'] }] });
+      const pendingContribs = await ProjectPendingContrib.findAll({ where: { projectId: p.id, status: 'pending' }, include: [{ model: User, as: 'member', attributes: ['id','name','memberId'] }] });
       const totalRaised   = contributions.reduce((s,c)=>s+c.amount,0);
       const memberCount   = [...new Set(contributions.map(c=>c.memberId))].length;
-      return { ...p.toJSON(), totalRaised, memberCount, contributorCount: memberCount };
+      const memberShare   = p.targetAmount > 0 && totalMembers > 0 ? Math.ceil(p.targetAmount / totalMembers) : 0;
+      return { ...p.toJSON(), totalRaised, memberCount, contributorCount: memberCount, contributions: contributions.map(c=>c.toJSON()), pendingContribs: pendingContribs.map(c=>c.toJSON()), memberShare, totalMembers };
     }));
     const totalAssetValue = (await Asset.findAll({ where: { groupId: gid, status:'active' } })).reduce((s,a)=>s+a.currentValue,0);
     const members = await User.findAll({ where: { groupId: gid, role: ['member','credit_officer','treasurer','chairperson'] }, attributes: ['id','name','memberId'] });
@@ -88,4 +92,32 @@ router.post('/assets/:id/edit', async (req, res) => {
   } catch(err) { console.error(err); res.redirect('/admin/assets?error=update_failed'); }
 });
 
+
+router.post('/projects/pending/:id/confirm', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const pending = await ProjectPendingContrib.findOne({ where: { id: req.params.id } });
+    if (!pending) return res.redirect('/admin/projects?error=not_found');
+    const project = await Project.findByPk(pending.projectId);
+    const member  = await User.findByPk(pending.memberId);
+    // Create confirmed contribution
+    await ProjectContribution.create({ projectId: pending.projectId, memberId: pending.memberId, groupId: gid, amount: pending.amount, date: new Date(), postedBy: req.user.id, notes: 'Confirmed online payment via ' + pending.paymentMethod });
+    // Update project raised amount
+    project.raisedAmount = (project.raisedAmount||0) + pending.amount;
+    await project.save();
+    // Mark pending as confirmed
+    pending.status = 'confirmed'; pending.confirmedBy = req.user.id; pending.confirmedAt = new Date();
+    await pending.save();
+    await AuditLog.create({ userId: req.user.id, action: 'CONFIRM_PROJECT_CONTRIB', detail: `Confirmed UGX ${pending.amount.toLocaleString()} from ${member?.name} to ${project?.name}`, groupId: gid });
+    res.redirect('/admin/projects?success=contribution_confirmed');
+  } catch(err) { console.error(err); res.redirect('/admin/projects?error=confirm_failed'); }
+});
+
+router.post('/projects/pending/:id/reject', async (req, res) => {
+  try {
+    const pending = await ProjectPendingContrib.findOne({ where: { id: req.params.id } });
+    if (pending) { pending.status = 'rejected'; await pending.save(); }
+    res.redirect('/admin/projects?success=contribution_rejected');
+  } catch(err) { console.error(err); res.redirect('/admin/projects?error=reject_failed'); }
+});
 module.exports = router;
