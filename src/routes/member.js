@@ -133,15 +133,56 @@ router.post('/deposit', async (req, res) => {
   try {
     const m     = req.user;
     const group = await Group.findByPk(m.groupId);
-    const { amount, paymentMethod, description } = req.body;
+    const { amount, paymentMethod, paymentType, projectId } = req.body;
     const parsedAmount = parseInt(amount);
     const ref  = `TXN${Date.now()}`;
-    const tx   = await Saving.create({ memberId: m.id, groupId: m.groupId, amount: parsedAmount, type: 'online_deposit', description: description||`Online deposit via ${paymentMethod}`, date: new Date(), postedBy: m.id, paymentMethod, transactionRef: ref });
-    await AuditLog.create({ userId: m.id, action: 'ONLINE_DEPOSIT', detail: `Deposited UGX ${parsedAmount.toLocaleString()} via ${paymentMethod}`, groupId: m.groupId });
+
+    // ── PROJECT CONTRIBUTION — goes to project, NOT savings ───────
+    if (paymentType === 'project_contribution') {
+      if (!projectId) return res.redirect('/member/deposit?error=select_project');
+      const { Project, ProjectPendingContrib } = require('../models');
+      const project = await Project.findOne({ where: { id: projectId, groupId: m.groupId } });
+      if (!project) return res.redirect('/member/deposit?error=project_not_found');
+      await ProjectPendingContrib.create({
+        projectId, memberId: m.id, groupId: m.groupId,
+        amount: parsedAmount, paymentMethod, transactionRef: ref,
+        status: 'pending', date: new Date(),
+      });
+      await AuditLog.create({ userId: m.id, action: 'PROJECT_CONTRIB_INTENT', detail: `Project contribution intent UGX ${parsedAmount.toLocaleString()} to ${project.name} via ${paymentMethod}`, groupId: m.groupId });
+      return res.redirect(`/member/projects?success=contrib_pending&project=${encodeURIComponent(project.name)}&amount=${parsedAmount}`);
+    }
+
+    // ── LOAN REPAYMENT — pending saving flagged as loan repayment ─
+    if (paymentType === 'loan_repayment') {
+      await Saving.create({
+        memberId: m.id, groupId: m.groupId, amount: parsedAmount,
+        type: 'online_deposit',
+        description: `Loan repayment via ${paymentMethod}`,
+        date: new Date(), postedBy: m.id, paymentMethod, transactionRef: ref, status: 'pending',
+      });
+      await AuditLog.create({ userId: m.id, action: 'LOAN_REPAYMENT_INTENT', detail: `Loan repayment intent UGX ${parsedAmount.toLocaleString()} via ${paymentMethod}`, groupId: m.groupId });
+      return res.redirect(`/member/loans?success=repayment_pending&ref=${ref.slice(-6)}&amount=${parsedAmount}`);
+    }
+
+    // ── ALL OTHER TYPES — go to savings (pending) ─────────────────
+    const typeMap = {
+      monthly_contribution: { type: 'contribution',   desc: `Monthly contribution via ${paymentMethod}` },
+      annual_subscription:  { type: 'contribution',   desc: `Annual subscription via ${paymentMethod}` },
+      share_capital:        { type: 'share_capital',  desc: `Share capital payment via ${paymentMethod}` },
+      extra_savings:        { type: 'online_deposit', desc: `Extra savings deposit via ${paymentMethod}` },
+    };
+    const mapped = typeMap[paymentType] || { type: 'online_deposit', desc: `Online deposit via ${paymentMethod}` };
+
+    const tx = await Saving.create({
+      memberId: m.id, groupId: m.groupId, amount: parsedAmount,
+      type: mapped.type, description: mapped.desc,
+      date: new Date(), postedBy: m.id, paymentMethod, transactionRef: ref, status: 'pending',
+    });
+    await AuditLog.create({ userId: m.id, action: 'ONLINE_DEPOSIT', detail: `Deposit intent UGX ${parsedAmount.toLocaleString()} — ${mapped.desc}`, groupId: m.groupId });
     const balance = await getBalance(m.id);
     emails.savingsReceiptToMember(m.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(()=>{});
-    res.redirect(`/member/savings?success=deposit_pending&ref=${ref.slice(-6)}&method=${encodeURIComponent(paymentMethod)}&amount=${parsedAmount}`);
-  } catch (err) { console.error(err); res.redirect('/member/deposit?error=deposit_failed'); }
+    return res.redirect(`/member/savings?success=deposit_pending&ref=${ref.slice(-6)}&method=${encodeURIComponent(paymentMethod)}&amount=${parsedAmount}`);
+  } catch (err) { console.error('Deposit error:', err); res.redirect('/member/deposit?error=deposit_failed'); }
 });
 
 router.get('/profile', async (req, res) => {
