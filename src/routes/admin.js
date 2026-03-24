@@ -467,15 +467,27 @@ router.get('/expenditure', async (req, res) => {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
     const { Expenditure, OtherIncome } = require('../models');
-    const expenditures      = await Expenditure.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
-    const otherIncomes      = await OtherIncome.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
-    const savings           = await Saving.findAll({ where: { groupId: gid, status: { [Op.ne]: 'pending' } }, attributes: ['amount'] });
+    const expenditures   = await Expenditure.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
+    const otherIncomes   = await OtherIncome.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
+    // Exclude pending and loan repayment records (repayments live in Repayment table, not savings)
+    const savings        = await Saving.findAll({
+      where: {
+        groupId: gid,
+        status: { [Op.ne]: 'pending' },
+        description: { [Op.notLike]: '%loan repayment%' },
+      },
+      attributes: ['amount']
+    });
+    const activeLoans    = await Loan.findAll({ where: { groupId: gid, status: 'active' }, attributes: ['totalRepayable','amountRepaid'] });
+    const loanPortfolio  = activeLoans.reduce((s,l) => s + (l.totalRepayable - l.amountRepaid), 0);
+
     const totalSavingsIncome = savings.reduce((s,r) => s+r.amount, 0);
     const totalOtherIncome   = otherIncomes.reduce((s,r) => s+r.amount, 0);
     const totalIncome        = totalSavingsIncome + totalOtherIncome;
     const totalExpend        = expenditures.reduce((s,r) => s+r.amount, 0);
-    const netBalance         = totalIncome - totalExpend;
-    res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, query: req.query });
+    // Net balance = income − expenditure − outstanding loans (same formula as Reports)
+    const netBalance         = totalIncome - totalExpend - loanPortfolio;
+    res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, loanPortfolio, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 

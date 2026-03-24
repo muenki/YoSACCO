@@ -120,7 +120,7 @@ router.get('/', async (req, res) => {
     }));
 
     // ── AVAILABLE BALANCE ─────────────────────────────────────────
-    const allSavingsEver  = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' } }, attributes:['amount'] });
+    const allSavingsEver  = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' }, description:{ [Op.notLike]:'%loan repayment%' } }, attributes:['amount'] });
     const allExpendsEver  = await Expenditure.findAll({ where:{ groupId:gid }, attributes:['amount'] });
     const totalSavingsEver = allSavingsEver.reduce((t,s)=>t+s.amount,0);
     const totalExpendsEver = allExpendsEver.reduce((t,e)=>t+e.amount,0);

@@ -37,11 +37,12 @@
     <div class="sub">All time</div>
   </div>
   <div class="stat-card" style="border-left:4px solid <%= netBalance >= 0 ? 'var(--teal)' : 'var(--danger)' %>;">
-    <div class="label">Net Balance</div>
+    <div class="label">Net Available Balance</div>
     <div class="value" style="font-size:17px;color:<%= netBalance >= 0 ? 'var(--success)' : 'var(--danger)' %>">
       UGX <%= Math.abs(netBalance).toLocaleString() %>
     </div>
     <div class="sub"><%= netBalance >= 0 ? 'Surplus' : 'Deficit' %></div>
+    <div class="sub" style="font-size:10px;">After loans: - UGX <%= (locals.loanPortfolio||0).toLocaleString() %></div>
   </div>
 </div>
 
