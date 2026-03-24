@@ -206,8 +206,11 @@ function updateTotal() {
     var v = parseInt(document.querySelector('[name=annualFee]').value)||0;
     total += v; if(v) parts.push('Annual: UGX '+v.toLocaleString()+'/yr');
   }
-  document.getElementById('liveTotal').textContent = 'UGX ' + total.toLocaleString();
-  document.getElementById('liveSub').textContent = parts.join(' + ');
+  var vat = Math.round(total * 0.18);
+  var grand = total + vat;
+  document.getElementById('liveTotal').textContent = 'UGX ' + grand.toLocaleString();
+  document.getElementById('liveSub').textContent = parts.join(' + ') + ' + VAT (18%: UGX ' + vat.toLocaleString() + ')';
+
 }
 updateTotal();
 </script>

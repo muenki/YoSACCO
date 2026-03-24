@@ -128,8 +128,9 @@ router.post('/quotations/generate', async (req, res) => {
       });
     }
 
-    const subtotal = items.reduce((t,i)=>t+i.total, 0);
-    const total    = subtotal;
+    const subtotal    = items.reduce((t,i)=>t+i.total, 0);
+    const vat         = Math.round(subtotal * 0.18);
+    const total       = subtotal + vat;
 
     res.render('super/quotation-print', {
       user: req.user, quoteNumber, today, validUntil,
@@ -137,7 +138,7 @@ router.post('/quotations/generate', async (req, res) => {
       clientEmail: clientEmail||'',
       clientContact: clientContact||'',
       saccoType: saccoType||'',
-      items, subtotal, total,
+      items, subtotal, vat, total,
       notes: notes||'',
     });
   } catch(err) {

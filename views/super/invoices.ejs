@@ -19,159 +19,47 @@
 <% invoices.forEach(function(inv, idx){ %>
 <div class="inv-template" id="invts-<%= idx %>">
   <div style="max-width:780px;margin:0 auto;font-family:Arial,sans-serif;border:1px solid #ddd;">
-
-    <!-- MUENKI LETTERHEAD HEADER -->
+    <!-- MUENKI LETTERHEAD -->
     <div style="padding:18px 32px 0;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div><img src="/assets/muenki_logo.jpg" style="height:66px;width:auto;" onerror="this.style.display='none'" alt="MUENKI Investments LTD"></div>
-        <div style="text-align:right;font-size:10.5px;line-height:1.75;font-family:'Times New Roman',serif;">
+        <img src="/assets/muenki_logo.jpg" style="height:66px;width:auto;" alt="MUENKI Investments LTD">
+        <div style="text-align:right;font-size:10.5px;line-height:1.75;font-family:Georgia,serif;">
           P.O.BOX 5445 Kampala, Uganda<br>
           Plot 4, Semawata Road. Ntinda<br>
-          Email: muenkinvestments@gmail.com<br>
+          muenkinvestments@gmail.com<br>
           Tel: +256 756 683 141
         </div>
       </div>
     </div>
-    <!-- Three coloured lines -->
-    <div style="margin:8px 32px 0;display:flex;flex-direction:column;gap:3px;">
+    <div style="margin:8px 32px 0;">
       <div style="height:2px;background:#FFC000;"></div>
-      <div style="height:2px;background:#375623;"></div>
-      <div style="height:2px;background:#FF0000;"></div>
+      <div style="height:2px;background:#375623;margin-top:3px;"></div>
+      <div style="height:2px;background:#FF0000;margin-top:3px;"></div>
     </div>
-
     <div style="padding:22px 32px;">
-
-      <!-- INVOICE TITLE BAR -->
-      <div style="background:#1a1a1a;color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <div style="font-size:18px;font-weight:700;letter-spacing:.06em;">INVOICE</div>
-        <div style="text-align:right;font-size:11px;opacity:0.75;line-height:1.7;">
-          <div style="font-size:15px;font-weight:700;color:#FFC000;"><%= inv.invoiceNumber %></div>
-          Issued: <%= new Date(inv.createdAt).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %><br>
-          Due: <%= new Date(inv.dueDate).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %>
-        </div>
-      </div>
-
-      <!-- FROM / TO -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
-        <div style="background:#f8f8f8;border-left:3px solid #D35050;padding:12px 14px;">
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#D35050;margin-bottom:5px;">From</div>
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px;">MUENKI Investments LTD</div>
-          <div style="font-size:11px;color:#555;line-height:1.6;">YoSACCO Platform · Kampala, Uganda<br>muenkinvestments@gmail.com · +256 756 683 141</div>
-        </div>
-        <div style="background:#f8f8f8;border-left:3px solid #D35050;padding:12px 14px;">
-          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#D35050;margin-bottom:5px;">Billed To</div>
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px;"><%= inv.group ? inv.group.name : 'SACCO Group' %></div>
-          <div style="font-size:11px;color:#555;line-height:1.6;"><%= inv.group ? inv.group.adminEmail : '' %></div>
-        </div>
-      </div>
-
-      <!-- LINE ITEMS TABLE -->
-      <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px;">
-        <thead>
-          <tr style="background:#1a1a1a;color:#fff;">
-            <th style="padding:9px 12px;text-align:left;">Description</th>
-            <th style="padding:9px 12px;text-align:center;">Period</th>
-            <th style="padding:9px 12px;text-align:right;">Amount (UGX)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding:12px;border-bottom:1px solid #eee;">
-              <div style="font-weight:600;">YoSACCO <%= inv.type==='annual'?'Annual':'Monthly' %> Subscription</div>
-              <div style="font-size:10px;color:#888;margin-top:2px;">Full platform access — savings, loans, reports, member portal, notifications</div>
-            </td>
-            <td style="padding:12px;text-align:center;color:#666;border-bottom:1px solid #eee;">
-              <% if(inv.periodStart && inv.periodEnd){ %>
-                <%= new Date(inv.periodStart).toLocaleDateString('en-UG',{month:'short',day:'numeric',year:'numeric'}) %> –<br>
-                <%= new Date(inv.periodEnd).toLocaleDateString('en-UG',{month:'short',day:'numeric',year:'numeric'}) %>
-              <% } else { %>—<% } %>
-            </td>
-            <td style="padding:12px;text-align:right;font-weight:700;font-size:14px;border-bottom:1px solid #eee;">
-              UGX <%= inv.amount.toLocaleString() %>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- TOTAL -->
-      <div style="display:flex;justify-content:flex-end;margin-bottom:18px;">
-        <div style="min-width:220px;font-size:12px;">
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;"><span>Subtotal</span><span>UGX <%= inv.amount.toLocaleString() %></span></div>
-          <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee;"><span>VAT (0%)</span><span>UGX 0</span></div>
-          <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:17px;font-weight:800;border-top:2.5px solid #1a1a1a;margin-top:2px;">
-            <span>TOTAL DUE</span>
-            <span style="color:#D35050;">UGX <%= inv.amount.toLocaleString() %></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- STATUS BADGE -->
-      <div style="text-align:right;margin-bottom:16px;">
-        <span style="display:inline-block;padding:5px 16px;border-radius:20px;font-size:12px;font-weight:700;background:<%= inv.status==='paid'?'#dcfce7':inv.status==='overdue'?'#fee2e2':inv.status==='cancelled'?'#f0f0f0':'#fef9c3' %>;color:<%= inv.status==='paid'?'#15803d':inv.status==='overdue'?'#b91c1c':inv.status==='cancelled'?'#666':'#854d0e' %>;">
-          <%= inv.status.toUpperCase() %>
-        </span>
-      </div>
-
-      <!-- PAYMENT INSTRUCTIONS -->
-      <div style="background:#fff8e1;border:1px solid #FFC000;padding:10px 14px;font-size:11px;color:#7c5800;margin-bottom:14px;border-radius:3px;">
-        <strong>Payment Instructions:</strong> Pay via MTN MoMo, Airtel Money, or Bank Transfer.
-        Use reference: <strong><%= inv.invoiceNumber %></strong>.
-        Contact: muenkinvestments@gmail.com · +256 756 683 141
-      </div>
-
-      <% if(inv.status === 'paid'){ %>
-      <div style="padding:10px 14px;background:#dcfce7;border-radius:4px;font-size:12px;color:#15803d;font-weight:600;margin-bottom:14px;">
-        ✓ PAYMENT RECEIVED — UGX <%= inv.paidAmount.toLocaleString() %> on <%= new Date(inv.paidAt).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %>
-      </div>
-      <% } %>
-
-      <!-- TERMS -->
-      <div style="font-size:10px;color:#888;line-height:1.7;border-top:1px solid #eee;padding-top:10px;margin-bottom:14px;">
-        <strong style="color:#444;">Terms:</strong>
-        Payment due within 14 days. Late payments attract a 5% penalty per month.
-        Service may be suspended for invoices overdue by 30+ days.
-        All prices in Uganda Shillings (UGX).
-      </div>
-
-    </div><!-- /body -->
-
-    <!-- LETTERHEAD FOOTER -->
-    <div style="border-top:3px solid #FFC000;padding:9px 32px;text-align:center;font-size:10px;color:#555;font-family:'Times New Roman',serif;">
-      <strong>MUENKI Investments LTD</strong> — YoSACCO Platform &nbsp;·&nbsp; muenkinvestments@gmail.com &nbsp;·&nbsp; +256 756 683 141 &nbsp;·&nbsp; Plot 4, Semawata Road. Ntinda, Kampala
-    </div>
-
-  </div>
-</div>
-<% }); %>
-
-<!-- ── Page Content ─────────────────────────────────────────────── -->
-
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
       <div>
-        <img src="/assets/logo.png" style="height:52px;margin-bottom:8px;" onerror="this.style.display='none'"><br>
-        <div style="font-size:13px;color:#666;">Online SACCO Management Platform</div>
-        <div style="font-size:12px;color:#888;margin-top:4px;">muenkinvestments@gmail.com · +256 756 683 141</div>
-      </div>
-      <div style="text-align:right;">
         <div style="font-size:26px;font-weight:800;color:#D35050;">INVOICE</div>
-        <div style="font-size:16px;font-weight:700;color:#0A2342;"><%= inv.invoiceNumber %></div>
-        <div style="font-size:12px;color:#666;margin-top:4px;">Issued: <%= new Date(inv.createdAt).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></div>
-        <div style="font-size:12px;color:#666;">Due: <%= new Date(inv.dueDate).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></div>
+        <div style="font-size:15px;font-weight:700;color:#0A2342;"><%= inv.invoiceNumber %></div>
+      </div>
+      <div style="text-align:right;font-size:12px;color:#666;">
+        <div>Issued: <%= new Date(inv.createdAt).toDateString() %></div>
+        <div>Due: <%= new Date(inv.dueDate).toDateString() %></div>
       </div>
     </div>
 
-    <div style="display:flex;gap:40px;padding:16px;background:#f6f8fa;border-radius:8px;margin-bottom:24px;">
+    <div style="display:flex;gap:40px;padding:16px;background:#f6f8fa;border-left:3px solid #D35050;margin-bottom:24px;">
       <div>
-        <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">From</div>
-        <div style="font-weight:700;color:#0A2342;">YoSACCO Platform</div>
-        <div style="font-size:13px;color:#555;">muenkinvestments@gmail.com</div>
-        <div style="font-size:13px;color:#555;">+256 756 683 141</div>
-        <div style="font-size:13px;color:#555;">Kampala, Uganda</div>
+        <div style="font-size:10px;font-weight:700;color:#D35050;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">From</div>
+        <div style="font-weight:700;color:#0A2342;">MUENKI Investments LTD</div>
+        <div style="font-size:12px;color:#555;">YoSACCO Platform</div>
+        <div style="font-size:12px;color:#555;">muenkinvestments@gmail.com</div>
+        <div style="font-size:12px;color:#555;">+256 756 683 141 · Kampala, Uganda</div>
       </div>
       <div>
-        <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">To</div>
+        <div style="font-size:10px;font-weight:700;color:#D35050;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Billed To</div>
         <div style="font-weight:700;color:#0A2342;"><%= inv.group ? inv.group.name : 'SACCO Group' %></div>
-        <div style="font-size:13px;color:#555;"><%= inv.group ? inv.group.adminEmail : '' %></div>
+        <div style="font-size:12px;color:#555;"><%= inv.group ? inv.group.adminEmail : '' %></div>
       </div>
     </div>
 
@@ -201,9 +89,11 @@
     </table>
 
     <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
-      <div style="background:#f0f9f0;border:2px solid #D35050;border-radius:10px;padding:18px 28px;text-align:right;">
-        <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;">Total Due</div>
-        <div style="font-size:26px;font-weight:800;color:#D35050;margin:4px 0;">UGX <%= inv.amount.toLocaleString() %></div>
+      <div style="background:#f8f8f8;border:2px solid #D35050;border-radius:10px;padding:18px 28px;text-align:right;min-width:260px;">
+        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #eee;"><span>Subtotal</span><span>UGX <%= inv.amount.toLocaleString() %></span></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #ddd;"><span>VAT (18%)</span><span>UGX <%= Math.round(inv.amount * 0.18).toLocaleString() %></span></div>
+        <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-top:8px;">Total Due (inc. VAT)</div>
+        <div style="font-size:24px;font-weight:800;color:#D35050;margin:4px 0;">UGX <%= Math.round(inv.amount * 1.18).toLocaleString() %></div>
         <span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:<%= inv.status==='paid'?'#d6f0e4':inv.status==='overdue'?'#fed7d7':inv.status==='cancelled'?'#f0f0f0':'#fefcbf' %>;color:<%= inv.status==='paid'?'#1a7f4b':inv.status==='overdue'?'#c53030':inv.status==='cancelled'?'#666':'#b7791f' %>;">
           <%= inv.status.toUpperCase() %>
         </span>
@@ -223,9 +113,10 @@
     </div>
     <% } %>
 
-    <div style="text-align:center;margin-top:24px;font-size:11px;color:#aaa;">
-      Powered by YoSACCO · www.yosacco.coop · +256 756 683 141
+    <div style="text-align:center;margin-top:20px;border-top:3px solid #FFC000;padding-top:10px;font-size:10px;color:#666;font-family:Georgia,serif;">
+      <strong>MUENKI Investments LTD</strong> · muenkinvestments@gmail.com · +256 756 683 141 · Plot 4, Semawata Road. Ntinda, Kampala
     </div>
+    </div><!-- /inner padding -->
   </div>
 </div>
 <% }); %>
