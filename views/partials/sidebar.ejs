@@ -26,7 +26,8 @@ const accentCol = locals.group ? group.accentColor : '#0D7377';
       <a href="/super/dashboard" class="nav-link <%= isActive('super-dashboard') %>"><span class="icon">📊</span> Dashboard</a>
       <a href="/super/groups"    class="nav-link <%= isActive('super-groups') %>"><span class="icon">🏦</span> SACCO Groups</a>
       <a href="/super/invoices"  class="nav-link <%= isActive('super-invoices') %>"><span class="icon">🧾</span> Invoices</a>
-      <a href="/super/audit"     class="nav-link <%= isActive('super-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
+      <a href="/super/audit"       class="nav-link <%= isActive('super-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
+      <a href="/super/quotations" class="nav-link <%= isActive('super-quotations') %>"><span class="icon">🧾</span> Quotations</a>
 
     <% } else if (role === 'credit_officer' || role === 'treasurer' || role === 'chairperson') { %>
       <div class="nav-section">Loan Approvals</div>

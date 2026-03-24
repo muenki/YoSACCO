@@ -69,6 +69,82 @@ router.get('/audit', async (req, res) => {
   } catch (err) { console.error(err); res.render('error', { message: 'Audit error', user: req.user }); }
 });
 
+
+// ── Quotations ────────────────────────────────────────────────────
+router.get('/quotations', async (req, res) => {
+  try {
+    const groups = await Group.findAll({ order: [['createdAt','DESC']] });
+    res.render('super/quotations', { user: req.user, groups: groups.map(g=>g.toJSON()), query: req.query });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
+});
+
+router.post('/quotations/generate', async (req, res) => {
+  try {
+    const {
+      clientName, clientEmail, clientContact, saccoType,
+      setupFee, dataEntryFee, dataEntryMembers,
+      monthlyFee, annualFee,
+      includeSetup, includeDataEntry, includeMonthly, includeAnnual,
+      notes, validDays
+    } = req.body;
+
+    const quoteNumber = 'QT-' + new Date().getFullYear() + '-' + String(Date.now()).slice(-5);
+    const today = new Date();
+    const validUntil = new Date(today.getTime() + (parseInt(validDays)||30) * 24*60*60*1000);
+
+    const items = [];
+    if (includeSetup) {
+      items.push({
+        desc: 'One-off System Setup & Onboarding Fee',
+        detail: 'Includes system configuration, admin training, and go-live support',
+        qty: 1, unit: parseInt(setupFee)||500000,
+        total: parseInt(setupFee)||500000,
+        type: 'once-off'
+      });
+    }
+    if (includeDataEntry) {
+      const members = parseInt(dataEntryMembers)||50;
+      const fee = parseInt(dataEntryFee)||300000;
+      items.push({
+        desc: 'Data Entry & Migration (up to ' + members + ' members)',
+        detail: 'Digitisation of member records, savings history, and loan data',
+        qty: 1, unit: fee, total: fee, type: 'once-off'
+      });
+    }
+    if (includeMonthly) {
+      const mFee = parseInt(monthlyFee)||50000;
+      items.push({
+        desc: 'Monthly Subscription — YoSACCO Platform',
+        detail: 'Full platform access: savings, loans, reports, member portal, email notifications',
+        qty: 1, unit: mFee, total: mFee, type: 'monthly'
+      });
+    }
+    if (includeAnnual) {
+      const aFee = parseInt(annualFee)||500000;
+      items.push({
+        desc: 'Annual Subscription — YoSACCO Platform (12 months)',
+        detail: 'Full platform access billed annually. Saves ' + Math.round(100 - (aFee / (parseInt(monthlyFee||50000) * 12) * 100)) + '% vs monthly',
+        qty: 12, unit: Math.round(aFee/12), total: aFee, type: 'annual'
+      });
+    }
+
+    const subtotal = items.reduce((t,i)=>t+i.total, 0);
+    const total    = subtotal;
+
+    res.render('super/quotation-print', {
+      user: req.user, quoteNumber, today, validUntil,
+      clientName: clientName||'SACCO Group',
+      clientEmail: clientEmail||'',
+      clientContact: clientContact||'',
+      saccoType: saccoType||'',
+      items, subtotal, total,
+      notes: notes||'',
+    });
+  } catch(err) {
+    console.error('Quotation error:', err);
+    res.render('error', { message: 'Error generating quotation', user: req.user });
+  }
+});
 module.exports = router;
 
 // ── Super Admin Invoices ──────────────────────────────────────────

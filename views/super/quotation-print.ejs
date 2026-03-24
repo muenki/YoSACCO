@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quotation <%= quoteNumber %> — YoSACCO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',Arial,sans-serif; font-size:13px; color:#1a1a2e; background:#f5f5f5; }
+
+    @media print {
+      body { background:#fff; }
+      .no-print { display:none!important; }
+      .page { box-shadow:none!important; margin:0!important; border-radius:0!important; }
+    }
+
+    .no-print {
+      background:#0A2342; color:#fff; padding:12px 32px;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .no-print button {
+      background:#0D7377; color:#fff; border:none; padding:10px 24px;
+      border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;
+    }
+
+    .page {
+      max-width:800px; margin:24px auto; background:#fff;
+      box-shadow:0 4px 24px rgba(0,0,0,0.1); border-radius:12px; overflow:hidden;
+    }
+
+    /* Header */
+    .header {
+      background:#0A2342; color:#fff; padding:36px 40px;
+      display:flex; justify-content:space-between; align-items:flex-start;
+    }
+    .logo-area { display:flex; flex-direction:column; gap:4px; }
+    .logo-name { font-size:28px; font-weight:800; color:#4FD1C5; }
+    .logo-sub  { font-size:12px; opacity:0.6; }
+    .quote-meta { text-align:right; }
+    .quote-num  { font-size:22px; font-weight:800; color:#4FD1C5; }
+    .quote-label{ font-size:11px; opacity:0.5; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+    .quote-date { font-size:12px; opacity:0.7; margin-top:6px; }
+
+    /* Body */
+    .body { padding:36px 40px; }
+
+    /* Addresses */
+    .addresses { display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-bottom:32px; }
+    .addr-box { background:#f6f8fa; border-radius:8px; padding:16px 20px; }
+    .addr-label { font-size:10px; font-weight:700; color:#0D7377; text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+    .addr-name  { font-size:15px; font-weight:700; color:#0A2342; margin-bottom:2px; }
+    .addr-detail{ font-size:12px; color:#666; line-height:1.6; }
+
+    /* What's included */
+    .features { background:#f0fbfa; border:1px solid #b2dfdb; border-radius:8px; padding:16px 20px; margin-bottom:28px; }
+    .features-title { font-size:12px; font-weight:700; color:#0D7377; margin-bottom:10px; text-transform:uppercase; letter-spacing:.04em; }
+    .features-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px 16px; font-size:12px; color:#444; }
+    .features-grid span::before { content:'✓ '; color:#0D7377; font-weight:700; }
+
+    /* Items table */
+    .table-title { font-size:13px; font-weight:700; color:#0A2342; margin-bottom:10px; text-transform:uppercase; letter-spacing:.04em; }
+    table.items { width:100%; border-collapse:collapse; margin-bottom:20px; }
+    table.items thead tr { background:#0A2342; color:#fff; }
+    table.items th { padding:10px 14px; text-align:left; font-size:12px; font-weight:600; }
+    table.items th:last-child { text-align:right; }
+    table.items td { padding:12px 14px; border-bottom:1px solid #eee; vertical-align:top; }
+    table.items td:last-child { text-align:right; font-weight:700; }
+    table.items .item-desc { font-weight:600; color:#0A2342; font-size:13px; }
+    table.items .item-detail { font-size:11px; color:#888; margin-top:2px; }
+    table.items .type-badge {
+      display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; margin-left:6px;
+    }
+    .badge-once   { background:#fef3c7; color:#b7791f; }
+    .badge-monthly{ background:#e8f4fd; color:#2b6cb0; }
+    .badge-annual { background:#d6f0e4; color:#1a7f4b; }
+
+    /* Totals */
+    .totals { display:flex; justify-content:flex-end; margin-bottom:28px; }
+    .totals-box { min-width:260px; }
+    .totals-row { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px solid #eee; }
+    .totals-total { display:flex; justify-content:space-between; padding:12px 0; font-size:18px; font-weight:800; color:#0D7377; border-top:2px solid #0D7377; margin-top:4px; }
+
+    /* Validity & terms */
+    .validity { background:#fffbeb; border:1px solid #f6e05e; border-radius:8px; padding:14px 18px; margin-bottom:20px; font-size:12px; color:#b7791f; }
+    .terms { font-size:11px; color:#999; line-height:1.7; border-top:1px solid #eee; padding-top:16px; margin-bottom:16px; }
+
+    /* Footer */
+    .footer { background:#0A2342; color:rgba(255,255,255,0.6); padding:20px 40px; text-align:center; font-size:11px; }
+    .footer strong { color:#4FD1C5; }
+
+    /* Signature area */
+    .signatures { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-bottom:28px; }
+    .sig-box { border-top:1px solid #ccc; padding-top:8px; font-size:11px; color:#888; }
+  </style>
+</head>
+<body>
+
+<!-- Print toolbar -->
+<div class="no-print">
+  <span style="font-size:14px;font-weight:600;">Quotation Preview — <%= quoteNumber %></span>
+  <div style="display:flex;gap:10px;">
+    <button onclick="window.print()">🖨 Print / Save as PDF</button>
+    <button onclick="window.close()" style="background:#333;">✕ Close</button>
+  </div>
+</div>
+
+<div class="page">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-name">Yo$ACCO</div>
+      <div class="logo-sub">Online SACCO Management Platform</div>
+      <div style="margin-top:12px;font-size:12px;opacity:0.7;">
+        info@yosacco.coop · +256 756 683 141<br>
+        Powered by MUENKI Investments LTD
+      </div>
+    </div>
+    <div class="quote-meta">
+      <div class="quote-label">Quotation</div>
+      <div class="quote-num"><%= quoteNumber %></div>
+      <div class="quote-date">
+        Date: <%= today.toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'}) %><br>
+        Valid Until: <strong style="color:#FBD38D;"><%= validUntil.toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'}) %></strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- Addresses -->
+    <div class="addresses">
+      <div class="addr-box">
+        <div class="addr-label">From</div>
+        <div class="addr-name">MUENKI Investments LTD</div>
+        <div class="addr-detail">
+          YoSACCO Platform<br>
+          Kampala, Uganda<br>
+          info@yosacco.coop<br>
+          +256 756 683 141
+        </div>
+      </div>
+      <div class="addr-box">
+        <div class="addr-label">Prepared For</div>
+        <div class="addr-name"><%= clientName %></div>
+        <div class="addr-detail">
+          <% if(saccoType){ %><%= saccoType %><br><% } %>
+          <% if(clientEmail){ %><%= clientEmail %><br><% } %>
+          <% if(clientContact){ %><%= clientContact %><% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- What's included -->
+    <div class="features">
+      <div class="features-title">Platform Features Included in All Plans</div>
+      <div class="features-grid">
+        <span>Member management</span>
+        <span>Savings tracking</span>
+        <span>Loan management</span>
+        <span>3-stage approvals</span>
+        <span>Financial reports</span>
+        <span>Member portal</span>
+        <span>Project management</span>
+        <span>Asset register</span>
+        <span>Income distribution</span>
+        <span>Email notifications</span>
+        <span>Print statements</span>
+        <span>Unlimited members</span>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="table-title">Quotation Items</div>
+    <table class="items">
+      <thead>
+        <tr>
+          <th style="width:50%;">Description</th>
+          <th style="text-align:center;">Qty</th>
+          <th style="text-align:right;">Unit Price</th>
+          <th style="text-align:right;">Total (UGX)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% items.forEach(function(item, i){ %>
+        <tr style="background:<%= i%2===0?'#fff':'#f9fafb' %>;">
+          <td>
+            <div class="item-desc">
+              <%= item.desc %>
+              <span class="type-badge badge-<%= item.type==='once-off'?'once':item.type %>">
+                <%= item.type==='once-off'?'Once-off':item.type==='monthly'?'Monthly':'Annual' %>
+              </span>
+            </div>
+            <% if(item.detail){ %><div class="item-detail"><%= item.detail %></div><% } %>
+          </td>
+          <td style="text-align:center;"><%= item.qty %></td>
+          <td style="text-align:right;">UGX <%= item.unit.toLocaleString() %></td>
+          <td>UGX <%= item.total.toLocaleString() %></td>
+        </tr>
+        <% }); %>
+        <% if(!items.length){ %>
+        <tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">No items selected.</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="totals">
+      <div class="totals-box">
+        <div class="totals-row"><span>Subtotal</span><span>UGX <%= subtotal.toLocaleString() %></span></div>
+        <div class="totals-row"><span>VAT (0%)</span><span>UGX 0</span></div>
+        <div class="totals-total"><span>TOTAL DUE</span><span>UGX <%= total.toLocaleString() %></span></div>
+      </div>
+    </div>
+
+    <!-- Validity note -->
+    <div class="validity">
+      ⏳ <strong>This quotation is valid for 30 days</strong> from the date of issue
+      (until <%= validUntil.toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'}) %>).
+      Prices are subject to change after expiry.
+    </div>
+
+    <!-- Notes -->
+    <% if(notes){ %>
+    <div style="background:var(--bg,#f6f8fa);border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:12px;color:#444;">
+      <strong>Notes:</strong> <%= notes %>
+    </div>
+    <% } %>
+
+    <!-- Terms -->
+    <div class="terms">
+      <strong style="color:#444;">Terms & Conditions:</strong><br>
+      1. Payment is due within 14 days of invoice date.<br>
+      2. Setup and data entry fees are non-refundable once work has commenced.<br>
+      3. Subscription services begin on the date of first payment.<br>
+      4. Annual subscription includes all platform updates and email support.<br>
+      5. MUENKI Investments LTD reserves the right to suspend service for overdue invoices exceeding 30 days.<br>
+      6. All prices are in Uganda Shillings (UGX) and exclude bank transfer charges.
+    </div>
+
+    <!-- Signatures -->
+    <div class="signatures">
+      <div class="sig-box">
+        Authorised by — MUENKI Investments LTD<br><br>
+        Name: ___________________________<br><br>
+        Signature: ______________________<br><br>
+        Date: ___________________________
+      </div>
+      <div class="sig-box">
+        Accepted by — <%= clientName %><br><br>
+        Name: ___________________________<br><br>
+        Signature: ______________________<br><br>
+        Date: ___________________________
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <strong>MUENKI Investments LTD</strong> — Powering YoSACCO Platform &nbsp;·&nbsp;
+    info@yosacco.coop &nbsp;·&nbsp; +256 756 683 141 &nbsp;·&nbsp; Kampala, Uganda
+  </div>
+</div>
+
+</body>
+</html>

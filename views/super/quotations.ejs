@@ -1,0 +1,215 @@
+<%- include('../partials/head', { title: 'Generate Quotation', activePage: 'super-quotations' }) %>
+
+<% if (locals.query && locals.query.success) { %><div class="alert alert-success">Quotation generated successfully.</div><% } %>
+
+<div class="grid-2 gap-4">
+
+  <!-- Quotation Form -->
+  <div class="card">
+    <div class="card-header"><h3>🧾 Build a Quotation</h3></div>
+    <div class="card-body">
+      <form method="POST" action="/super/quotations/generate" target="_blank">
+
+        <p class="text-sm font-semibold mb-3" style="color:var(--teal);">CLIENT DETAILS</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">SACCO / Organisation Name *</label>
+            <input type="text" name="clientName" class="form-control" placeholder="e.g. Kampala Teachers SACCO" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">SACCO Type</label>
+            <select name="saccoType" class="form-control">
+              <option value="">— Select type —</option>
+              <option>Teachers SACCO</option>
+              <option>Farmers Cooperative</option>
+              <option>Workers SACCO</option>
+              <option>Community SACCO</option>
+              <option>Church SACCO</option>
+              <option>Market Vendors SACCO</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Contact Person Email</label>
+            <input type="email" name="clientEmail" class="form-control" placeholder="admin@sacco.coop">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input type="text" name="clientContact" class="form-control" placeholder="+256 7XX XXX XXX">
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
+        <p class="text-sm font-semibold mb-3" style="color:var(--teal);">ITEMS TO INCLUDE</p>
+
+        <!-- Setup Fee -->
+        <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <input type="checkbox" name="includeSetup" id="chkSetup" value="1" checked onchange="toggleField('setupFields',this.checked)" style="width:16px;height:16px;">
+            <label for="chkSetup" class="font-semibold text-sm" style="cursor:pointer;">One-off Setup Fee</label>
+            <span class="badge badge-gray text-xs">Once only</span>
+          </div>
+          <div id="setupFields">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:11px;">Amount (UGX)</label>
+              <input type="number" name="setupFee" class="form-control" value="500000" min="0" oninput="updateTotal()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Entry -->
+        <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <input type="checkbox" name="includeDataEntry" id="chkData" value="1" checked onchange="toggleField('dataFields',this.checked)" style="width:16px;height:16px;">
+            <label for="chkData" class="font-semibold text-sm" style="cursor:pointer;">Data Entry & Migration</label>
+            <span class="badge badge-gray text-xs">Once only</span>
+          </div>
+          <div id="dataFields">
+            <div class="form-row" style="margin:0;">
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" style="font-size:11px;">Fee (UGX)</label>
+                <input type="number" name="dataEntryFee" class="form-control" value="300000" min="0" oninput="updateTotal()">
+              </div>
+              <div class="form-group" style="margin-bottom:0;">
+                <label class="form-label" style="font-size:11px;">No. of Members</label>
+                <input type="number" name="dataEntryMembers" class="form-control" value="50" min="1">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Subscription -->
+        <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <input type="checkbox" name="includeMonthly" id="chkMonthly" value="1" onchange="toggleField('monthlyFields',this.checked)" style="width:16px;height:16px;">
+            <label for="chkMonthly" class="font-semibold text-sm" style="cursor:pointer;">Monthly Subscription</label>
+            <span class="badge badge-info text-xs">Recurring</span>
+          </div>
+          <div id="monthlyFields" style="display:none;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:11px;">Monthly Fee (UGX)</label>
+              <input type="number" name="monthlyFee" class="form-control" value="50000" min="0" oninput="updateTotal()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Annual Subscription -->
+        <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:16px;border:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <input type="checkbox" name="includeAnnual" id="chkAnnual" value="1" checked onchange="toggleField('annualFields',this.checked)" style="width:16px;height:16px;">
+            <label for="chkAnnual" class="font-semibold text-sm" style="cursor:pointer;">Annual Subscription</label>
+            <span class="badge badge-success text-xs">Best value</span>
+          </div>
+          <div id="annualFields">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:11px;">Annual Fee (UGX)</label>
+              <input type="number" name="annualFee" class="form-control" value="500000" min="0" oninput="updateTotal()">
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border);margin:20px 0;">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Valid For (days)</label>
+            <input type="number" name="validDays" class="form-control" value="30" min="7" max="90">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Notes (optional)</label>
+            <input type="text" name="notes" class="form-control" placeholder="Any special terms...">
+          </div>
+        </div>
+
+        <!-- Live Total Preview -->
+        <div style="background:var(--navy);color:#fff;border-radius:10px;padding:14px 18px;margin-bottom:16px;">
+          <div style="font-size:12px;opacity:0.6;margin-bottom:4px;">ESTIMATED TOTAL</div>
+          <div id="liveTotal" style="font-size:24px;font-weight:800;color:#4FD1C5;">UGX 0</div>
+          <div id="liveSub" style="font-size:11px;opacity:0.6;margin-top:2px;"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;">
+          🖨 Generate & Print Quotation
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Info Panel -->
+  <div>
+    <div class="card mb-4">
+      <div class="card-header"><h3>Pricing Guide</h3></div>
+      <div class="card-body">
+        <p class="text-sm text-muted mb-3">Standard YoSACCO pricing — adjust per client.</p>
+        <table style="width:100%;font-size:13px;">
+          <thead><tr style="background:var(--bg);"><th style="padding:8px;">Item</th><th style="padding:8px;">Standard Price</th><th style="padding:8px;">Type</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:8px;">System Setup</td><td style="padding:8px;color:var(--navy);font-weight:600;">UGX 500,000</td><td style="padding:8px;"><span class="badge badge-gray text-xs">Once-off</span></td></tr>
+            <tr style="background:var(--bg);"><td style="padding:8px;">Data Entry (≤50)</td><td style="padding:8px;color:var(--navy);font-weight:600;">UGX 300,000</td><td style="padding:8px;"><span class="badge badge-gray text-xs">Once-off</span></td></tr>
+            <tr><td style="padding:8px;">Data Entry (51–200)</td><td style="padding:8px;color:var(--navy);font-weight:600;">UGX 500,000</td><td style="padding:8px;"><span class="badge badge-gray text-xs">Once-off</span></td></tr>
+            <tr style="background:var(--bg);"><td style="padding:8px;">Monthly Subscription</td><td style="padding:8px;color:var(--navy);font-weight:600;">UGX 50,000</td><td style="padding:8px;"><span class="badge badge-info text-xs">Monthly</span></td></tr>
+            <tr><td style="padding:8px;">Annual Subscription</td><td style="padding:8px;color:var(--teal);font-weight:600;">UGX 500,000</td><td style="padding:8px;"><span class="badge badge-success text-xs">Annual</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>What's Included</h3></div>
+      <div class="card-body">
+        <% [
+          ['Member management & registration','✓'],
+          ['Savings & contributions tracking','✓'],
+          ['3-stage loan approval workflow','✓'],
+          ['Income & expenditure tracking','✓'],
+          ['Project & asset management','✓'],
+          ['Monthly/quarterly/annual reports','✓'],
+          ['Income distribution to members','✓'],
+          ['Email notifications','✓'],
+          ['Member self-service portal','✓'],
+          ['Print receipts & statements','✓'],
+          ['YoSACCO subscription invoicing','✓'],
+          ['Unlimited members','✓'],
+        ].forEach(function(item){ %>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--border);">
+          <span><%= item[0] %></span>
+          <span style="color:var(--success);font-weight:700;"><%= item[1] %></span>
+        </div>
+        <% }); %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleField(id, show) {
+  document.getElementById(id).style.display = show ? 'block' : 'none';
+  updateTotal();
+}
+function updateTotal() {
+  var total = 0; var parts = [];
+  if (document.getElementById('chkSetup').checked) {
+    var v = parseInt(document.querySelector('[name=setupFee]').value)||0;
+    total += v; if(v) parts.push('Setup: UGX '+v.toLocaleString());
+  }
+  if (document.getElementById('chkData').checked) {
+    var v = parseInt(document.querySelector('[name=dataEntryFee]').value)||0;
+    total += v; if(v) parts.push('Data Entry: UGX '+v.toLocaleString());
+  }
+  if (document.getElementById('chkMonthly').checked) {
+    var v = parseInt(document.querySelector('[name=monthlyFee]').value)||0;
+    total += v; if(v) parts.push('Monthly: UGX '+v.toLocaleString()+'/mo');
+  }
+  if (document.getElementById('chkAnnual').checked) {
+    var v = parseInt(document.querySelector('[name=annualFee]').value)||0;
+    total += v; if(v) parts.push('Annual: UGX '+v.toLocaleString()+'/yr');
+  }
+  document.getElementById('liveTotal').textContent = 'UGX ' + total.toLocaleString();
+  document.getElementById('liveSub').textContent = parts.join(' + ');
+}
+updateTotal();
+</script>
+
+<%- include('../partials/foot') %>
