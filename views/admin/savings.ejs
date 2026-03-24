@@ -31,7 +31,7 @@
 <div class="member-ledger-template" id="mledger-<%= idx %>">
   <div style="max-width:700px;margin:40px auto;font-family:Arial,sans-serif;padding:32px;">
     <!-- Header -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #90E0EF;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #D35050;">
       <div>
         <% if(group.logo){ %><img src="<%= group.logo %>" style="height:44px;margin-bottom:6px;display:block;"><% } %>
         <div style="font-size:16px;font-weight:700;color:#0A2342;"><%= group.name %></div>
@@ -54,7 +54,7 @@
       </div>
       <div>
         <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Total Balance</div>
-        <div style="font-weight:800;font-size:18px;color:#90E0EF;">UGX <%= m.balance.toLocaleString() %></div>
+        <div style="font-weight:800;font-size:18px;color:#D35050;">UGX <%= m.balance.toLocaleString() %></div>
       </div>
       <div>
         <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Share Capital</div>
@@ -90,7 +90,7 @@
         <% } else { %>
           <tr><td colspan="6" style="text-align:center;padding:20px;color:#888;">No transactions on record.</td></tr>
         <% } %>
-        <tr style="background:#90E0EF;color:#fff;font-weight:700;">
+        <tr style="background:#D35050;color:#fff;font-weight:700;">
           <td colspan="4" style="padding:10px 12px;text-align:right;">CLOSING BALANCE</td>
           <td style="padding:10px 12px;text-align:right;"></td>
           <td style="padding:10px 12px;text-align:right;">UGX <%= m.balance.toLocaleString() %></td>
@@ -152,7 +152,7 @@
 
 
 <!-- Print header for full ledger -->
-<div class="print-header" style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #90E0EF;">
+<div class="print-header" style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #D35050;">
   <% if(group.logo){ %><img src="<%= group.logo %>" style="height:50px;margin-bottom:8px;"><br><% } %>
   <h2 style="margin:0;"><%= group.name %></h2>
   <p style="margin:4px 0;font-size:14px;"><strong>Savings Ledger</strong></p>
@@ -307,10 +307,10 @@
 </div>
 
 <!-- Totals visible when printing full ledger -->
-<div id="ledger-totals" style="display:none;margin-top:16px;padding:14px 16px;background:#f0f9f0;border-radius:8px;border:2px solid #90E0EF;">
+<div id="ledger-totals" style="display:none;margin-top:16px;padding:14px 16px;background:#f0f9f0;border-radius:8px;border:2px solid #D35050;">
   <div style="display:flex;justify-content:space-between;align-items:center;">
     <span style="font-weight:700;font-size:15px;">Group Total Savings</span>
-    <span style="font-weight:800;font-size:20px;color:#90E0EF;">UGX <%= members.reduce(function(s,m){return s+m.balance;},0).toLocaleString() %></span>
+    <span style="font-weight:800;font-size:20px;color:#D35050;">UGX <%= members.reduce(function(s,m){return s+m.balance;},0).toLocaleString() %></span>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
     <span style="font-size:13px;color:#555;">Total Share Capital</span>

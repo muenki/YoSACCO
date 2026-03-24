@@ -105,7 +105,7 @@
               <div style="font-weight:600;font-size:13px;">Member Savings</div>
               <div style="font-size:11px;color:var(--text-muted);">Deducted from savings balances</div>
             </label>
-            <label id="lbl-contributions" onclick="setFunding('member_contributions')" style="cursor:pointer;padding:12px;border:2px solid var(--teal);border-radius:10px;text-align:center;background:rgba(144,224,239,0.15);transition:all 0.15s;">
+            <label id="lbl-contributions" onclick="setFunding('member_contributions')" style="cursor:pointer;padding:12px;border:2px solid var(--teal);border-radius:10px;text-align:center;background:rgba(211,80,80,0.12);transition:all 0.15s;">
               <input type="radio" name="fundingSource" value="member_contributions" checked style="display:none;">
               <div style="font-size:20px;margin-bottom:4px;">🎯</div>
               <div style="font-weight:600;font-size:13px;">Member Contributions</div>
@@ -272,9 +272,9 @@ function setFunding(val) {
   var lblS = document.getElementById('lbl-savings');
   var lblC = document.getElementById('lbl-contributions');
   lblS.style.border = isSavings ? '2px solid var(--teal)' : '2px solid var(--border)';
-  lblS.style.background = isSavings ? 'rgba(144,224,239,0.15)' : '';
+  lblS.style.background = isSavings ? 'rgba(211,80,80,0.12)' : '';
   lblC.style.border = !isSavings ? '2px solid var(--teal)' : '2px solid var(--border)';
-  lblC.style.background = !isSavings ? 'rgba(144,224,239,0.15)' : '';
+  lblC.style.background = !isSavings ? 'rgba(211,80,80,0.12)' : '';
   // Toggle notes
   document.getElementById('savings-note').style.display = isSavings ? 'block' : 'none';
   document.getElementById('contributions-note').style.display = !isSavings ? 'block' : 'none';

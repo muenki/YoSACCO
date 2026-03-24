@@ -1,7 +1,7 @@
 :root {
   --navy: #0A2342;
-  --teal: #90E0EF;
-  --teal-light: #CAF0F8;
+  --teal: #D35050;
+  --teal-light: #E88080;
   --gold: #F5A623;
   --white: #ffffff;
   --bg: #F4F6FA;
@@ -42,7 +42,7 @@ body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); c
 .nav-section { padding: 8px 20px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(255,255,255,0.35); }
 .nav-link { display: flex; align-items: center; gap: 10px; padding: 10px 20px; font-size: 14px; color: rgba(255,255,255,0.7); text-decoration: none; transition: all 0.15s; border-left: 3px solid transparent; }
 .nav-link:hover { background: rgba(255,255,255,0.06); color: #fff; }
-.nav-link.active { background: rgba(144,224,239,0.3); color: #90E0EF; border-left-color: var(--teal); font-weight: 600; }
+.nav-link.active { background: rgba(211,80,80,0.2); color: #D35050; border-left-color: var(--teal); font-weight: 600; }
 .nav-link .icon { width: 18px; text-align: center; font-size: 15px; }
 .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
 .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; min-height: 100vh; }
@@ -87,8 +87,8 @@ tr:hover td { background: #F9FBFD; }
 
 /* ── Buttons ─────────────────────────────────────────────────── */
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; text-decoration: none; }
-.btn-primary { background: var(--teal); color: #0A2342; border-color: var(--teal); font-weight: 700; }
-.btn-primary:hover { background: var(--teal-light); color: #0A2342; }
+.btn-primary { background: var(--teal); color: #fff; border-color: var(--teal); font-weight: 700; }
+.btn-primary:hover { background: #B83C3C; color: #fff; }
 .btn-navy { background: var(--navy); color: #fff; border-color: var(--navy); }
 .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
 .btn-danger:hover { background: #9B2C2C; }
@@ -101,7 +101,7 @@ tr:hover td { background: #F9FBFD; }
 .form-group { margin-bottom: 16px; }
 .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 6px; }
 .form-control { width: 100%; padding: 9px 13px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--text); background: var(--surface); transition: border-color 0.15s; outline: none; }
-.form-control:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(144,224,239,0.2); }
+.form-control:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(211,80,80,0.15); }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
@@ -129,7 +129,7 @@ tr:hover td { background: #F9FBFD; }
 
 /* ── Progress ────────────────────────────────────────────────── */
 .progress { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
-.progress-bar { height: 100%; background: #48CAE4; border-radius: 4px; transition: width 0.4s; }
+.progress-bar { height: 100%; background: #D35050; border-radius: 4px; transition: width 0.4s; }
 
 /* ── Section heading ─────────────────────────────────────────── */
 .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -148,7 +148,7 @@ tr:hover td { background: #F9FBFD; }
 .font-semibold { font-weight: 600; }
 .text-success { color: var(--success); }
 .text-danger { color: var(--danger); }
-.text-teal { color: #0096B7; }
+.text-teal { color: #D35050; }
 .flex { display: flex; align-items: center; }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
 .gap-2 { gap: 8px; }
@@ -172,8 +172,8 @@ tr:hover td { background: #F9FBFD; }
 /* ── Payment cards ───────────────────────────────────────────── */
 .payment-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
 .payment-option { border: 2px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.15s; text-align: center; }
-.payment-option:hover { border-color: var(--teal); background: rgba(144,224,239,0.08); }
-.payment-option.selected { border-color: var(--teal); background: rgba(144,224,239,0.12); }
+.payment-option:hover { border-color: var(--teal); background: rgba(211,80,80,0.06); }
+.payment-option.selected { border-color: var(--teal); background: rgba(211,80,80,0.10); }
 .payment-option .pm-label { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
 .payment-option .pm-name { font-size: 14px; font-weight: 600; }
 
@@ -212,7 +212,7 @@ tr:hover td { background: #F9FBFD; }
 .chart-card .chart-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
 .chart-period-btns { display: flex; gap: 6px; margin-bottom: 16px; }
 .chart-period-btn { padding: 4px 12px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; background: transparent; cursor: pointer; color: var(--text-muted); transition: all 0.15s; }
-.chart-period-btn.active { background: var(--teal); color: #0A2342; border-color: var(--teal); font-weight: 600; }
+.chart-period-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); font-weight: 600; }
 
 /* ── Invoice ─────────────────────────────────────────────────── */
 .invoice-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 12px; background: var(--surface); }
@@ -223,7 +223,7 @@ tr:hover td { background: #F9FBFD; }
 /* ── Tabs ────────────────────────────────────────────────────── */
 .tab-nav { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
 .tab-btn { padding: 10px 20px; font-size: 14px; font-weight: 500; color: var(--text-muted); background: none; border: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
-.tab-btn.active { color: #0A2342; border-bottom-color: var(--teal); font-weight: 600; }
+.tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); font-weight: 600; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
