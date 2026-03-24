@@ -110,7 +110,16 @@ router.get('/deposit', async (req, res) => {
     const group    = await Group.findByPk(m.groupId);
     const settings = await getSettings(m.groupId);
     const balance  = await getBalance(m.id);
-    res.render('member/deposit', { user: m.toJSON(), group: group.toJSON(), settings, balance });
+    const { Project, ProjectContribution, Loan: LoanModel } = require('../models');
+    const projects  = await Project.findAll({ where: { groupId: m.groupId, status: 'active' } });
+    const activeLoan = await LoanModel.findOne({ where: { memberId: m.id, status: 'active' } });
+    // Enrich projects with member's total contribution
+    const enriched = await Promise.all(projects.map(async p => {
+      const myContribs = await ProjectContribution.findAll({ where: { projectId: p.id, memberId: m.id } });
+      const myTotal = myContribs.reduce((t,c)=>t+c.amount,0);
+      return { ...p.toJSON(), myTotal };
+    }));
+    res.render('member/deposit', { user: m.toJSON(), group: group.toJSON(), settings, balance, projects: enriched, activeLoan: activeLoan?.toJSON()||null });
   } catch (err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 

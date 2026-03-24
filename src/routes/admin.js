@@ -332,14 +332,47 @@ module.exports = router;
 // ── Confirm pending deposit ───────────────────────────────────────
 router.post('/savings/:id/confirm', async (req, res) => {
   try {
-    const gid  = req.user.groupId;
+    const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
-    const tx   = await Saving.findOne({ where: { id: req.params.id, groupId: gid, status: 'pending' } });
+    const tx    = await Saving.findOne({ where: { id: req.params.id, groupId: gid, status: 'pending' } });
     if (!tx) return res.redirect('/admin/savings?error=not_found');
     const member = await User.findByPk(tx.memberId);
     tx.status   = 'confirmed';
     tx.postedBy = req.user.id;
     await tx.save();
+
+    // ── If it's a loan repayment intent, reduce the loan balance ──
+    if (tx.description && tx.description.toLowerCase().includes('loan repayment')) {
+      const activeLoan = await Loan.findOne({ where: { memberId: tx.memberId, status: 'active' }, order: [['disbursedAt','DESC']] });
+      if (activeLoan) {
+        activeLoan.amountRepaid = (activeLoan.amountRepaid||0) + tx.amount;
+        const remaining = Math.max(0, activeLoan.totalRepayable - activeLoan.amountRepaid);
+        if (remaining === 0) activeLoan.status = 'repaid';
+        await activeLoan.save();
+        const { Repayment } = require('../models');
+        await Repayment.create({ loanId: activeLoan.id, memberId: tx.memberId, groupId: gid, amount: tx.amount, date: new Date(), postedBy: req.user.id });
+        await AuditLog.create({ userId: req.user.id, action: 'CONFIRM_LOAN_REPAYMENT', detail: `Confirmed loan repayment UGX ${tx.amount.toLocaleString()} for ${member?.name}`, groupId: gid });
+      }
+    }
+
+    // ── If it's a project contribution, credit the project ────────
+    if (tx.projectId) {
+      const { Project, ProjectContribution } = require('../models');
+      const project = await Project.findByPk(tx.projectId);
+      if (project) {
+        await ProjectContribution.create({ projectId: tx.projectId, memberId: tx.memberId, groupId: gid, amount: tx.amount, date: new Date(), postedBy: req.user.id, notes: 'Via online payment' });
+        project.raisedAmount = (project.raisedAmount||0) + tx.amount;
+        await project.save();
+        await AuditLog.create({ userId: req.user.id, action: 'CONFIRM_PROJECT_CONTRIB', detail: `Confirmed project contribution UGX ${tx.amount.toLocaleString()} to ${project.name} for ${member?.name}`, groupId: gid });
+      }
+    }
+
+    // ── If it's a share capital payment, update member share capital ──
+    if (tx.type === 'share_capital') {
+      member.shareCapitalPaid = (member.shareCapitalPaid||0) + tx.amount;
+      await member.save();
+    }
+
     await AuditLog.create({ userId: req.user.id, action: 'CONFIRM_DEPOSIT', detail: `Confirmed deposit of UGX ${tx.amount.toLocaleString()} for ${member?.name}`, groupId: gid });
     const balance = await getBalance(tx.memberId);
     emails.savingsReceiptToMember(member.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(()=>{});

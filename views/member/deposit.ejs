@@ -4,23 +4,59 @@
   <div class="card">
     <div class="card-header"><h3>Make a Payment or Deposit</h3></div>
     <div class="card-body">
-      <form method="POST" action="/member/deposit">
+      <form method="POST" action="/member/deposit" id="depositForm">
+
+        <!-- Payment Type -->
         <div class="form-group">
-          <label class="form-label">Payment Type</label>
-          <select name="description" class="form-control">
-            <option value="Monthly contribution">Monthly Contribution</option>
-            <option value="Annual subscription payment">Annual Subscription Payment</option>
-            <option value="Share capital payment">Share Capital Payment</option>
-            <option value="Loan repayment">Loan Repayment</option>
-            <option value="Extra savings deposit">Extra Savings Deposit</option>
+          <label class="form-label">Payment Type *</label>
+          <select name="paymentType" id="paymentType" class="form-control" onchange="onTypeChange(this.value)" required>
+            <option value="monthly_contribution">Monthly Contribution</option>
+            <option value="annual_subscription">Annual Subscription Payment</option>
+            <option value="share_capital">Share Capital Payment</option>
+            <option value="loan_repayment">Loan Repayment</option>
+            <option value="project_contribution">Project Contribution</option>
+            <option value="extra_savings">Extra Savings Deposit</option>
           </select>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Amount (UGX) *</label>
-          <input type="number" name="amount" id="amountInput" class="form-control" placeholder="e.g. 50000" min="1000" required value="<%= user.monthlyContribution %>">
+        <!-- Project Selector (shown only for project contribution) -->
+        <div id="projectField" class="form-group" style="display:none;">
+          <label class="form-label">Select Project *</label>
+          <select name="projectId" id="projectId" class="form-control">
+            <option value="">— Choose a project —</option>
+            <% (locals.projects||[]).forEach(function(p){ %>
+            <option value="<%= p.id %>" data-raised="<%= p.raisedAmount %>" data-target="<%= p.targetAmount %>" data-mine="<%= p.myTotal %>">
+              <%= p.name %> — <%= p.type.replace(/_/g,' ') %>
+              <% if(p.targetAmount > 0){ %> (UGX <%= p.raisedAmount.toLocaleString() %> / <%= p.targetAmount.toLocaleString() %>)<% } %>
+            </option>
+            <% }); %>
+          </select>
+          <div id="projectInfo" class="form-hint" style="margin-top:6px;"></div>
         </div>
 
+        <!-- Loan info (shown for loan repayment) -->
+        <% if (locals.activeLoan) { %>
+        <div id="loanInfo" class="form-group" style="display:none;">
+          <div style="background:var(--info-bg);border-radius:8px;padding:12px 14px;font-size:13px;">
+            <div class="font-semibold mb-1">Active Loan Details</div>
+            <div class="info-list">
+              <div class="info-item"><span class="info-key">Outstanding</span><span class="info-val text-danger">UGX <%= (activeLoan.totalRepayable - activeLoan.amountRepaid).toLocaleString() %></span></div>
+              <div class="info-item"><span class="info-key">Monthly Instalment</span><span class="info-val">UGX <%= (activeLoan.monthlyInstallment||0).toLocaleString() %></span></div>
+            </div>
+          </div>
+        </div>
+        <% } %>
+
+        <!-- Amount -->
+        <div class="form-group">
+          <label class="form-label">Amount (UGX) *</label>
+          <input type="number" name="amount" id="amountInput" class="form-control"
+            placeholder="e.g. 50000" min="1000"
+            value="<%= user.monthlyContribution %>" required>
+          <div class="form-hint" id="amountHint"></div>
+        </div>
+
+        <!-- Payment Method -->
         <div class="form-group">
           <label class="form-label">Payment Method *</label>
           <div class="payment-methods">
@@ -29,14 +65,14 @@
               <img src="/assets/mtn.png" style="height:36px;width:auto;object-fit:contain;margin-bottom:4px;display:block;">
               <div class="pm-label">Mobile Money</div>
               <div class="pm-name" style="font-weight:600;font-size:13px;">MTN MoMo</div>
-              <% if(settings && settings.mtnMomoNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.mtnMomoNumber %></div><% } %>
+              <% if(settings && settings.mtnMomoNumber){ %><div style="font-size:10px;color:var(--text-muted);"><%= settings.mtnMomoNumber %></div><% } %>
             </label>
             <label class="payment-option" id="opt-airtel" onclick="selectMethod('airtel',this)">
               <input type="radio" name="paymentMethod" value="Airtel Money" style="display:none">
               <img src="/assets/airtel.png" style="height:36px;width:auto;object-fit:contain;margin-bottom:4px;display:block;">
               <div class="pm-label">Mobile Money</div>
               <div class="pm-name" style="font-weight:600;font-size:13px;">Airtel Money</div>
-              <% if(settings && settings.airtelMoneyNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.airtelMoneyNumber %></div><% } %>
+              <% if(settings && settings.airtelMoneyNumber){ %><div style="font-size:10px;color:var(--text-muted);"><%= settings.airtelMoneyNumber %></div><% } %>
             </label>
             <label class="payment-option" id="opt-card" onclick="selectMethod('card',this)">
               <input type="radio" name="paymentMethod" value="Visa/Mastercard" style="display:none">
@@ -46,10 +82,10 @@
             </label>
             <label class="payment-option" id="opt-bank" onclick="selectMethod('bank',this)">
               <input type="radio" name="paymentMethod" value="Bank Transfer" style="display:none">
-              <div style="height:36px;width:auto;display:flex;align-items:center;justify-content:center;margin-bottom:4px;"><span style="font-size:26px;">🏦</span></div>
+              <div style="height:36px;display:flex;align-items:center;justify-content:center;margin-bottom:4px;"><span style="font-size:26px;">🏦</span></div>
               <div class="pm-label">Bank Transfer</div>
               <div class="pm-name" style="font-weight:600;font-size:13px;"><%= settings && settings.bankName ? settings.bankName.split(' ')[0] : 'Bank' %></div>
-              <% if(settings && settings.accountNumber){ %><div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><%= settings.accountNumber %></div><% } %>
+              <% if(settings && settings.accountNumber){ %><div style="font-size:10px;color:var(--text-muted);"><%= settings.accountNumber %></div><% } %>
             </label>
           </div>
         </div>
@@ -67,18 +103,19 @@
           <div class="info-item"><span class="info-key font-bold">Total charged</span><span class="info-val font-bold" id="sumTotal" style="color:var(--teal);">UGX 0</span></div>
         </div>
 
+        <div id="typeNote" class="alert alert-info mt-3" style="font-size:12px;display:none;"></div>
+
         <button type="submit" class="btn btn-primary mt-4" style="width:100%;justify-content:center;padding:12px;">
-          Confirm & Pay
+          Submit Payment Intent
         </button>
         <p class="text-xs text-muted mt-3" style="text-align:center;">
-  This records your payment intent. Please complete the actual transfer to the SACCO account using the details on the right,
-  then your admin will confirm and credit your savings account. A receipt will be emailed once confirmed.
-</p>
+          Complete the actual transfer to the SACCO account, then your admin will confirm and update your records.
+        </p>
       </form>
     </div>
   </div>
 
-  <!-- Account Details Panel -->
+  <!-- Right panel -->
   <div>
     <div class="card mb-4">
       <div class="card-header"><h3>SACCO Account Details</h3></div>
@@ -109,6 +146,10 @@
         <div class="info-list">
           <div class="info-item"><span class="info-key">Current balance</span><span class="info-val text-teal">UGX <%= balance.toLocaleString() %></span></div>
           <div class="info-item"><span class="info-key">Monthly contribution</span><span class="info-val">UGX <%= user.monthlyContribution.toLocaleString() %></span></div>
+          <div class="info-item"><span class="info-key">Share capital paid</span><span class="info-val">UGX <%= (user.shareCapitalPaid||0).toLocaleString() %> / <%= (user.shareCapitalTarget||0).toLocaleString() %></span></div>
+          <% if(locals.activeLoan){ %>
+          <div class="info-item"><span class="info-key">Loan outstanding</span><span class="info-val text-danger">UGX <%= ((activeLoan.totalRepayable||0)-(activeLoan.amountRepaid||0)).toLocaleString() %></span></div>
+          <% } %>
         </div>
       </div>
     </div>
@@ -117,9 +158,9 @@
       <div class="card-body">
         <p class="text-sm font-semibold mb-2">Transaction Fees</p>
         <div style="font-size:13px;display:grid;gap:6px;color:var(--text-muted);">
-          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/mtn.png" style="height:20px;"> MTN MoMo: ~1.5%</div>
-          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/airtel.png" style="height:20px;"> Airtel Money: ~1.5%</div>
-          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/visa.png" style="height:20px;"> Visa/Mastercard: ~2.5%</div>
+          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/mtn.png" style="height:18px;"> MTN MoMo: ~1.5%</div>
+          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/airtel.png" style="height:18px;"> Airtel Money: ~1.5%</div>
+          <div style="display:flex;align-items:center;gap:8px;"><img src="/assets/visa.png" style="height:18px;"> Visa/Mastercard: ~2.5%</div>
           <div style="display:flex;align-items:center;gap:8px;"><span>🏦</span> Bank Transfer: No platform fee</div>
         </div>
       </div>
@@ -128,24 +169,94 @@
 </div>
 
 <script>
-let selected = 'mtn';
-const fees = { mtn:0.015, airtel:0.015, card:0.025, bank:0 };
+var selectedMethod = 'mtn';
+var fees = { mtn:0.015, airtel:0.015, card:0.025, bank:0 };
+var monthlyContrib = <%= user.monthlyContribution %>;
+var loanInstalment = <%= locals.activeLoan ? activeLoan.monthlyInstallment||0 : 0 %>;
+var loanOutstanding = <%= locals.activeLoan ? (activeLoan.totalRepayable - activeLoan.amountRepaid) : 0 %>;
+var shareCapitalTarget = <%= user.shareCapitalTarget||0 %>;
+var shareCapitalPaid   = <%= user.shareCapitalPaid||0 %>;
+var shareCapitalRemaining = Math.max(0, shareCapitalTarget - shareCapitalPaid);
+
+var typeNotes = {
+  monthly_contribution: 'This will credit your savings account as a monthly contribution once confirmed by admin.',
+  annual_subscription:  'Annual subscription payment. This is recorded as income for your SACCO.',
+  share_capital:        'Your share capital balance will be updated once the admin confirms this payment.',
+  loan_repayment:       'Your loan outstanding balance will reduce once admin confirms this payment.',
+  project_contribution: 'Your contribution will be posted to the selected project once admin confirms.',
+  extra_savings:        'This will be added to your savings balance once confirmed.',
+};
+
+function onTypeChange(val) {
+  // Show/hide project field
+  document.getElementById('projectField').style.display = (val === 'project_contribution') ? 'block' : 'none';
+  if (val === 'project_contribution') {
+    document.querySelector('#projectId').required = true;
+  } else {
+    document.querySelector('#projectId').required = false;
+  }
+
+  // Show/hide loan info
+  var loanInfo = document.getElementById('loanInfo');
+  if (loanInfo) loanInfo.style.display = (val === 'loan_repayment') ? 'block' : 'none';
+
+  // Set suggested amount
+  var amtField = document.getElementById('amountInput');
+  var hint = document.getElementById('amountHint');
+  if (val === 'monthly_contribution') { amtField.value = monthlyContrib; hint.textContent = 'Your monthly contribution target'; }
+  else if (val === 'loan_repayment')  { amtField.value = loanInstalment; hint.textContent = 'Monthly instalment: UGX ' + loanInstalment.toLocaleString() + ' · Outstanding: UGX ' + loanOutstanding.toLocaleString(); amtField.max = loanOutstanding; }
+  else if (val === 'share_capital')   { amtField.value = ''; hint.textContent = 'Remaining share capital: UGX ' + shareCapitalRemaining.toLocaleString(); }
+  else if (val === 'annual_subscription') { amtField.value = ''; hint.textContent = 'Check with your admin for the annual subscription amount'; }
+  else { amtField.value = ''; hint.textContent = ''; }
+
+  // Show type note
+  var noteEl = document.getElementById('typeNote');
+  if (typeNotes[val]) { noteEl.textContent = typeNotes[val]; noteEl.style.display = 'block'; }
+  else { noteEl.style.display = 'none'; }
+
+  updateSummary();
+}
+
+function onProjectChange(sel) {
+  var opt = sel.options[sel.selectedIndex];
+  if (!opt.value) { document.getElementById('projectInfo').textContent = ''; return; }
+  var raised = parseInt(opt.dataset.raised)||0;
+  var target = parseInt(opt.dataset.target)||0;
+  var mine   = parseInt(opt.dataset.mine)||0;
+  var pct    = target > 0 ? ((raised/target)*100).toFixed(1) : 0;
+  document.getElementById('projectInfo').textContent =
+    'Progress: UGX ' + raised.toLocaleString() + ' / ' + target.toLocaleString() + ' (' + pct + '%) · Your total: UGX ' + mine.toLocaleString();
+}
+
+// Attach project change listener
+var projSel = document.getElementById('projectId');
+if (projSel) projSel.addEventListener('change', function(){ onProjectChange(this); });
+
 function selectMethod(method, el) {
-  selected = method;
-  document.querySelectorAll('.payment-option').forEach(o => { o.classList.remove('selected'); o.style.border='2px solid var(--border)'; });
-  el.classList.add('selected'); el.style.border='2px solid var(--teal)';
-  document.querySelector('input[value="'+({mtn:'MTN MoMo',airtel:'Airtel Money',card:'Visa/Mastercard',bank:'Bank Transfer'}[method])+'"]').checked=true;
+  selectedMethod = method;
+  document.querySelectorAll('.payment-option').forEach(function(o){
+    o.classList.remove('selected');
+    o.style.border = '2px solid var(--border)';
+  });
+  el.classList.add('selected');
+  el.style.border = '2px solid var(--teal)';
+  var vals = { mtn:'MTN MoMo', airtel:'Airtel Money', card:'Visa/Mastercard', bank:'Bank Transfer' };
+  document.querySelector('input[value="'+vals[method]+'"]').checked = true;
   document.getElementById('momoField').style.display = (method==='mtn'||method==='airtel') ? 'block' : 'none';
   updateSummary();
 }
+
 function updateSummary() {
-  const amt = parseInt(document.getElementById('amountInput').value)||0;
-  const fee = Math.round(amt*(fees[selected]||0));
-  document.getElementById('sumAmt').textContent   = 'UGX '+amt.toLocaleString();
-  document.getElementById('sumFee').textContent   = 'UGX '+fee.toLocaleString();
-  document.getElementById('sumTotal').textContent = 'UGX '+(amt+fee).toLocaleString();
+  var amt = parseInt(document.getElementById('amountInput').value)||0;
+  var fee = Math.round(amt*(fees[selectedMethod]||0));
+  document.getElementById('sumAmt').textContent   = 'UGX ' + amt.toLocaleString();
+  document.getElementById('sumFee').textContent   = 'UGX ' + fee.toLocaleString();
+  document.getElementById('sumTotal').textContent = 'UGX ' + (amt+fee).toLocaleString();
 }
+
 document.getElementById('amountInput').addEventListener('input', updateSummary);
+// Init
+onTypeChange('monthly_contribution');
 updateSummary();
 </script>
 <%- include('../partials/foot') %>
