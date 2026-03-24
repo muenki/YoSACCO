@@ -18,9 +18,10 @@ const Saving = sequelize.define('Saving', {
   amount: {
     type: DataTypes.INTEGER,
     allowNull: false,
+    // Can be negative for deductions (e.g. project funding from savings)
   },
   type: {
-    type: DataTypes.ENUM('contribution', 'share_capital', 'interest', 'dividend', 'online_deposit', 'other'),
+    type: DataTypes.ENUM('contribution', 'share_capital', 'interest', 'dividend', 'online_deposit', 'project_deduction', 'other'),
     defaultValue: 'contribution',
   },
   description: {

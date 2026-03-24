@@ -5,7 +5,13 @@
 </style>
 
 <% const q = locals.query||{}; %>
-<% if(q.success==='project_added')          { %><div class="alert alert-success no-print">Project added.</div><% } %>
+<% if(q.success==='project_added') { %>
+<% if(q.funded==='savings'){ %>
+<div class="alert alert-success no-print">Project added. Member savings have been deducted proportionally.</div>
+<% } else { %>
+<div class="alert alert-success no-print">Project added. Members can now contribute towards this project via the deposit page.</div>
+<% } %>
+<% } %>
 <% if(q.success==='contribution_confirmed') { %><div class="alert alert-success no-print">Contribution confirmed and posted to project.</div><% } %>
 <% if(q.success==='contribution_rejected')  { %><div class="alert alert-warning no-print">Contribution rejected.</div><% } %>
 
@@ -88,7 +94,40 @@
           </div>
           <div class="form-group"><label class="form-label">Annual Return Rate (%)</label><input type="number" name="returnRate" class="form-control" step="0.1" placeholder="e.g. 12"></div>
         </div>
-        <div class="form-group"><label class="form-label">Target Amount (UGX)</label><input type="number" name="targetAmount" class="form-control" placeholder="e.g. 50000000"></div>
+
+        <!-- Funding Source -->
+        <div class="form-group">
+          <label class="form-label">Source of Funding *</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
+            <label id="lbl-savings" onclick="setFunding('member_savings')" style="cursor:pointer;padding:12px;border:2px solid var(--border);border-radius:10px;text-align:center;transition:all 0.15s;">
+              <input type="radio" name="fundingSource" value="member_savings" style="display:none;">
+              <div style="font-size:20px;margin-bottom:4px;">💰</div>
+              <div style="font-weight:600;font-size:13px;">Member Savings</div>
+              <div style="font-size:11px;color:var(--text-muted);">Deducted from savings balances</div>
+            </label>
+            <label id="lbl-contributions" onclick="setFunding('member_contributions')" style="cursor:pointer;padding:12px;border:2px solid var(--teal);border-radius:10px;text-align:center;background:rgba(13,115,119,0.06);transition:all 0.15s;">
+              <input type="radio" name="fundingSource" value="member_contributions" checked style="display:none;">
+              <div style="font-size:20px;margin-bottom:4px;">🎯</div>
+              <div style="font-weight:600;font-size:13px;">Member Contributions</div>
+              <div style="font-size:11px;color:var(--text-muted);">Members pay towards a target</div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Savings funding note -->
+        <div id="savings-note" class="alert" style="background:#fffbeb;border:1px solid #f6e05e;color:#b7791f;font-size:13px;display:none;margin-bottom:12px;">
+          ⚠️ <strong>Member Savings Funding:</strong> The target amount will be divided equally among all active members
+          and automatically deducted from their savings balances when this project is created.
+          Ensure members have sufficient savings before proceeding.
+        </div>
+
+        <!-- Contributions funding note -->
+        <div id="contributions-note" class="alert alert-info" style="font-size:13px;margin-bottom:12px;">
+          ℹ️ <strong>Member Contributions:</strong> A target amount will be set and divided equally among members.
+          Each member's share will be shown on their Projects page. They pay voluntarily via the deposit page.
+        </div>
+
+        <div class="form-group"><label class="form-label">Target Amount (UGX)</label><input type="number" name="targetAmount" class="form-control" placeholder="e.g. 50000000" id="targetInput"></div>
         <div class="form-row">
           <div class="form-group"><label class="form-label">Start Date</label><input type="date" name="startDate" class="form-control"></div>
           <div class="form-group"><label class="form-label">End Date (optional)</label><input type="date" name="endDate" class="form-control"></div>
@@ -223,4 +262,25 @@
 
 <% if(!projects.length){ %><div class="card"><div class="card-body text-muted text-sm">No projects yet. Add one above.</div></div><% } %>
 
+<script>
+function setFunding(val) {
+  var isSavings = val === 'member_savings';
+  // Update radio inputs
+  document.querySelector('[value="member_savings"]').checked = isSavings;
+  document.querySelector('[value="member_contributions"]').checked = !isSavings;
+  // Update card styles
+  var lblS = document.getElementById('lbl-savings');
+  var lblC = document.getElementById('lbl-contributions');
+  lblS.style.border = isSavings ? '2px solid var(--teal)' : '2px solid var(--border)';
+  lblS.style.background = isSavings ? 'rgba(13,115,119,0.06)' : '';
+  lblC.style.border = !isSavings ? '2px solid var(--teal)' : '2px solid var(--border)';
+  lblC.style.background = !isSavings ? 'rgba(13,115,119,0.06)' : '';
+  // Toggle notes
+  document.getElementById('savings-note').style.display = isSavings ? 'block' : 'none';
+  document.getElementById('contributions-note').style.display = !isSavings ? 'block' : 'none';
+  // Update target label
+  var targetLabel = document.querySelector('[for], label.form-label');
+  document.querySelector('#targetInput').placeholder = isSavings ? 'Total amount to deduct from all members' : 'e.g. 50000000';
+}
+</script>
 <%- include('../partials/foot') %>
