@@ -20,7 +20,7 @@
         <div class="form-group">
           <label class="form-label">Select Loan Type</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;">
-            <div class="loan-type-opt selected" data-type="new_loan" onclick="selectLoanType('new_loan')" style="cursor:pointer;padding:12px 8px;text-align:center;border:2px solid var(--teal);border-radius:10px;background:rgba(13,115,119,0.06);transition:all 0.15s;">
+            <div class="loan-type-opt selected" data-type="new_loan" onclick="selectLoanType('new_loan')" style="cursor:pointer;padding:12px 8px;text-align:center;border:2px solid var(--teal);border-radius:10px;background:rgba(144,224,239,0.15);transition:all 0.15s;">
               <div style="font-size:22px;margin-bottom:4px;">🏦</div>
               <div style="font-size:12px;font-weight:600;">New Loan</div>
               <div style="font-size:10px;color:var(--text-muted);">Up to 3× savings</div>
@@ -205,7 +205,7 @@ function selectLoanType(type) {
   document.querySelectorAll('.loan-type-opt').forEach(el => {
     const sel = el.dataset.type === type;
     el.style.border = sel ? '2px solid var(--teal)' : '2px solid var(--border)';
-    el.style.background = sel ? 'rgba(13,115,119,0.06)' : '';
+    el.style.background = sel ? 'rgba(144,224,239,0.15)' : '';
   });
   document.getElementById('eligAmt').textContent = limit.toLocaleString();
   document.getElementById('amountHint').textContent = 'Maximum: UGX ' + limit.toLocaleString();

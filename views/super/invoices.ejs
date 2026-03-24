@@ -26,7 +26,7 @@
         <div style="font-size:12px;color:#888;margin-top:4px;">info@yosacco.coop · +256 756 683 141</div>
       </div>
       <div style="text-align:right;">
-        <div style="font-size:26px;font-weight:800;color:#0D7377;">INVOICE</div>
+        <div style="font-size:26px;font-weight:800;color:#90E0EF;">INVOICE</div>
         <div style="font-size:16px;font-weight:700;color:#0A2342;"><%= inv.invoiceNumber %></div>
         <div style="font-size:12px;color:#666;margin-top:4px;">Issued: <%= new Date(inv.createdAt).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></div>
         <div style="font-size:12px;color:#666;">Due: <%= new Date(inv.dueDate).toLocaleDateString('en-UG',{year:'numeric',month:'long',day:'numeric'}) %></div>
@@ -74,9 +74,9 @@
     </table>
 
     <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
-      <div style="background:#f0f9f0;border:2px solid #0D7377;border-radius:10px;padding:18px 28px;text-align:right;">
+      <div style="background:#f0f9f0;border:2px solid #90E0EF;border-radius:10px;padding:18px 28px;text-align:right;">
         <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;">Total Due</div>
-        <div style="font-size:26px;font-weight:800;color:#0D7377;margin:4px 0;">UGX <%= inv.amount.toLocaleString() %></div>
+        <div style="font-size:26px;font-weight:800;color:#90E0EF;margin:4px 0;">UGX <%= inv.amount.toLocaleString() %></div>
         <span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:<%= inv.status==='paid'?'#d6f0e4':inv.status==='overdue'?'#fed7d7':inv.status==='cancelled'?'#f0f0f0':'#fefcbf' %>;color:<%= inv.status==='paid'?'#1a7f4b':inv.status==='overdue'?'#c53030':inv.status==='cancelled'?'#666':'#b7791f' %>;">
           <%= inv.status.toUpperCase() %>
         </span>

@@ -6,7 +6,7 @@ const Group = sequelize.define('Group', {
   name:         { type: DataTypes.STRING, allowNull: false },
   slug:         { type: DataTypes.STRING, unique: true },
   logo:         { type: DataTypes.STRING, allowNull: true },
-  accentColor:  { type: DataTypes.STRING, defaultValue: '#0D7377' },
+  accentColor:  { type: DataTypes.STRING, defaultValue: '#90E0EF' },
   adminEmail:   { type: DataTypes.STRING, allowNull: false },
   accountNumber:{ type: DataTypes.STRING, allowNull: true },
   bankName:     { type: DataTypes.STRING, allowNull: true },

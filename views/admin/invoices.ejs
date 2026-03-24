@@ -29,7 +29,7 @@
         <div style="font-size:12px;color:#999;margin-top:2px;"><%= group.adminEmail %></div>
       </div>
       <div style="text-align:right;">
-        <div style="font-size:28px;font-weight:800;color:#0D7377;letter-spacing:-1px;">INVOICE</div>
+        <div style="font-size:28px;font-weight:800;color:#90E0EF;letter-spacing:-1px;">INVOICE</div>
         <div style="font-size:15px;font-weight:700;color:#0A2342;margin-top:2px;"><%= inv.invoiceNumber %></div>
         <div style="font-size:12px;color:#666;margin-top:6px;">Issued: <%= new Date(inv.createdAt).toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'}) %></div>
         <div style="font-size:12px;color:#666;">Due: <%= new Date(inv.dueDate).toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'}) %></div>
@@ -75,9 +75,9 @@
     </table>
 
     <div style="display:flex;justify-content:flex-end;margin-bottom:24px;">
-      <div style="border:2px solid #0D7377;border-radius:10px;padding:16px 28px;text-align:right;min-width:200px;">
+      <div style="border:2px solid #90E0EF;border-radius:10px;padding:16px 28px;text-align:right;min-width:200px;">
         <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.06em;">Total Due</div>
-        <div style="font-size:26px;font-weight:800;color:#0D7377;margin:4px 0;">UGX <%= inv.amount.toLocaleString() %></div>
+        <div style="font-size:26px;font-weight:800;color:#90E0EF;margin:4px 0;">UGX <%= inv.amount.toLocaleString() %></div>
         <span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;background:<%= inv.status==='paid'?'#d6f0e4':inv.status==='overdue'?'#fed7d7':'#fefcbf' %>;color:<%= inv.status==='paid'?'#1a7f4b':inv.status==='overdue'?'#c53030':'#b7791f' %>;">
           <%= inv.status.toUpperCase() %>
         </span>

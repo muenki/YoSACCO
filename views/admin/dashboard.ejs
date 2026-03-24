@@ -151,8 +151,8 @@ let savingsChart = new Chart(savingsCtx, {
     datasets: [{
       label: 'Monthly Savings (UGX)',
       data: savingsData.monthly.values,
-      borderColor: '#0D7377', backgroundColor: 'rgba(13,115,119,0.08)',
-      borderWidth: 2, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#0D7377'
+      borderColor: '#48CAE4', backgroundColor: 'rgba(144,224,239,0.15)',
+      borderWidth: 2, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#90E0EF'
     }]
   },
   options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX '+(v/1000).toFixed(0)+'K' } } } }
