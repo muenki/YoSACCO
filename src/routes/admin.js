@@ -8,7 +8,15 @@ const { emails } = require('../utils/email');
 router.use(authenticate, requireRole('admin', 'superadmin'));
 
 const getBalance = async (memberId) => {
-  const rows = await Saving.findAll({ where: { memberId, status: { [Op.ne]: 'pending' } }, attributes: ['amount'] });
+  // Exclude pending and loan repayment records — repayments go to Repayment table only
+  const rows = await Saving.findAll({
+    where: {
+      memberId,
+      status: { [Op.ne]: 'pending' },
+      description: { [Op.notLike]: '%loan repayment%' },
+    },
+    attributes: ['amount']
+  });
   return rows.reduce((s, r) => s + r.amount, 0);
 };
 
@@ -337,11 +345,8 @@ router.post('/savings/:id/confirm', async (req, res) => {
     const tx    = await Saving.findOne({ where: { id: req.params.id, groupId: gid, status: 'pending' } });
     if (!tx) return res.redirect('/admin/savings?error=not_found');
     const member = await User.findByPk(tx.memberId);
-    tx.status   = 'confirmed';
-    tx.postedBy = req.user.id;
-    await tx.save();
 
-    // ── If it's a loan repayment intent, reduce the loan balance ──
+    // ── If it's a loan repayment — REMOVE from savings, record in Repayments only ──
     if (tx.description && tx.description.toLowerCase().includes('loan repayment')) {
       const activeLoan = await Loan.findOne({ where: { memberId: tx.memberId, status: 'active' }, order: [['disbursedAt','DESC']] });
       if (activeLoan) {
@@ -353,6 +358,9 @@ router.post('/savings/:id/confirm', async (req, res) => {
         await Repayment.create({ loanId: activeLoan.id, memberId: tx.memberId, groupId: gid, amount: tx.amount, date: new Date(), postedBy: req.user.id });
         await AuditLog.create({ userId: req.user.id, action: 'CONFIRM_LOAN_REPAYMENT', detail: `Confirmed loan repayment UGX ${tx.amount.toLocaleString()} for ${member?.name}`, groupId: gid });
       }
+      // DELETE the pending saving record — loan repayments must NOT appear in savings balance
+      await tx.destroy();
+      return res.redirect('/admin/savings?success=deposit_confirmed');
     }
 
     // ── If it's a project contribution, credit the project ────────

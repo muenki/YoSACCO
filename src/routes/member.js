@@ -33,7 +33,14 @@ router.get('/savings', async (req, res) => {
   try {
     const m     = req.user;
     const group = await Group.findByPk(m.groupId);
-    const rows  = await Saving.findAll({ where: { memberId: m.id }, order: [['date','ASC']] });
+    const rows  = await Saving.findAll({
+      where: {
+        memberId: m.id,
+        // Exclude loan repayment records — those belong in the Loans section
+        description: { [require('sequelize').Op.notLike]: '%loan repayment%' },
+      },
+      order: [['date','ASC']]
+    });
     let running = 0;
     const transactions = rows.map(function(t) {
       if ((t.status||'confirmed') === 'confirmed') running += t.amount;
