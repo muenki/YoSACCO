@@ -1,0 +1,101 @@
+<%- include('../partials/head', { title: 'Savings Withdrawal', activePage: 'member-withdrawal', group }) %>
+
+<% var q = locals.query||{}; %>
+<% if(q.success==='submitted'){ %><div class="alert alert-success">Withdrawal request submitted. Awaiting approval from Credit Officer, Treasurer, and Chairperson.</div><% } %>
+<% if(q.error==='has_active_loan'){ %><div class="alert alert-danger">You cannot withdraw savings while you have an active loan with the SACCO.</div><% } %>
+<% if(q.error==='insufficient_balance'){ %><div class="alert alert-danger">Withdrawal amount exceeds your current balance.</div><% } %>
+<% if(q.error==='invalid_amount'){ %><div class="alert alert-danger">Please enter a valid amount.</div><% } %>
+
+<div class="grid-2 gap-4 mb-6">
+  <!-- Apply for Withdrawal -->
+  <div class="card">
+    <div class="card-header"><h3>💸 Apply for Savings Withdrawal</h3></div>
+    <div class="card-body">
+      <% if(locals.activeLoan){ %>
+      <div class="alert alert-warning">
+        <strong>⚠️ You have an active loan.</strong><br>
+        Members with an outstanding loan cannot apply for savings withdrawal. Please clear your loan first.
+      </div>
+      <% } else { %>
+      <div class="alert alert-info mb-4" style="font-size:13px;">
+        Withdrawal requests go through a 3-stage approval:
+        Credit Officer → Treasurer → Chairperson → Admin disburses.
+      </div>
+      <form method="POST" action="/member/withdrawal">
+        <div class="form-group">
+          <label class="form-label">Withdrawal Amount (UGX) *</label>
+          <input type="number" name="amount" class="form-control" placeholder="e.g. 200000" min="10000" max="<%= balance %>" required>
+          <div class="form-hint">Available balance: <strong>UGX <%= balance.toLocaleString() %></strong></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reason for Withdrawal *</label>
+          <textarea name="reason" class="form-control" rows="3" placeholder="State the reason for your withdrawal request..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Submit Withdrawal Request</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Account Summary -->
+  <div class="card">
+    <div class="card-header"><h3>Your Account</h3></div>
+    <div class="card-body">
+      <div class="info-list">
+        <div class="info-item"><span class="info-key">Current Balance</span><span class="info-val text-teal">UGX <%= balance.toLocaleString() %></span></div>
+        <div class="info-item"><span class="info-key">Share Capital</span><span class="info-val">UGX <%= (user.shareCapitalPaid||0).toLocaleString() %></span></div>
+        <div class="info-item"><span class="info-key">Active Loan</span><span class="info-val <%= activeLoan?'text-danger':'' %>"><%= activeLoan ? 'UGX '+(activeLoan.totalRepayable-activeLoan.amountRepaid).toLocaleString()+' outstanding' : 'None' %></span></div>
+      </div>
+      <% if(activeLoan){ %>
+      <div style="margin-top:12px;padding:10px;background:#fff5f5;border-radius:6px;font-size:12px;color:#c53030;">
+        Clear your loan balance before applying for withdrawal.
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Withdrawal History -->
+<h2 class="mb-3">My Withdrawal Requests</h2>
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Date</th><th>Amount</th><th>Reason</th><th>Credit Officer</th><th>Treasurer</th><th>Chairperson</th><th>Status</th></tr></thead>
+      <tbody>
+        <% if(!withdrawals.length){ %>
+        <tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted);">No withdrawal requests yet.</td></tr>
+        <% } %>
+        <% withdrawals.forEach(function(w, i){ %>
+        <tr>
+          <td class="text-muted text-sm"><%= i+1 %></td>
+          <td class="text-sm"><%= new Date(w.appliedAt).toLocaleDateString() %></td>
+          <td class="font-semibold">UGX <%= w.amount.toLocaleString() %></td>
+          <td class="text-sm"><%= w.reason||'—' %></td>
+          <td class="text-sm">
+            <% if(w.creditOfficerStatus==='approved'){ %><span style="color:var(--success);">✓ Approved</span>
+            <% } else if(w.creditOfficerStatus==='rejected'){ %><span style="color:var(--danger);">✗ Rejected</span>
+            <% } else { %><span style="color:var(--warning);">⏳ Pending</span><% } %>
+          </td>
+          <td class="text-sm">
+            <% if(w.treasurerStatus==='approved'){ %><span style="color:var(--success);">✓ Approved</span>
+            <% } else if(w.treasurerStatus==='rejected'){ %><span style="color:var(--danger);">✗ Rejected</span>
+            <% } else { %><span style="color:var(--warning);">⏳ Pending</span><% } %>
+          </td>
+          <td class="text-sm">
+            <% if(w.chairpersonStatus==='approved'){ %><span style="color:var(--success);">✓ Approved</span>
+            <% } else if(w.chairpersonStatus==='rejected'){ %><span style="color:var(--danger);">✗ Rejected</span>
+            <% } else { %><span style="color:var(--warning);">⏳ Pending</span><% } %>
+          </td>
+          <td>
+            <% if(w.status==='approved'){ %><span class="badge badge-success">Disbursed</span>
+            <% } else if(w.status==='rejected'){ %><span class="badge badge-danger">Rejected</span>
+            <% } else { %><span class="badge badge-warning">In Review</span><% } %>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

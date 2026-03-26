@@ -120,7 +120,8 @@ router.get('/', async (req, res) => {
     }));
 
     // ── AVAILABLE BALANCE ─────────────────────────────────────────
-    const allSavingsEver  = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' }, description:{ [Op.notLike]:'%loan repayment%' } }, attributes:['amount'] });
+    // Exclude dividends (distributed income) from available balance — once distributed it's in member savings, not SACCO pool
+    const allSavingsEver  = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' }, description:{ [Op.notLike]:'%loan repayment%' }, type:{ [Op.ne]:'dividend' } }, attributes:['amount'] });
     const allExpendsEver  = await Expenditure.findAll({ where:{ groupId:gid }, attributes:['amount'] });
     const totalSavingsEver = allSavingsEver.reduce((t,s)=>t+s.amount,0);
     const totalExpendsEver = allExpendsEver.reduce((t,e)=>t+e.amount,0);

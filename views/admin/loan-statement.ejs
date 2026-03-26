@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Loan Statement — <%= member.name %></title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial,sans-serif; font-size:12px; color:#1a1a1a; padding:20px; }
+    .header { text-align:center; margin-bottom:20px; border-bottom:3px solid #D35050; padding-bottom:14px; }
+    .header h1 { font-size:22px; font-weight:800; color:#D35050; }
+    .header h2 { font-size:14px; color:#333; margin-top:4px; }
+    .header p  { font-size:11px; color:#666; margin-top:2px; }
+    .meta { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
+    .meta-box { background:#f6f8fa; padding:10px 14px; border-radius:6px; font-size:11px; }
+    .meta-box .label { font-size:10px; color:#888; text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px; }
+    .meta-box .value { font-size:14px; font-weight:700; color:#0A2342; }
+    table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+    th { background:#0A2342; color:#fff; padding:8px 10px; text-align:left; font-size:11px; }
+    td { padding:7px 10px; border-bottom:1px solid #eee; font-size:11px; }
+    tr:nth-child(even) td { background:#f9fafb; }
+    .total-row td { background:#0A2342; color:#fff; font-weight:700; padding:10px; }
+    .progress-bar { background:#eee; border-radius:4px; height:8px; margin-top:4px; }
+    .progress-fill { background:#D35050; border-radius:4px; height:8px; }
+    .footer { text-align:center; font-size:10px; color:#999; border-top:1px solid #eee; padding-top:10px; margin-top:10px; }
+    .no-print { text-align:center; margin-bottom:16px; }
+    @media print { .no-print { display:none; } }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button onclick="window.print()" style="background:#D35050;color:#fff;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">🖨 Print Statement</button>
+  </div>
+
+  <div class="header">
+    <% if(group.logo){ %><img src="<%= group.logo %>" style="height:48px;margin-bottom:6px;"><br><% } %>
+    <h1><%= group.name %></h1>
+    <h2>Loan Repayment Statement</h2>
+    <p>Generated: <%= new Date().toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'}) %></p>
+  </div>
+
+  <%
+    var pct = loan.totalRepayable > 0 ? Math.round(totalRepaid/loan.totalRepayable*100) : 0;
+    var outstanding = Math.max(0, loan.totalRepayable - totalRepaid);
+  %>
+
+  <div class="meta">
+    <div class="meta-box">
+      <div class="label">Member</div>
+      <div class="value"><%= member.name %></div>
+      ID: <%= member.memberId %> · <%= member.email %>
+    </div>
+    <div class="meta-box">
+      <div class="label">Loan Details</div>
+      <div class="value">UGX <%= loan.amount.toLocaleString() %></div>
+      Type: <%= loan.loanType %> · <%= loan.repaymentMonths %> months<br>
+      Interest: <%= loan.interestRate %>% per month
+    </div>
+    <div class="meta-box">
+      <div class="label">Status</div>
+      <div class="value" style="color:<%= loan.status==='repaid'?'#1a7f4b':loan.status==='active'?'#D35050':'#888' %>"><%= loan.status.toUpperCase() %></div>
+      Total Repayable: UGX <%= loan.totalRepayable.toLocaleString() %><br>
+      Applied: <%= new Date(loan.appliedAt).toLocaleDateString() %>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div style="background:#f6f8fa;padding:12px 14px;border-radius:6px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px;">
+      <span>Repaid: <strong style="color:#1a7f4b;">UGX <%= totalRepaid.toLocaleString() %></strong></span>
+      <span>Outstanding: <strong style="color:#D35050;">UGX <%= outstanding.toLocaleString() %></strong></span>
+      <span>Progress: <strong><%= pct %>%</strong></span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:<%= pct %>%"></div></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Amount Paid (UGX)</th>
+        <th>Outstanding Balance (UGX)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if(!repayments.length){ %>
+      <tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">No repayments recorded yet.</td></tr>
+      <% } %>
+      <% repayments.forEach(function(r, i){ %>
+      <tr>
+        <td><%= i+1 %></td>
+        <td><%= new Date(r.date).toLocaleDateString() %></td>
+        <td style="color:#1a7f4b;font-weight:600;">UGX <%= r.amount.toLocaleString() %></td>
+        <td style="color:#D35050;font-weight:600;">UGX <%= r.runningBalance.toLocaleString() %></td>
+      </tr>
+      <% }); %>
+      <tr class="total-row">
+        <td colspan="2">TOTAL REPAID</td>
+        <td>UGX <%= totalRepaid.toLocaleString() %></td>
+        <td>UGX <%= outstanding.toLocaleString() %> remaining</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <%= group.name %> · Powered by YoSACCO · muenkinvestments@gmail.com · +256 756 683 141
+  </div>
+</body>
+</html>

@@ -256,6 +256,7 @@
           <th>Last Contribution</th>
           <th>Total Balance</th>
           <th>Share Capital</th>
+          <th>Weight (Balance + Share Capital)</th>
           <th>Status</th>
           <th class="no-print">Actions</th>
         </tr>
@@ -279,6 +280,9 @@
               <div class="progress-bar" style="width:<%= m.shareCapitalTarget>0?Math.min(100,Math.round((m.shareCapitalPaid||0)/(m.shareCapitalTarget)*100)):0 %>%"></div>
             </div>
           </td>
+          <td class="font-semibold" style="color:var(--navy);">
+            UGX <%= (m.balance + (m.shareCapitalPaid||0)).toLocaleString() %>
+          </td>
           <td>
             <%
               var overdue = !m.lastContrib || (Date.now() - new Date(m.lastContrib.date)) / (1000*60*60*24) > 45;
@@ -288,7 +292,7 @@
           </td>
           <td class="no-print">
             <div class="flex gap-1">
-              <a href="/admin/members/<%= m.id %>" class="btn btn-sm btn-outline">View</a>
+              <a href="/admin/savings/statement/<%= m.id %>" class="btn btn-sm btn-outline" target="_blank">🖨 Statement</a>
               <button onclick="printMemberLedger(<%= idx %>)" class="btn btn-sm btn-outline" title="Print member statement">🖨</button>
             </div>
           </td>

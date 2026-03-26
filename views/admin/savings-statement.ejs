@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Savings Statement — <%= member.name %></title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:Arial,sans-serif; font-size:12px; color:#1a1a1a; padding:20px; }
+    .header { text-align:center; margin-bottom:20px; border-bottom:3px solid #D35050; padding-bottom:14px; }
+    .header h1 { font-size:22px; font-weight:800; color:#D35050; }
+    .header h2 { font-size:14px; color:#333; margin-top:4px; }
+    .header p  { font-size:11px; color:#666; margin-top:2px; }
+    .meta { display:flex; justify-content:space-between; margin-bottom:16px; }
+    .meta-box { background:#f6f8fa; padding:10px 14px; border-radius:6px; font-size:11px; }
+    .meta-box strong { display:block; font-size:13px; margin-bottom:2px; }
+    table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+    th { background:#0A2342; color:#fff; padding:8px 10px; text-align:left; font-size:11px; }
+    td { padding:7px 10px; border-bottom:1px solid #eee; font-size:11px; }
+    tr:nth-child(even) td { background:#f9fafb; }
+    .pos { color:#1a7f4b; font-weight:600; }
+    .neg { color:#c53030; font-weight:600; }
+    .total-row td { background:#0A2342; color:#fff; font-weight:700; padding:10px; }
+    .footer { text-align:center; font-size:10px; color:#999; border-top:1px solid #eee; padding-top:10px; margin-top:10px; }
+    .no-print { text-align:center; margin-bottom:16px; }
+    @media print { .no-print { display:none; } }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button onclick="window.print()" style="background:#D35050;color:#fff;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;">🖨 Print Statement</button>
+  </div>
+
+  <div class="header">
+    <% if(group.logo){ %><img src="<%= group.logo %>" style="height:48px;margin-bottom:6px;"><br><% } %>
+    <h1><%= group.name %></h1>
+    <h2>Member Savings Statement</h2>
+    <p>Generated: <%= new Date().toLocaleDateString('en-UG',{day:'numeric',month:'long',year:'numeric'}) %></p>
+  </div>
+
+  <div class="meta">
+    <div class="meta-box">
+      <strong><%= member.name %></strong>
+      Member ID: <%= member.memberId %><br>
+      Email: <%= member.email %><br>
+      Phone: <%= member.phone || '—' %>
+    </div>
+    <div class="meta-box" style="text-align:right;">
+      <strong>Current Balance</strong>
+      <span style="font-size:18px;font-weight:800;color:#D35050;">UGX <%= balance.toLocaleString() %></span><br>
+      Share Capital: UGX <%= (member.shareCapitalPaid||0).toLocaleString() %><br>
+      Total Assets: UGX <%= (balance + (member.shareCapitalPaid||0)).toLocaleString() %>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Type</th>
+        <th>Amount (UGX)</th>
+        <th>Balance (UGX)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if(!transactions.length){ %>
+      <tr><td colspan="6" style="text-align:center;padding:20px;color:#999;">No transactions found.</td></tr>
+      <% } %>
+      <% transactions.forEach(function(t, i){ %>
+      <tr>
+        <td><%= i+1 %></td>
+        <td><%= new Date(t.date).toLocaleDateString() %></td>
+        <td><%= t.description || '—' %></td>
+        <td style="text-transform:capitalize;"><%= (t.type||'').replace(/_/g,' ') %></td>
+        <td class="<%= t.amount >= 0 ? 'pos' : 'neg' %>">
+          <%= t.amount >= 0 ? '+' : '' %><%= t.amount.toLocaleString() %>
+        </td>
+        <td><%= t.runningBalance.toLocaleString() %></td>
+      </tr>
+      <% }); %>
+      <tr class="total-row">
+        <td colspan="4">CLOSING BALANCE</td>
+        <td></td>
+        <td>UGX <%= balance.toLocaleString() %></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <%= group.name %> · Powered by YoSACCO · muenkinvestments@gmail.com · +256 756 683 141
+  </div>
+</body>
+</html>

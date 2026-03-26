@@ -125,6 +125,7 @@
           <td>
             <% if (loan.status==='active') { %>
               <button onclick="openRepayModal('<%= loan.id %>')" class="btn btn-sm btn-primary">Repayment</button>
+              <a href="/admin/loans/<%= loan.id %>/statement" target="_blank" class="btn btn-sm btn-outline">🖨 View</a>
             <% } else if (loan.status==='approved') { %>
               <form method="POST" action="/admin/loans/<%= loan.id %>/disburse"><button class="btn btn-sm btn-success">Disburse</button></form>
             <% } %>

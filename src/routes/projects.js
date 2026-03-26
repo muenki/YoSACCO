@@ -54,7 +54,30 @@ router.post('/projects/:id/toggle', async (req, res) => {
   try {
     const gid = req.user.groupId;
     const p   = await Project.findOne({ where: { id:req.params.id, groupId:gid } });
-    if (p) { p.status = p.status==='active'?'suspended':'active'; await p.save(); }
+    if (!p) return res.redirect('/admin/projects');
+
+    const wasActive = p.status === 'active';
+    p.status = wasActive ? 'suspended' : 'active';
+    await p.save();
+
+    // If suspending a savings-funded project, refund each member proportionally
+    if (wasActive && p.fundingSource === 'member_savings' && p.raisedAmount > 0) {
+      const contribs = await ProjectContribution.findAll({ where: { projectId: p.id } });
+      // Group by member and refund
+      const byMember = {};
+      contribs.forEach(c => { byMember[c.memberId] = (byMember[c.memberId]||0) + c.amount; });
+      for (const [memberId, amount] of Object.entries(byMember)) {
+        await Saving.create({
+          memberId, groupId: gid, amount,
+          type: 'other',
+          description: 'Project refund — ' + p.name + ' (suspended)',
+          date: new Date(), postedBy: req.user.id, status: 'confirmed',
+        });
+      }
+      await AuditLog.create({ userId: req.user.id, action: 'PROJECT_SUSPENDED', detail: 'Suspended project ' + p.name + ' and refunded savings to ' + Object.keys(byMember).length + ' members', groupId: gid });
+      return res.redirect('/admin/projects?success=project_suspended_refunded');
+    }
+
     res.redirect('/admin/projects');
   } catch(err) { console.error(err); res.redirect('/admin/projects'); }
 });

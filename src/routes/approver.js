@@ -111,4 +111,52 @@ router.post('/loans/:id/review', async (req, res) => {
   } catch (err) { console.error(err); res.redirect('/approver/dashboard?error=review_failed'); }
 });
 
+
+// ── Savings Withdrawal Approvals ──────────────────────────────────
+router.get('/withdrawals', async (req, res) => {
+  try {
+    const m = req.user;
+    const { SavingsWithdrawal, User } = require('../models');
+    const group = await require('../models').Group.findByPk(m.groupId);
+    let where = { groupId: m.groupId };
+    if (m.role === 'credit_officer')  where.creditOfficerStatus = 'pending';
+    if (m.role === 'treasurer')       where.treasurerStatus = 'pending';
+    if (m.role === 'chairperson')     where.chairpersonStatus = 'pending';
+    const pending = await SavingsWithdrawal.findAll({ where, order: [['appliedAt','DESC']] });
+    const enriched = await Promise.all(pending.map(async w => ({
+      ...w.toJSON(), member: (await User.findByPk(w.memberId))?.toJSON()||null
+    })));
+    res.render('approver/withdrawals', { user: m, group, withdrawals: enriched, query: req.query });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
+});
+
+router.post('/withdrawals/:id/approve', async (req, res) => {
+  try {
+    const m = req.user;
+    const { SavingsWithdrawal } = require('../models');
+    const w = await SavingsWithdrawal.findOne({ where: { id: req.params.id, groupId: m.groupId } });
+    if (!w) return res.redirect('/approver/withdrawals?error=not_found');
+    if (m.role === 'credit_officer')  { w.creditOfficerStatus = 'approved'; w.creditOfficerNote = req.body.note||''; }
+    if (m.role === 'treasurer')       { w.treasurerStatus = 'approved';     w.treasurerNote = req.body.note||''; }
+    if (m.role === 'chairperson')     { w.chairpersonStatus = 'approved';   w.chairpersonNote = req.body.note||''; }
+    // Check if all 3 approved
+    if (w.creditOfficerStatus==='approved' && w.treasurerStatus==='approved' && w.chairpersonStatus==='approved') {
+      w.status = 'chair_approved';
+    }
+    await w.save();
+    res.redirect('/approver/withdrawals?success=approved');
+  } catch(err) { console.error(err); res.redirect('/approver/withdrawals?error=failed'); }
+});
+
+router.post('/withdrawals/:id/reject', async (req, res) => {
+  try {
+    const m = req.user;
+    const { SavingsWithdrawal } = require('../models');
+    const w = await SavingsWithdrawal.findOne({ where: { id: req.params.id, groupId: m.groupId } });
+    if (!w) return res.redirect('/approver/withdrawals?error=not_found');
+    w.status = 'rejected'; w.rejectedBy = m.role; w.rejectionReason = req.body.reason||'';
+    await w.save();
+    res.redirect('/approver/withdrawals?success=rejected');
+  } catch(err) { console.error(err); res.redirect('/approver/withdrawals?error=failed'); }
+});
 module.exports = router;

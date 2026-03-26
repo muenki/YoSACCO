@@ -12,6 +12,7 @@ const Project            = require('./Project');
 const ProjectContribution= require('./ProjectContribution');
 const Asset              = require('./Asset');
 const OtherIncome            = require('./OtherIncome');
+const SavingsWithdrawal      = require('./SavingsWithdrawal');
 const ProjectPendingContrib  = require('./ProjectPendingContrib');
 
 // Associations
@@ -39,4 +40,4 @@ Project.hasMany(ProjectPendingContrib,  { foreignKey: 'projectId' });
 ProjectPendingContrib.belongsTo(Project, { foreignKey: 'projectId' });
 ProjectPendingContrib.belongsTo(User,    { foreignKey: 'memberId', as: 'member' });
 
-module.exports = { sequelize, Group, User, Saving, Loan, Repayment, AuditLog, GroupSettings, Expenditure, Invoice, Project, ProjectContribution, ProjectPendingContrib, Asset, OtherIncome };
+module.exports = { sequelize, Group, User, Saving, Loan, Repayment, AuditLog, GroupSettings, Expenditure, Invoice, Project, ProjectContribution, ProjectPendingContrib, Asset, OtherIncome, SavingsWithdrawal };

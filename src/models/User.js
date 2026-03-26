@@ -22,6 +22,7 @@ const User = sequelize.define('User', {
   shareCapitalTarget: { type: DataTypes.INTEGER, defaultValue: 1000000 },
   shareCapitalPaid:   { type: DataTypes.INTEGER, defaultValue: 0 },
   active:             { type: DataTypes.BOOLEAN, defaultValue: true },
+  mustChangePassword:  { type: DataTypes.BOOLEAN, defaultValue: true },
 }, { tableName: 'users', timestamps: true });
 
 module.exports = User;

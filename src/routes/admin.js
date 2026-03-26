@@ -473,6 +473,7 @@ router.get('/expenditure', async (req, res) => {
         groupId: gid,
         status: { [Op.ne]: 'pending' },
         description: { [Op.notLike]: '%loan repayment%' },
+        type: { [Op.ne]: 'dividend' },
       },
       attributes: ['amount']
     });
@@ -523,4 +524,73 @@ router.get('/invoices', async (req, res) => {
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
+
+// ── Member Savings Statement (printable) ──────────────────────────
+router.get('/savings/statement/:memberId', async (req, res) => {
+  try {
+    const gid    = req.user.groupId;
+    const group  = await Group.findByPk(gid);
+    const member = await User.findOne({ where: { id: req.params.memberId, groupId: gid } });
+    if (!member) return res.redirect('/admin/savings?error=not_found');
+    const rows = await Saving.findAll({
+      where: { memberId: member.id, status: { [Op.ne]: 'pending' }, description: { [Op.notLike]: '%loan repayment%' } },
+      order: [['date','ASC']]
+    });
+    let running = 0;
+    const transactions = rows.map(t => { running += t.amount; return { ...t.toJSON(), runningBalance: running }; });
+    res.render('admin/savings-statement', { user: req.user, group, member: member.toJSON(), transactions, balance: running });
+  } catch(err) { console.error(err); res.redirect('/admin/savings'); }
+});
+
+// ── Loan Repayment Statement (printable) ─────────────────────────
+router.get('/loans/:id/statement', async (req, res) => {
+  try {
+    const gid  = req.user.groupId;
+    const group = await Group.findByPk(gid);
+    const loan  = await Loan.findOne({ where: { id: req.params.id, groupId: gid } });
+    if (!loan) return res.redirect('/admin/loans');
+    const member = await User.findByPk(loan.memberId);
+    const { Repayment } = require('../models');
+    const repayments = await Repayment.findAll({ where: { loanId: loan.id }, order: [['date','ASC']] });
+    let totalRepaid = 0;
+    const rows = repayments.map(r => { totalRepaid += r.amount; return { ...r.toJSON(), runningBalance: Math.max(0, loan.totalRepayable - totalRepaid) }; });
+    res.render('admin/loan-statement', { user: req.user, group, loan: loan.toJSON(), member: member.toJSON(), repayments: rows, totalRepaid });
+  } catch(err) { console.error(err); res.redirect('/admin/loans'); }
+});
+
+// ── Savings Withdrawals (Admin) ───────────────────────────────────
+router.get('/withdrawals', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const group = await Group.findByPk(gid);
+    const { SavingsWithdrawal } = require('../models');
+    const all = await SavingsWithdrawal.findAll({ where: { groupId: gid }, order: [['appliedAt','DESC']] });
+    const enriched = await Promise.all(all.map(async w => ({
+      ...w.toJSON(), member: (await User.findByPk(w.memberId))?.toJSON()||null
+    })));
+    res.render('admin/withdrawals', { user: req.user, group, withdrawals: enriched, query: req.query });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
+});
+
+router.post('/withdrawals/:id/disburse', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const { SavingsWithdrawal } = require('../models');
+    const w = await SavingsWithdrawal.findOne({ where: { id: req.params.id, groupId: gid, status: 'chair_approved' } });
+    if (!w) return res.redirect('/admin/withdrawals?error=not_ready');
+    const member = await User.findByPk(w.memberId);
+    const balance = await getBalance(w.memberId);
+    if (w.amount > balance) return res.redirect('/admin/withdrawals?error=insufficient_balance');
+    // Deduct from savings
+    await Saving.create({
+      memberId: w.memberId, groupId: gid, amount: -w.amount,
+      type: 'other', description: 'Savings withdrawal — approved',
+      date: new Date(), postedBy: req.user.id, status: 'confirmed',
+    });
+    w.status = 'approved'; w.disbursedAt = new Date(); w.disbursedBy = req.user.id;
+    await w.save();
+    await AuditLog.create({ userId: req.user.id, action: 'WITHDRAWAL_DISBURSED', detail: 'Disbursed savings withdrawal UGX ' + w.amount.toLocaleString() + ' to ' + member?.name, groupId: gid });
+    res.redirect('/admin/withdrawals?success=disbursed');
+  } catch(err) { console.error(err); res.redirect('/admin/withdrawals?error=failed'); }
+});
 module.exports = router;

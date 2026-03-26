@@ -226,4 +226,34 @@ router.get('/projects', async (req, res) => {
   } catch(err) { console.error(err); res.render('error', { message: 'Error loading projects', user: req.user }); }
 });
 
+
+// ── Savings Withdrawal ────────────────────────────────────────────
+router.get('/withdrawal', async (req, res) => {
+  try {
+    const m = req.user;
+    const { SavingsWithdrawal, Loan: LoanModel } = require('../models');
+    const group = await Group.findByPk(m.groupId);
+    const balance = await getBalance(m.id);
+    const activeLoan = await LoanModel.findOne({ where: { memberId: m.id, status: 'active' } });
+    const withdrawals = await SavingsWithdrawal.findAll({ where: { memberId: m.id }, order: [['appliedAt','DESC']] });
+    res.render('member/withdrawal', { user: m.toJSON(), group: group.toJSON(), balance, activeLoan: activeLoan?.toJSON()||null, withdrawals: withdrawals.map(w=>w.toJSON()), query: req.query });
+  } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
+});
+
+router.post('/withdrawal', async (req, res) => {
+  try {
+    const m = req.user;
+    const { SavingsWithdrawal, Loan: LoanModel } = require('../models');
+    // Cannot withdraw if active loan
+    const activeLoan = await LoanModel.findOne({ where: { memberId: m.id, status: 'active' } });
+    if (activeLoan) return res.redirect('/member/withdrawal?error=has_active_loan');
+    const balance = await getBalance(m.id);
+    const amount = parseInt(req.body.amount);
+    if (!amount || amount <= 0) return res.redirect('/member/withdrawal?error=invalid_amount');
+    if (amount > balance) return res.redirect('/member/withdrawal?error=insufficient_balance');
+    await SavingsWithdrawal.create({ memberId: m.id, groupId: m.groupId, amount, reason: req.body.reason||'', appliedAt: new Date() });
+    await AuditLog.create({ userId: m.id, action: 'WITHDRAWAL_REQUEST', detail: 'Savings withdrawal request UGX ' + amount.toLocaleString(), groupId: m.groupId });
+    res.redirect('/member/withdrawal?success=submitted');
+  } catch(err) { console.error(err); res.redirect('/member/withdrawal?error=failed'); }
+});
 module.exports = router;
