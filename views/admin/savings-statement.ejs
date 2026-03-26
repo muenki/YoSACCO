@@ -45,10 +45,10 @@
       Phone: <%= member.phone || '—' %>
     </div>
     <div class="meta-box" style="text-align:right;">
-      <strong>Current Balance</strong>
-      <span style="font-size:18px;font-weight:800;color:#D35050;">UGX <%= balance.toLocaleString() %></span><br>
-      Share Capital: UGX <%= (member.shareCapitalPaid||0).toLocaleString() %><br>
-      Total Assets: UGX <%= (balance + (member.shareCapitalPaid||0)).toLocaleString() %>
+      <strong>Current Balance (Savings + Share Capital)</strong>
+      <span style="font-size:18px;font-weight:800;color:#D35050;">UGX <%= (balance + (member.shareCapitalPaid||0)).toLocaleString() %></span><br>
+      Savings: UGX <%= balance.toLocaleString() %><br>
+      Share Capital: UGX <%= (member.shareCapitalPaid||0).toLocaleString() %>
     </div>
   </div>
 
