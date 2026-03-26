@@ -3,14 +3,16 @@
 <style>
 .inv-template { display: none !important; }
 @media print {
-  * { visibility: hidden; }
-  .inv-template.selected,
-  .inv-template.selected * { visibility: visible; }
-  .inv-template.selected {
+  body.printing-invoice .sidebar,
+  body.printing-invoice .topbar,
+  body.printing-invoice .page-footer,
+  body.printing-invoice .no-print { display: none !important; }
+  body.printing-invoice .main { margin-left: 0 !important; }
+  body.printing-invoice .page-content { padding: 0 !important; }
+  body.printing-invoice .inv-template { display: none !important; }
+  body.printing-invoice .inv-template.selected {
     display: block !important;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%;
+    position: static !important;
   }
 }
 </style>
@@ -232,7 +234,7 @@
         <hr style="border:none;border-top:1px solid var(--border);margin:14px 0;">
         <div class="flex-between">
           <span class="font-semibold">Total Collected</span>
-          <span class="font-semibold text-teal">UGX <%= totalRevenue.toLocaleString() %></span>
+          <span class="font-semibold text-teal">UGX <%= totalRevenue.toLocaleString() %> <span style="font-size:11px;font-weight:400;">(inc. VAT)</span></span>
         </div>
       </div>
     </div>
@@ -263,7 +265,10 @@
             <td class="font-semibold text-sm"><%= inv.invoiceNumber %></td>
             <td class="text-sm"><%= inv.group ? inv.group.name : '—' %></td>
             <td><span class="badge badge-gray" style="font-size:11px;"><%= inv.type %></span></td>
-            <td class="font-semibold">UGX <%= inv.amount.toLocaleString() %></td>
+            <td class="font-semibold">
+              UGX <%= inv.amount.toLocaleString() %><br>
+              <span style="font-size:11px;color:#888;">+ VAT: UGX <%= Math.round(inv.amount*0.18).toLocaleString() %> = <strong>UGX <%= Math.round(inv.amount*1.18).toLocaleString() %></strong></span>
+            </td>
             <td class="text-sm text-muted"><%= new Date(inv.dueDate).toLocaleDateString() %></td>
             <td>
               <span class="badge badge-<%= inv.status==='paid'?'success':inv.status==='overdue'?'danger':inv.status==='cancelled'?'gray':'warning' %>">
@@ -301,12 +306,16 @@ function printSingleInvoice(idx) {
   var prev = document.querySelector('.inv-template.selected');
   if (prev) prev.classList.remove('selected');
   var target = document.getElementById('invts-' + idx);
-  if (!target) { alert('Invoice not found'); return; }
+  if (!target) return;
   target.classList.add('selected');
+  document.body.classList.add('printing-invoice');
   setTimeout(function() {
     window.print();
-    setTimeout(function() { target.classList.remove('selected'); }, 2000);
-  }, 100);
+    setTimeout(function() {
+      document.body.classList.remove('printing-invoice');
+      target.classList.remove('selected');
+    }, 1500);
+  }, 150);
 }
 </script>
 

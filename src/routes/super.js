@@ -154,7 +154,7 @@ router.get('/invoices', async (req, res) => {
     const { Invoice } = require('../models');
     const invoices = await Invoice.findAll({ order: [['createdAt','DESC']] });
     const enriched = await Promise.all(invoices.map(async i => ({ ...i.toJSON(), group: await Group.findByPk(i.groupId) })));
-    const totalRevenue = invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+i.paidAmount,0);
+    const totalRevenue = invoices.filter(i=>i.status==='paid').reduce((s,i)=>s+Math.round(i.paidAmount*1.18),0);
     const pendingRevenue = invoices.filter(i=>i.status==='pending').reduce((s,i)=>s+i.amount,0);
     res.render('super/invoices', { user: req.user, invoices: enriched, totalRevenue, pendingRevenue, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
@@ -184,7 +184,7 @@ router.post('/invoices/:id/mark-paid', async (req, res) => {
   try {
     const { Invoice } = require('../models');
     const inv = await Invoice.findByPk(req.params.id);
-    if (inv) { inv.status = 'paid'; inv.paidAt = new Date(); inv.paidAmount = inv.amount; await inv.save(); }
+    if (inv) { inv.status = 'paid'; inv.paidAt = new Date(); inv.paidAmount = inv.amount; inv.totalWithVat = Math.round(inv.amount * 1.18); await inv.save(); }
     res.redirect('/super/invoices?success=marked_paid');
   } catch(err) { console.error(err); res.redirect('/super/invoices'); }
 });
