@@ -120,19 +120,22 @@ router.get('/', async (req, res) => {
     }));
 
     // ── AVAILABLE BALANCE ─────────────────────────────────────────
-    // Available Balance = Total Member Assets (savings + share capital) - Expenditure - Loans
-    // Total member assets = sum of each member's (savings balance + share capital)
+    // Available Balance = Total Member Assets - Expenditure - Loans - Cash Payouts
     const allExpendsEver   = await Expenditure.findAll({ where:{ groupId:gid }, attributes:['amount'] });
     const totalExpendsEver = allExpendsEver.reduce((t,e)=>t+e.amount,0);
     const loanPortfolio    = activeLoansRaw.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0);
     const totalShareCapital = allMembers.reduce((t,m) => t + (m.shareCapitalPaid||0), 0);
-    // Each member savings balance (all confirmed non-repayment savings)
-    const allSavingsEver   = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' }, description:{ [Op.notLike]:'%loan repayment%' } }, attributes:['amount'] });
+    // Include dividends in savings total (they are member assets), exclude payouts
+    const allSavingsEver   = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' }, description:{ [Op.notLike]:'%loan repayment%' }, type:{ [Op.notIn]:['payout'] } }, attributes:['amount'] });
     const totalSavingsEver = allSavingsEver.reduce((t,s)=>t+s.amount,0);
-    // Payouts reduce available balance without touching member savings
-    const totalPayouts     = await Saving.sum('amount', { where:{ groupId:gid, type:'payout', status:'confirmed' } }) || 0;
+    // Cash payouts reduce available balance
+    let totalPayouts = 0;
+    try {
+      const payoutRows = await Saving.findAll({ where:{ groupId:gid, type:'payout', status:'confirmed' }, attributes:['amount'] });
+      totalPayouts = Math.abs(payoutRows.reduce((t,r)=>t+r.amount,0));
+    } catch(e) { totalPayouts = 0; }
     const totalMemberAssets = totalSavingsEver + totalShareCapital;
-    const availableBalance  = totalMemberAssets - totalExpendsEver - loanPortfolio - Math.abs(totalPayouts);
+    const availableBalance  = totalMemberAssets - totalExpendsEver - loanPortfolio - totalPayouts;
 
     // ── ASSETS ────────────────────────────────────────────────────
     const allAssets = await Asset.findAll({ where:{ groupId:gid }, order:[['purchaseDate','DESC']] });

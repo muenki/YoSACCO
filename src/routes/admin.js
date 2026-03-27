@@ -472,13 +472,13 @@ router.get('/expenditure', async (req, res) => {
     const { Expenditure, OtherIncome } = require('../models');
     const expenditures   = await Expenditure.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
     const otherIncomes   = await OtherIncome.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
-    // Exclude pending and loan repayment records (repayments live in Repayment table, not savings)
+    // All confirmed savings (including dividends — they ARE member assets)
     const savings        = await Saving.findAll({
       where: {
         groupId: gid,
         status: { [Op.ne]: 'pending' },
         description: { [Op.notLike]: '%loan repayment%' },
-        type: { [Op.ne]: 'dividend' },
+        type: { [Op.notIn]: ['payout'] },
       },
       attributes: ['amount']
     });
@@ -489,12 +489,15 @@ router.get('/expenditure', async (req, res) => {
     const totalOtherIncome   = otherIncomes.reduce((s,r) => s+r.amount, 0);
     const totalIncome        = totalSavingsIncome + totalOtherIncome;
     const totalExpend        = expenditures.reduce((s,r) => s+r.amount, 0);
-    // Net balance = Savings + Share Capital - Expenditure - Loans
-    // Other income is NOT included because it gets distributed to members immediately
     const totalShareCapital  = (await User.findAll({ where: { groupId: gid, active: true, role: { [Op.ne]: 'superadmin' } }, attributes: ['shareCapitalPaid'] })).reduce((t,m)=>t+(m.shareCapitalPaid||0),0);
-    // Available = Total Member Assets (savings + share capital) - Expenditure - Loans - Payouts
-    const totalPayouts       = Math.abs(await Saving.sum('amount', { where:{ groupId: gid, type:'payout', status:'confirmed' } }) || 0);
-    const netBalance         = totalSavingsIncome + totalShareCapital - totalExpend - loanPortfolio - totalPayouts;
+    // Payouts: safely sum negative payout records
+    let totalPayouts = 0;
+    try {
+      const payoutRows = await Saving.findAll({ where: { groupId: gid, type: 'payout', status: 'confirmed' }, attributes: ['amount'] });
+      totalPayouts = Math.abs(payoutRows.reduce((t,r) => t + r.amount, 0));
+    } catch(e) { totalPayouts = 0; }
+    // Available Balance = Total Member Assets (savings + share capital) - Expenditure - Loans - Cash Payouts
+    const netBalance = totalSavingsIncome + totalShareCapital - totalExpend - loanPortfolio - totalPayouts;
     res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, loanPortfolio, totalShareCapital, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
