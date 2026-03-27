@@ -120,20 +120,19 @@ router.get('/', async (req, res) => {
     }));
 
     // ── AVAILABLE BALANCE ─────────────────────────────────────────
-    // Exclude dividends (distributed income) from available balance — once distributed it's in member savings, not SACCO pool
-    const allSavingsEver  = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' }, description:{ [Op.notLike]:'%loan repayment%' }, type:{ [Op.ne]:'dividend' } }, attributes:['amount'] });
-    const allExpendsEver  = await Expenditure.findAll({ where:{ groupId:gid }, attributes:['amount'] });
-    const totalSavingsEver = allSavingsEver.reduce((t,s)=>t+s.amount,0);
+    // Available Balance = Total Member Assets (savings + share capital) - Expenditure - Loans
+    // Total member assets = sum of each member's (savings balance + share capital)
+    const allExpendsEver   = await Expenditure.findAll({ where:{ groupId:gid }, attributes:['amount'] });
     const totalExpendsEver = allExpendsEver.reduce((t,e)=>t+e.amount,0);
     const loanPortfolio    = activeLoansRaw.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0);
-    // Total share capital from all members
     const totalShareCapital = allMembers.reduce((t,m) => t + (m.shareCapitalPaid||0), 0);
-    // Other income: only undistributed portion stays in balance
-    // Total dividends already posted = amount that left the pool
-    const totalDividendsPosted = await Saving.sum('amount', { where:{ groupId:gid, type:'dividend', status:'confirmed' } }) || 0;
-    const undistributedIncome  = Math.max(0, totalOtherIncomeEver - totalDividendsPosted);
-    // Available = Member Savings + Share Capital + Undistributed Other Income - Expenditure - Loans
-    const availableBalance = totalSavingsEver + totalShareCapital + undistributedIncome - totalExpendsEver - loanPortfolio;
+    // Each member savings balance (all confirmed non-repayment savings)
+    const allSavingsEver   = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' }, description:{ [Op.notLike]:'%loan repayment%' } }, attributes:['amount'] });
+    const totalSavingsEver = allSavingsEver.reduce((t,s)=>t+s.amount,0);
+    // Payouts reduce available balance without touching member savings
+    const totalPayouts     = await Saving.sum('amount', { where:{ groupId:gid, type:'payout', status:'confirmed' } }) || 0;
+    const totalMemberAssets = totalSavingsEver + totalShareCapital;
+    const availableBalance  = totalMemberAssets - totalExpendsEver - loanPortfolio - Math.abs(totalPayouts);
 
     // ── ASSETS ────────────────────────────────────────────────────
     const allAssets = await Asset.findAll({ where:{ groupId:gid }, order:[['purchaseDate','DESC']] });
@@ -194,13 +193,14 @@ router.get('/', async (req, res) => {
 });
 
 
-// ── Post Distribution to Member Savings ──────────────────────────
+// ── Post Distribution to Member Savings OR Payout ────────────────
 router.post('/distribute', async (req, res) => {
   try {
     const gid      = req.user.groupId;
     const group    = await Group.findByPk(gid);
     const settings = await GroupSettings.findOne({ where:{ groupId:gid } });
-    const { period, year, quarter, month, description } = req.body;
+    const { period, year, quarter, month, description, distribute_type } = req.body;
+    // distribute_type: 'savings' (add to member savings) or 'payout' (cash out, no savings change)
 
     // Rebuild the same calculation as the reports route
     const { start, end } = (() => {
@@ -257,29 +257,48 @@ router.post('/distribute', async (req, res) => {
     const totalWeight = weighted.reduce((t,m)=>t+m.weight,0);
     if (totalWeight <= 0) return res.redirect('/admin/reports?tab=interest&error=no_weight&period='+period+'&year='+year);
 
-    // Post a savings credit entry for each member
-    const label = description || 'Income distribution — ' + period + ' ' + year;
+    const isPayout  = distribute_type === 'payout';
+    const entryType = isPayout ? 'payout' : 'dividend';
+    const label     = description || (isPayout ? 'Cash payout — ' : 'Income distribution — ') + period + ' ' + year;
+
     let posted = 0;
     for (const ms of weighted) {
       const share = Math.round((ms.weight / totalWeight) * totalPool);
       if (share <= 0) continue;
-      await Saving.create({
-        memberId: ms.id,
-        groupId: gid,
-        amount: share,
-        type: 'dividend',
-        description: label,
-        date: new Date(),
-        postedBy: req.user.id,
-        status: 'confirmed',
-      });
+
+      if (isPayout) {
+        // Payout: record a NEGATIVE saving entry (reduces pool) but does NOT increase member savings
+        // We track it as type='payout' with negative amount so available balance drops
+        await Saving.create({
+          memberId: ms.id,
+          groupId: gid,
+          amount: -share,          // negative — reduces pool
+          type: 'payout',
+          description: label,
+          date: new Date(),
+          postedBy: req.user.id,
+          status: 'confirmed',
+        });
+      } else {
+        // Add to savings: credit member savings with their share
+        await Saving.create({
+          memberId: ms.id,
+          groupId: gid,
+          amount: share,
+          type: 'dividend',
+          description: label,
+          date: new Date(),
+          postedBy: req.user.id,
+          status: 'confirmed',
+        });
+      }
       posted++;
     }
 
     await AuditLog.create({
       userId: req.user.id,
-      action: 'INCOME_DISTRIBUTION',
-      detail: 'Distributed UGX ' + totalPool.toLocaleString() + ' to ' + posted + ' members (' + label + ')',
+      action: isPayout ? 'INCOME_PAYOUT' : 'INCOME_DISTRIBUTION',
+      detail: (isPayout ? 'Paid out' : 'Distributed') + ' UGX ' + totalPool.toLocaleString() + ' to ' + posted + ' members (' + label + ')',
       groupId: gid,
     });
 

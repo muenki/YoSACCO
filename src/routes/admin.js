@@ -492,9 +492,9 @@ router.get('/expenditure', async (req, res) => {
     // Net balance = Savings + Share Capital - Expenditure - Loans
     // Other income is NOT included because it gets distributed to members immediately
     const totalShareCapital  = (await User.findAll({ where: { groupId: gid, active: true, role: { [Op.ne]: 'superadmin' } }, attributes: ['shareCapitalPaid'] })).reduce((t,m)=>t+(m.shareCapitalPaid||0),0);
-    const totalDividendsPosted = await Saving.sum('amount', { where:{ groupId: gid, type:'dividend', status:'confirmed' } }) || 0;
-    const undistributedIncome  = Math.max(0, totalOtherIncome - totalDividendsPosted);
-    const netBalance         = totalSavingsIncome + totalShareCapital + undistributedIncome - totalExpend - loanPortfolio;
+    // Available = Total Member Assets (savings + share capital) - Expenditure - Loans - Payouts
+    const totalPayouts       = Math.abs(await Saving.sum('amount', { where:{ groupId: gid, type:'payout', status:'confirmed' } }) || 0);
+    const netBalance         = totalSavingsIncome + totalShareCapital - totalExpend - loanPortfolio - totalPayouts;
     res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, loanPortfolio, totalShareCapital, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
