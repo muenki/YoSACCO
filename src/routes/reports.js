@@ -128,10 +128,26 @@ router.get('/', async (req, res) => {
     const loanPortfolio    = activeLoansRaw.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0);
     // Total share capital from all members
     const totalShareCapital = allMembers.reduce((t,m) => t + (m.shareCapitalPaid||0), 0);
-    const availableBalance = totalSavingsEver + totalShareCapital + totalOtherIncomeEver - totalExpendsEver - loanPortfolio;
+    // Net balance = Savings + Share Capital - Expenditure - Loans
+    // Other income excluded — it gets distributed to members immediately
+    const availableBalance = totalSavingsEver + totalShareCapital - totalExpendsEver - loanPortfolio;
 
     // ── ASSETS ────────────────────────────────────────────────────
     const allAssets = await Asset.findAll({ where:{ groupId:gid }, order:[['purchaseDate','DESC']] });
+
+    // ── PROJECT COLLECTIONS ──────────────────────────────────────
+    const allProjects = await Project.findAll({ where:{ groupId:gid } });
+    const projectCollections = await Promise.all(allProjects.map(async p => {
+      const contribs = await ProjectContribution.findAll({ where:{ projectId: p.id } });
+      const totalContrib = contribs.reduce((t,c)=>t+c.amount,0);
+      // Group by member
+      const byMember = {};
+      contribs.forEach(c => { byMember[c.memberId]=(byMember[c.memberId]||0)+c.amount; });
+      const memberContribs = await Promise.all(Object.entries(byMember).map(async ([mid,amt]) => ({
+        member: (await User.findByPk(mid))?.toJSON()||null, amount: amt
+      })));
+      return { ...p.toJSON(), totalContrib, memberContribs };
+    }));
 
     const currentYear = new Date().getFullYear();
     const years       = Array.from({length:6},(_,i)=>currentYear-i);
@@ -164,6 +180,7 @@ router.get('/', async (req, res) => {
       totalExpendsEver,
       loanPortfolio,
       allAssets: allAssets.map(a=>a.toJSON()),
+      projectCollections,
       years, months,
       settings: settings?.toJSON() || {},
     });

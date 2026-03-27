@@ -489,9 +489,10 @@ router.get('/expenditure', async (req, res) => {
     const totalOtherIncome   = otherIncomes.reduce((s,r) => s+r.amount, 0);
     const totalIncome        = totalSavingsIncome + totalOtherIncome;
     const totalExpend        = expenditures.reduce((s,r) => s+r.amount, 0);
-    // Net balance = income − expenditure − outstanding loans (same formula as Reports)
+    // Net balance = Savings + Share Capital - Expenditure - Loans
+    // Other income is NOT included because it gets distributed to members immediately
     const totalShareCapital  = (await User.findAll({ where: { groupId: gid, active: true, role: { [Op.ne]: 'superadmin' } }, attributes: ['shareCapitalPaid'] })).reduce((t,m)=>t+(m.shareCapitalPaid||0),0);
-    const netBalance         = totalIncome + totalShareCapital - totalExpend - loanPortfolio;
+    const netBalance         = totalSavingsIncome + totalShareCapital - totalExpend - loanPortfolio;
     res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, loanPortfolio, totalShareCapital, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
@@ -502,9 +503,11 @@ router.post('/expenditure/income/add', async (req, res) => {
     const gid = req.user.groupId;
     const { OtherIncome } = require('../models');
     const { amount, source, description, date } = req.body;
-    await OtherIncome.create({ groupId: gid, amount: parseInt(amount), source, description, date: date ? new Date(date) : new Date(), postedBy: req.user.id });
-    await AuditLog.create({ userId: req.user.id, action: 'ADD_INCOME', detail: 'Recorded income: UGX ' + parseInt(amount).toLocaleString() + ' from ' + source, groupId: gid });
-    res.redirect('/admin/expenditure?success=income_added');
+    const parsedAmount = parseInt(amount);
+    await OtherIncome.create({ groupId: gid, amount: parsedAmount, source, description, date: date ? new Date(date) : new Date(), postedBy: req.user.id });
+    await AuditLog.create({ userId: req.user.id, action: 'ADD_INCOME', detail: 'Recorded income: UGX ' + parsedAmount.toLocaleString() + ' from ' + source, groupId: gid });
+    // Redirect to reports distribution tab to prompt immediate distribution
+    res.redirect('/admin/reports?tab=interest&success=income_added&prompt_distribute=1&income_amount=' + parsedAmount + '&income_source=' + encodeURIComponent(source));
   } catch(err) { console.error(err); res.redirect('/admin/expenditure?error=income_failed'); }
 });
 
