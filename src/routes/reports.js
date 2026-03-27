@@ -128,9 +128,12 @@ router.get('/', async (req, res) => {
     const loanPortfolio    = activeLoansRaw.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0);
     // Total share capital from all members
     const totalShareCapital = allMembers.reduce((t,m) => t + (m.shareCapitalPaid||0), 0);
-    // Net balance = Savings + Share Capital - Expenditure - Loans
-    // Other income excluded — it gets distributed to members immediately
-    const availableBalance = totalSavingsEver + totalShareCapital - totalExpendsEver - loanPortfolio;
+    // Other income: only undistributed portion stays in balance
+    // Total dividends already posted = amount that left the pool
+    const totalDividendsPosted = await Saving.sum('amount', { where:{ groupId:gid, type:'dividend', status:'confirmed' } }) || 0;
+    const undistributedIncome  = Math.max(0, totalOtherIncomeEver - totalDividendsPosted);
+    // Available = Member Savings + Share Capital + Undistributed Other Income - Expenditure - Loans
+    const availableBalance = totalSavingsEver + totalShareCapital + undistributedIncome - totalExpendsEver - loanPortfolio;
 
     // ── ASSETS ────────────────────────────────────────────────────
     const allAssets = await Asset.findAll({ where:{ groupId:gid }, order:[['purchaseDate','DESC']] });
