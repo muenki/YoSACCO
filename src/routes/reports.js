@@ -126,7 +126,9 @@ router.get('/', async (req, res) => {
     const totalSavingsEver = allSavingsEver.reduce((t,s)=>t+s.amount,0);
     const totalExpendsEver = allExpendsEver.reduce((t,e)=>t+e.amount,0);
     const loanPortfolio    = activeLoansRaw.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0);
-    const availableBalance = totalSavingsEver + totalOtherIncomeEver - totalExpendsEver - loanPortfolio;
+    // Total share capital from all members
+    const totalShareCapital = allMembers.reduce((t,m) => t + (m.shareCapitalPaid||0), 0);
+    const availableBalance = totalSavingsEver + totalShareCapital + totalOtherIncomeEver - totalExpendsEver - loanPortfolio;
 
     // ── ASSETS ────────────────────────────────────────────────────
     const allAssets = await Asset.findAll({ where:{ groupId:gid }, order:[['purchaseDate','DESC']] });
@@ -158,6 +160,7 @@ router.get('/', async (req, res) => {
       method,
       availableBalance,
       totalSavingsEver,
+      totalShareCapital,
       totalExpendsEver,
       loanPortfolio,
       allAssets: allAssets.map(a=>a.toJSON()),

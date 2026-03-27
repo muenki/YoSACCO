@@ -485,8 +485,9 @@ router.get('/expenditure', async (req, res) => {
     const totalIncome        = totalSavingsIncome + totalOtherIncome;
     const totalExpend        = expenditures.reduce((s,r) => s+r.amount, 0);
     // Net balance = income − expenditure − outstanding loans (same formula as Reports)
-    const netBalance         = totalIncome - totalExpend - loanPortfolio;
-    res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, loanPortfolio, query: req.query });
+    const totalShareCapital  = (await User.findAll({ where: { groupId: gid, active: true, role: { [Op.ne]: 'superadmin' } }, attributes: ['shareCapitalPaid'] })).reduce((t,m)=>t+(m.shareCapitalPaid||0),0);
+    const netBalance         = totalIncome + totalShareCapital - totalExpend - loanPortfolio;
+    res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, loanPortfolio, totalShareCapital, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
