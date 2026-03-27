@@ -245,8 +245,8 @@
             <% }); %>
             <tr style="background:var(--bg);font-weight:700;">
               <td colspan="3" style="text-align:right;padding:10px 16px;">TOTAL RAISED</td>
-              <td style="padding:10px 16px;color:var(--teal);">UGX <%= proj.raisedAmount.toLocaleString() %></td>
-              <td style="padding:10px 16px;"><%= proj.targetAmount>0?(proj.raisedAmount/proj.targetAmount*100).toFixed(1):0 %>%</td>
+              <td style="padding:10px 16px;color:var(--teal);">UGX <%= memberRows.reduce(function(t,r){return t+r.total;},0).toLocaleString() %></td>
+              <td style="padding:10px 16px;"><%= proj.targetAmount>0?(memberRows.reduce(function(t,r){return t+r.total;},0)/proj.targetAmount*100).toFixed(1):0 %>%</td>
               <td colspan="2"></td>
             </tr>
           </tbody>

@@ -16,6 +16,8 @@ router.get('/projects', async (req, res) => {
       const contributions   = await ProjectContribution.findAll({ where: { projectId: p.id }, include: [{ model: User, as: 'member', attributes: ['id','name','memberId'] }] });
       const pendingContribs = await ProjectPendingContrib.findAll({ where: { projectId: p.id, status: 'pending' }, include: [{ model: User, as: 'member', attributes: ['id','name','memberId'] }] });
       const totalRaised   = contributions.reduce((s,c)=>s+c.amount,0);
+      // Keep raisedAmount in sync with actual contributions
+      if (p.raisedAmount !== totalRaised) { p.raisedAmount = totalRaised; await p.save(); }
       const memberCount   = [...new Set(contributions.map(c=>c.memberId))].length;
       const memberShare   = p.targetAmount > 0 && totalMembers > 0 ? Math.ceil(p.targetAmount / totalMembers) : 0;
       return { ...p.toJSON(), totalRaised, memberCount, contributorCount: memberCount, contributions: contributions.map(c=>c.toJSON()), pendingContribs: pendingContribs.map(c=>c.toJSON()), memberShare, totalMembers };

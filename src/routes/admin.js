@@ -379,6 +379,11 @@ router.post('/savings/:id/confirm', async (req, res) => {
       await member.save();
     }
 
+    // ── Mark the saving as confirmed (THIS IS THE KEY STEP) ──────
+    tx.status   = 'confirmed';
+    tx.postedBy = req.user.id;
+    await tx.save();
+
     await AuditLog.create({ userId: req.user.id, action: 'CONFIRM_DEPOSIT', detail: `Confirmed deposit of UGX ${tx.amount.toLocaleString()} for ${member?.name}`, groupId: gid });
     const balance = await getBalance(tx.memberId);
     emails.savingsReceiptToMember(member.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(()=>{});
