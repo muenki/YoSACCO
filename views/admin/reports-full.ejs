@@ -229,55 +229,101 @@ body.printing-tab .page-content { padding:8px!important; }
   </div>
 
   <!-- Distribute Button -->
-  <% if ((locals.totalDistributionPool||totalInterestPool) > 0) { %>
-  <div class="card mb-4 no-print" style="border-left:4px solid var(--teal);background:var(--info-bg);">
+  <%
+    var _interestAmt  = locals.periodInterestDisplay || 0;
+    var _otherAmt     = locals.totalOtherIncomePeriod || 0;
+    var _periodLabel  = period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year;
+  %>
+
+  <!-- INTEREST INCOME DISTRIBUTION -->
+  <% if (_interestAmt > 0) { %>
+  <div class="card mb-4 no-print" style="border-left:4px solid #0D7377;background:#f0f9f9;">
     <div class="card-body">
-      <div class="font-semibold" style="font-size:15px;margin-bottom:4px;">Distribute Income to Members</div>
-      <div class="text-sm text-muted mb-4">Pool: <strong>UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %></strong> — Choose how to distribute:</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-
-        <!-- Option 1: Add to Savings -->
-        <div style="border:2px solid var(--success,#1a7f4b);border-radius:10px;padding:16px;background:#f0fff4;">
-          <div class="font-semibold" style="color:#1a7f4b;margin-bottom:4px;">💰 Add to Member Savings</div>
-          <div class="text-sm" style="color:#555;margin-bottom:12px;">Each member's share is credited into their savings balance. Increases available balance per member. Savings pool grows.</div>
-          <form method="POST" action="/admin/reports/distribute" style="display:flex;gap:8px;flex-direction:column;">
-            <input type="hidden" name="period"          value="<%= period %>">
-            <input type="hidden" name="year"            value="<%= year %>">
-            <input type="hidden" name="quarter"         value="<%= quarter %>">
-            <input type="hidden" name="month"           value="<%= month %>">
-            <input type="hidden" name="distribute_type" value="savings">
-            <input type="text" name="description" class="form-control"
-              placeholder="e.g. March 2026 income distribution"
-              value="Income distribution — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %>">
-            <button type="submit" class="btn btn-success"
-              onclick="return confirm('Add UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %> to member savings?\n\nThis will credit each member\'s savings account with their proportional share.\nAvailable balance will be unchanged (pool stays in savings).')">
-              ✓ Post to Savings
-            </button>
-          </form>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div>
+          <div class="font-semibold" style="font-size:15px;">📈 Loan Interest Income</div>
+          <div class="text-sm text-muted">Accrued loan interest for <%= _periodLabel %></div>
         </div>
-
-        <!-- Option 2: Cash Payout -->
-        <div style="border:2px solid #D35050;border-radius:10px;padding:16px;background:#fff5f5;">
-          <div class="font-semibold" style="color:#D35050;margin-bottom:4px;">💸 Cash Payout to Members</div>
-          <div class="text-sm" style="color:#555;margin-bottom:12px;">Members receive cash in hand. Savings balances stay unchanged but the SACCO's available balance is reduced by the total paid out.</div>
-          <form method="POST" action="/admin/reports/distribute" style="display:flex;gap:8px;flex-direction:column;">
-            <input type="hidden" name="period"          value="<%= period %>">
-            <input type="hidden" name="year"            value="<%= year %>">
-            <input type="hidden" name="quarter"         value="<%= quarter %>">
-            <input type="hidden" name="month"           value="<%= month %>">
-            <input type="hidden" name="distribute_type" value="payout">
-            <input type="text" name="description" class="form-control"
-              placeholder="e.g. March 2026 cash payout"
-              value="Cash payout — <%= period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year %>">
-            <button type="submit" class="btn btn-danger"
-              onclick="return confirm('Pay out UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %> in cash to members?\n\nMember savings balances will NOT change.\nSACCO available balance will drop by UGX <%= (locals.totalDistributionPool||totalInterestPool).toLocaleString() %>.')">
-              💸 Post Cash Payout
-            </button>
-          </form>
-        </div>
-
+        <div style="font-size:22px;font-weight:800;color:#0D7377;">UGX <%= _interestAmt.toLocaleString() %></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <form method="POST" action="/admin/reports/distribute" style="display:flex;gap:6px;flex-direction:column;">
+          <input type="hidden" name="period"          value="<%= period %>">
+          <input type="hidden" name="year"            value="<%= year %>">
+          <input type="hidden" name="quarter"         value="<%= quarter %>">
+          <input type="hidden" name="month"           value="<%= month %>">
+          <input type="hidden" name="distribute_type" value="savings">
+          <input type="hidden" name="income_type"     value="interest">
+          <input type="text"   name="description"     class="form-control" value="Loan interest distribution — <%= _periodLabel %>">
+          <button type="submit" class="btn btn-success"
+            onclick="return confirm('Add UGX <%= _interestAmt.toLocaleString() %> loan interest to member savings?\n\nSavings balances will increase. Available balance stays the same.')">
+            💰 Add to Member Savings
+          </button>
+        </form>
+        <form method="POST" action="/admin/reports/distribute" style="display:flex;gap:6px;flex-direction:column;">
+          <input type="hidden" name="period"          value="<%= period %>">
+          <input type="hidden" name="year"            value="<%= year %>">
+          <input type="hidden" name="quarter"         value="<%= quarter %>">
+          <input type="hidden" name="month"           value="<%= month %>">
+          <input type="hidden" name="distribute_type" value="payout">
+          <input type="hidden" name="income_type"     value="interest">
+          <input type="text"   name="description"     class="form-control" value="Loan interest payout — <%= _periodLabel %>">
+          <button type="submit" class="btn btn-primary"
+            onclick="return confirm('Pay out UGX <%= _interestAmt.toLocaleString() %> loan interest in cash?\n\nEach member will receive an email with their payout amount.\nMember savings will NOT change. Available balance will drop.')">
+            💸 Cash Payout (+ Email Members)
+          </button>
+        </form>
       </div>
     </div>
+  </div>
+  <% } %>
+
+  <!-- OTHER INCOME DISTRIBUTION -->
+  <% if (_otherAmt > 0) { %>
+  <div class="card mb-4 no-print" style="border-left:4px solid #FFC000;background:#fffbeb;">
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div>
+          <div class="font-semibold" style="font-size:15px;">💵 Other Income</div>
+          <div class="text-sm text-muted">Grants, donations, fines, and other income for <%= _periodLabel %></div>
+        </div>
+        <div style="font-size:22px;font-weight:800;color:#b7791f;">UGX <%= _otherAmt.toLocaleString() %></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <form method="POST" action="/admin/reports/distribute" style="display:flex;gap:6px;flex-direction:column;">
+          <input type="hidden" name="period"          value="<%= period %>">
+          <input type="hidden" name="year"            value="<%= year %>">
+          <input type="hidden" name="quarter"         value="<%= quarter %>">
+          <input type="hidden" name="month"           value="<%= month %>">
+          <input type="hidden" name="distribute_type" value="savings">
+          <input type="hidden" name="income_type"     value="other_income">
+          <input type="text"   name="description"     class="form-control" value="Other income distribution — <%= _periodLabel %>">
+          <button type="submit" class="btn btn-success"
+            onclick="return confirm('Add UGX <%= _otherAmt.toLocaleString() %> other income to member savings?\n\nSavings balances will increase proportionally.')">
+            💰 Add to Member Savings
+          </button>
+        </form>
+        <form method="POST" action="/admin/reports/distribute" style="display:flex;gap:6px;flex-direction:column;">
+          <input type="hidden" name="period"          value="<%= period %>">
+          <input type="hidden" name="year"            value="<%= year %>">
+          <input type="hidden" name="quarter"         value="<%= quarter %>">
+          <input type="hidden" name="month"           value="<%= month %>">
+          <input type="hidden" name="distribute_type" value="payout">
+          <input type="hidden" name="income_type"     value="other_income">
+          <input type="text"   name="description"     class="form-control" value="Other income payout — <%= _periodLabel %>">
+          <button type="submit" class="btn btn-primary"
+            onclick="return confirm('Pay out UGX <%= _otherAmt.toLocaleString() %> other income in cash?\n\nEach member will receive an email with their payout amount.\nMember savings will NOT change.')">
+            💸 Cash Payout (+ Email Members)
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
+  <% if (_interestAmt <= 0 && _otherAmt <= 0) { %>
+  <div class="card mb-4" style="border-left:4px solid #ccc;background:#f9f9f9;">
+    <div class="card-body text-sm text-muted">No distributable income for this period.</div>
   </div>
   <% } %>
   <div class="card p-0">

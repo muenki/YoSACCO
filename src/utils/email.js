@@ -188,6 +188,23 @@ const emails = {
       `),
     });
   },
+
+  async payoutNotification(member, amount, sharePct, group) {
+    const html = emailWrapper('Cash Payout Ready for Collection', '#1a7f4b',
+      '<p>Dear <strong>' + member.name + '</strong>,</p>' +
+      '<p>We are pleased to inform you that <strong>' + group.name + '</strong> has approved an income distribution for all members.</p>' +
+      '<table style="width:100%;border-collapse:collapse;margin:20px 0;">' +
+        '<tr style="background:#f0fff4;"><td style="padding:12px;border:1px solid #b2f5ea;font-weight:700;">Your Share</td><td style="padding:12px;border:1px solid #b2f5ea;font-size:20px;font-weight:800;color:#1a7f4b;">UGX ' + amount.toLocaleString() + '</td></tr>' +
+        '<tr><td style="padding:12px;border:1px solid #eee;">Your Percentage</td><td style="padding:12px;border:1px solid #eee;">' + sharePct + '%</td></tr>' +
+        '<tr><td style="padding:12px;border:1px solid #eee;">SACCO</td><td style="padding:12px;border:1px solid #eee;">' + group.name + '</td></tr>' +
+      '</table>' +
+      '<p style="background:#fffbeb;padding:14px;border-radius:8px;border-left:4px solid #f6e05e;">' +
+        '<strong>Please visit your SACCO office to collect your payment.</strong><br>' +
+        'Bring your member ID and this email as confirmation. Contact your admin if you have questions.' +
+      '</p>'
+    );
+    return sendEmail({ to: member.email, subject: 'Cash Payout Ready — ' + group.name, html });
+  },
 };
 
 module.exports = { sendEmail, emails };

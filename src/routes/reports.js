@@ -176,6 +176,7 @@ router.get('/', async (req, res) => {
       interestDistribution: interestDistributionFinal,
       totalInterestPool: totalDistributionPool,
       totalDistributionPool,
+      periodInterestDisplay,
       totalOtherIncomePeriod,
       totalOtherIncomeEver,
       method,
@@ -202,7 +203,9 @@ router.post('/distribute', async (req, res) => {
     const gid      = req.user.groupId;
     const group    = await Group.findByPk(gid);
     const settings = await GroupSettings.findOne({ where:{ groupId:gid } });
-    const { period, year, quarter, month, description, distribute_type } = req.body;
+    const { period, year, quarter, month, description, distribute_type, income_type, custom_amount } = req.body;
+    // income_type: 'interest' | 'other_income' | 'combined'
+    // distribute_type: 'savings' | 'payout'
     // distribute_type: 'savings' (add to member savings) or 'payout' (cash out, no savings change)
 
     // Rebuild the same calculation as the reports route
@@ -246,7 +249,12 @@ router.post('/distribute', async (req, res) => {
     const periodExpenditure = await Expenditure.findAll({ where:{ groupId:gid, date:dateFilter }, attributes:['amount'] });
     const totalPeriodExpend = periodExpenditure.reduce((t,e)=>t+e.amount,0);
     const totalPool = Math.max(0, periodInterestDisplay + totalOtherIncome - totalPeriodExpend);
-    if (totalPool <= 0) return res.redirect('/admin/reports?tab=interest&error=nothing_to_distribute&period='+period+'&year='+year);
+    // If distributing a specific income source, use only that amount
+    let poolToDistribute = totalPool;
+    if (income_type === 'interest') poolToDistribute = Math.max(0, periodInterestDisplay);
+    else if (income_type === 'other_income') poolToDistribute = Math.max(0, totalOtherIncome);
+    else if (custom_amount) poolToDistribute = Math.max(0, parseInt(custom_amount)||0);
+    if (poolToDistribute <= 0) return res.redirect('/admin/reports?tab=interest&error=nothing_to_distribute&period='+period+'&year='+year);
 
     // Distribution weights
     const method = settings?.interestDistributionMethod || 'share_capital_and_savings';
@@ -262,11 +270,12 @@ router.post('/distribute', async (req, res) => {
 
     const isPayout  = distribute_type === 'payout';
     const entryType = isPayout ? 'payout' : 'dividend';
-    const label     = description || (isPayout ? 'Cash payout — ' : 'Income distribution — ') + period + ' ' + year;
+    const sourceLabel = income_type === 'interest' ? 'Loan interest' : income_type === 'other_income' ? 'Other income' : 'Income';
+    const label     = description || (isPayout ? sourceLabel + ' payout — ' : sourceLabel + ' distribution — ') + period + ' ' + year;
 
     let posted = 0;
     for (const ms of weighted) {
-      const share = Math.round((ms.weight / totalWeight) * totalPool);
+      const share = Math.round((ms.weight / totalWeight) * poolToDistribute);
       if (share <= 0) continue;
 
       if (isPayout) {
@@ -301,9 +310,20 @@ router.post('/distribute', async (req, res) => {
     await AuditLog.create({
       userId: req.user.id,
       action: isPayout ? 'INCOME_PAYOUT' : 'INCOME_DISTRIBUTION',
-      detail: (isPayout ? 'Paid out' : 'Distributed') + ' UGX ' + totalPool.toLocaleString() + ' to ' + posted + ' members (' + label + ')',
+      detail: (isPayout ? 'Paid out' : 'Distributed') + ' UGX ' + poolToDistribute.toLocaleString() + ' to ' + posted + ' members (' + label + ')',
       groupId: gid,
     });
+
+    // Send payout emails to all members if it's a cash payout
+    if (isPayout) {
+      const emails = require('../utils/email').emails;
+      for (const ms of weighted) {
+        const share = Math.round((ms.weight / totalWeight) * poolToDistribute);
+        if (share <= 0) continue;
+        const sharePct = totalWeight > 0 ? ((ms.weight / totalWeight) * 100).toFixed(1) : '0';
+        emails.payoutNotification(ms, share, sharePct, group.toJSON()).catch(() => {});
+      }
+    }
 
     res.redirect('/admin/reports?tab=interest&success=distributed&period='+period+'&year='+year+'&quarter='+quarter+'&month='+month);
   } catch(err) {
