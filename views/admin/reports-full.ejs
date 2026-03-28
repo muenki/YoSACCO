@@ -567,8 +567,8 @@ body.printing-tab .page-content { padding:8px!important; }
           <div class="info-list">
             <div class="info-item"><span class="info-key">Total Savings (All Time)</span><span class="info-val text-success">+ UGX <%= totalSavingsEver.toLocaleString() %></span></div>
             <div class="info-item"><span class="info-key">Total Share Capital</span><span class="info-val text-success">+ UGX <%= (locals.totalShareCapital||0).toLocaleString() %></span></div>
-            <div class="info-item"><span class="info-key">Other Income (All Time)</span><span class="info-val text-success">+ UGX <%= (locals.totalOtherIncomeEver||0).toLocaleString() %></span></div>
             <div class="info-item"><span class="info-key">Interest Income (Period)</span><span class="info-val text-success">+ UGX <%= periodInterest.toLocaleString() %></span></div>
+            <div class="info-item"><span class="info-key">Other Income (All Time)</span><span class="info-val" style="color:#888;">UGX <%= (locals.totalOtherIncomeEver||0).toLocaleString() %> (distributed to members)</span></div>
             <div class="info-item"><span class="info-key">Project Contributions</span><span class="info-val text-success">+ UGX <%= totalProjectContribs.toLocaleString() %></span></div>
             <div class="info-item"><span class="info-key">Asset Value</span><span class="info-val text-success">+ UGX <%= (locals.allAssets||[]).filter(function(a){return a.status==='active';}).reduce(function(t,a){return t+a.currentValue;},0).toLocaleString() %></span></div>
           </div>
@@ -584,8 +584,8 @@ body.printing-tab .page-content { padding:8px!important; }
       <hr style="border:none;border-top:2px solid var(--teal);margin:20px 0;">
       <div style="background:var(--bg);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
         <strong style="color:var(--navy);">Balance Formula:</strong>
-        UGX <%= totalSavingsEver.toLocaleString() %> (savings) + UGX <%= (locals.totalShareCapital||0).toLocaleString() %> (share capital)
-        + UGX <%= (locals.totalOtherIncomeEver||0).toLocaleString() %> (other income)
+        UGX <%= totalSavingsEver.toLocaleString() %> (member savings)
+        + UGX <%= (locals.totalShareCapital||0).toLocaleString() %> (share capital)
         − UGX <%= totalExpendsEver.toLocaleString() %> (expenditure)
         − UGX <%= loanPortfolio.toLocaleString() %> (loans outstanding)
         = <strong style="color:<%= availableBalance >= 0 ? 'var(--success)' : 'var(--danger)' %>">UGX <%= availableBalance.toLocaleString() %></strong>
