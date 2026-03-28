@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { Op }  = require('sequelize');
-const { Group, User, Saving, Loan, Repayment, Expenditure, Project, ProjectContribution, GroupSettings, Asset, OtherIncome } = require('../models');
+const { Group, User, Saving, Loan, Repayment, Expenditure, Project, ProjectContribution, GroupSettings, Asset, OtherIncome, AuditLog } = require('../models');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 router.use(authenticate, requireRole('admin','superadmin'));
