@@ -3,7 +3,7 @@ const { Group, User, Saving, Loan, Repayment, AuditLog, GroupSettings } = requir
 const { authenticate, requireRole } = require('../middleware/auth');
 const { emails } = require('../utils/email');
 
-router.use(authenticate, requireRole('member','credit_officer','treasurer','chairperson'));
+router.use(authenticate, requireRole('member','admin','credit_officer','treasurer','chairperson'));
 
 const getBalance = async (memberId) => {
   const rows = await Saving.findAll({ where: { memberId }, attributes: ['amount'] });

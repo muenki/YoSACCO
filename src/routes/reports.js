@@ -134,8 +134,11 @@ router.get('/', async (req, res) => {
       const payoutRows = await Saving.findAll({ where:{ groupId:gid, type:'payout', status:'confirmed' }, attributes:['amount'] });
       totalPayouts = Math.abs(payoutRows.reduce((t,r)=>t+r.amount,0));
     } catch(e) { totalPayouts = 0; }
-    const totalMemberAssets = totalSavingsEver + totalShareCapital;
-    const availableBalance  = totalMemberAssets - totalExpendsEver - loanPortfolio - totalPayouts;
+    const allLoansEver2 = await Loan.findAll({ where:{ groupId:gid, status:{ [Op.in]:['active','repaid'] } }, attributes:['amount','totalRepayable'] });
+    const totalInterestEver = allLoansEver2.reduce((t,l)=>t+Math.max(0,(l.totalRepayable||0)-(l.amount||0)),0);
+    const allOtherInc2 = await OtherIncome.findAll({ where:{ groupId:gid }, attributes:['amount'] });
+    const totalOtherIncomeBalance = allOtherInc2.reduce((t,i)=>t+i.amount,0);
+    const availableBalance = totalSavingsEver + totalShareCapital + totalInterestEver + totalOtherIncomeBalance - totalExpendsEver - loanPortfolio - totalPayouts;
 
     // ── ASSETS ────────────────────────────────────────────────────
     const allAssets = await Asset.findAll({ where:{ groupId:gid }, order:[['purchaseDate','DESC']] });
