@@ -500,7 +500,13 @@ router.get('/expenditure', async (req, res) => {
     const allLoansForNet = await Loan.findAll({ where: { groupId: gid, status: { [Op.in]: ['active','repaid'] } }, attributes: ['amount','totalRepayable'] });
     const totalInterestNet = allLoansForNet.reduce((t,l)=>t+Math.max(0,(l.totalRepayable||0)-(l.amount||0)),0);
     const netBalance = totalSavingsIncome + totalShareCapital + totalInterestNet + totalOtherIncome - totalExpend - loanPortfolio - totalPayouts;
-    res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, loanPortfolio, totalShareCapital, query: req.query });
+    const payoutRowsExp = await Saving.findAll({ where: { groupId: gid, type: 'payout', status: 'confirmed' }, order: [['date','DESC']] });
+    const totalPayoutsExp = Math.abs(payoutRowsExp.reduce((t,r)=>t+r.amount,0));
+    // Fix netBalance to use undistributed other income
+    const totalDivExp = await Saving.sum('amount', { where:{ groupId: gid, type:'dividend', status:'confirmed' } }).catch(()=>0) || 0;
+    const undistOtherInc = Math.max(0, totalOtherIncome - totalDivExp);
+    const correctedBalance = totalSavingsIncome + totalShareCapital + totalInterestNet + undistOtherInc - totalExpend - loanPortfolio - totalPayoutsExp;
+    res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance: correctedBalance, loanPortfolio, totalShareCapital, payouts: payoutRowsExp.map(p=>p.toJSON()), totalPayouts: totalPayoutsExp, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
