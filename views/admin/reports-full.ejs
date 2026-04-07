@@ -584,10 +584,7 @@ body.printing-tab .page-content { padding:8px!important; }
       <hr style="border:none;border-top:2px solid var(--teal);margin:20px 0;">
       <div style="background:var(--bg);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:var(--text-muted);">
         <strong style="color:var(--navy);">Balance Formula:</strong>
-        UGX <%= totalSavingsEver.toLocaleString() %> (member savings)
-        + UGX <%= (locals.totalShareCapital||0).toLocaleString() %> (share capital)
-        − UGX <%= totalExpendsEver.toLocaleString() %> (expenditure)
-        − UGX <%= loanPortfolio.toLocaleString() %> (loans outstanding)
+        UGX <%= totalSavingsEver.toLocaleString() %> (savings) + UGX <%= (locals.totalShareCapital||0).toLocaleString() %> (share capital) + UGX <%= (locals.totalInterestEver||0).toLocaleString() %> (interest) + UGX <%= (locals.totalOtherIncomeBalance||0).toLocaleString() %> (other income) − UGX <%= totalExpendsEver.toLocaleString() %> (expenditure) − UGX <%= loanPortfolio.toLocaleString() %> (loans)
         = <strong style="color:<%= availableBalance >= 0 ? 'var(--success)' : 'var(--danger)' %>">UGX <%= availableBalance.toLocaleString() %></strong>
       </div>
       <div class="flex-between">

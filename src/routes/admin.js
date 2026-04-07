@@ -497,7 +497,9 @@ router.get('/expenditure', async (req, res) => {
       totalPayouts = Math.abs(payoutRows.reduce((t,r) => t + r.amount, 0));
     } catch(e) { totalPayouts = 0; }
     // Available Balance = Total Member Assets (savings + share capital) - Expenditure - Loans - Cash Payouts
-    const netBalance = totalSavingsIncome + totalShareCapital - totalExpend - loanPortfolio - totalPayouts;
+    const allLoansForNet = await Loan.findAll({ where: { groupId: gid, status: { [Op.in]: ['active','repaid'] } }, attributes: ['amount','totalRepayable'] });
+    const totalInterestNet = allLoansForNet.reduce((t,l)=>t+Math.max(0,(l.totalRepayable||0)-(l.amount||0)),0);
+    const netBalance = totalSavingsIncome + totalShareCapital + totalInterestNet + totalOtherIncome - totalExpend - loanPortfolio - totalPayouts;
     res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance, loanPortfolio, totalShareCapital, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
