@@ -31,7 +31,8 @@ const accentCol = locals.group ? group.accentColor : '#D35050';
 
     <% } else if (role === 'credit_officer' || role === 'treasurer' || role === 'chairperson') { %>
       <div class="nav-section">Loan Approvals</div>
-      <a href="/approver/dashboard" class="nav-link <%= isActive('approver-dashboard') %>"><span class="icon">📋</span> My Review Queue</a>
+      <a href="/approver/dashboard"   class="nav-link <%= isActive('approver-dashboard') %>"><span class="icon">📋</span> My Review Queue</a>
+      <a href="/approver/withdrawals" class="nav-link <%= isActive('approver-withdrawals') %>"><span class="icon">💸</span> Withdrawal Approvals</a>
       <div class="nav-section">My Account</div>
       <a href="/member/dashboard" class="nav-link <%= isActive('member-dashboard') %>"><span class="icon">🏠</span> Member Dashboard</a>
       <a href="/member/savings"   class="nav-link <%= isActive('member-savings') %>"><span class="icon">💰</span> My Savings</a>

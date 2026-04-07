@@ -256,4 +256,23 @@ router.post('/withdrawal', async (req, res) => {
     res.redirect('/member/withdrawal?success=submitted');
   } catch(err) { console.error(err); res.redirect('/member/withdrawal?error=failed'); }
 });
+
+router.post('/change-password', async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const user = await User.findByPk(req.user.id);
+    if (!bcrypt.compareSync(currentPassword, user.password))
+      return res.redirect('/member/profile?pwd_error=Current+password+is+incorrect');
+    if (!newPassword || newPassword.length < 8)
+      return res.redirect('/member/profile?pwd_error=Password+must+be+at+least+8+characters');
+    if (newPassword !== confirmPassword)
+      return res.redirect('/member/profile?pwd_error=Passwords+do+not+match');
+    const bcrypt2 = require('bcryptjs');
+    user.password = bcrypt2.hashSync(newPassword, 10);
+    user.mustChangePassword = false;
+    await user.save();
+    res.redirect('/member/profile?pwd_success=1');
+  } catch(err) { console.error(err); res.redirect('/member/profile?pwd_error=Error+occurred'); }
+});
 module.exports = router;

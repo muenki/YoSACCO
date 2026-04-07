@@ -54,4 +54,31 @@
   </div>
 </div>
 
+
+<div class="card mt-4">
+  <div class="card-header"><h3>🔐 Change Password</h3></div>
+  <div class="card-body">
+    <% if(locals.query && locals.query.pwd_success){ %>
+    <div class="alert alert-success mb-3">Password changed successfully.</div>
+    <% } %>
+    <% if(locals.query && locals.query.pwd_error){ %>
+    <div class="alert alert-danger mb-3"><%= locals.query.pwd_error %></div>
+    <% } %>
+    <form method="POST" action="/member/change-password">
+      <div class="form-group">
+        <label class="form-label">Current Password</label>
+        <input type="password" name="currentPassword" class="form-control" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input type="password" name="newPassword" class="form-control" placeholder="Minimum 8 characters" required minlength="8">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm New Password</label>
+        <input type="password" name="confirmPassword" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Update Password</button>
+    </form>
+  </div>
+</div>
 <%- include('../partials/foot') %>
