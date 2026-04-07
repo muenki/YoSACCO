@@ -59,6 +59,15 @@ const accentCol = locals.group ? group.accentColor : '#D35050';
       <a href="/admin/reports"   class="nav-link <%= isActive('admin-reports') %>"><span class="icon">📈</span> Reports</a>
       <a href="/admin/audit"     class="nav-link <%= isActive('admin-audit') %>"><span class="icon">🔍</span> Audit Trail</a>
 
+      <a href="/admin/withdrawals"   class="nav-link <%= isActive('admin-withdrawals') %>"><span class="icon">&#x1F4B8;</span> Withdrawals</a>
+      <div class="nav-section">My Account</div>
+      <a href="/member/dashboard"    class="nav-link <%= isActive('member-dashboard') %>"><span class="icon">&#x1F3E0;</span> Member Dashboard</a>
+      <a href="/member/savings"      class="nav-link <%= isActive('member-savings') %>"><span class="icon">&#x1F4B0;</span> My Savings</a>
+      <a href="/member/loans"        class="nav-link <%= isActive('member-loans') %>"><span class="icon">&#x1F4CB;</span> My Loans</a>
+      <a href="/member/deposit"      class="nav-link <%= isActive('member-deposit') %>"><span class="icon">&#x1F4B3;</span> Make Deposit</a>
+      <a href="/member/projects"     class="nav-link <%= isActive('member-projects') %>"><span class="icon">&#x1F3D7;</span> Projects</a>
+      <a href="/member/withdrawal"   class="nav-link <%= isActive('member-withdrawal') %>"><span class="icon">&#x1F4B8;</span> Savings Withdrawal</a>
+      <a href="/member/profile"      class="nav-link <%= isActive('member-profile') %>"><span class="icon">&#x1F464;</span> Profile</a>
     <% } else { %>
       <div class="nav-section">My Account</div>
       <a href="/member/dashboard" class="nav-link <%= isActive('member-dashboard') %>"><span class="icon">🏠</span> Dashboard</a>
