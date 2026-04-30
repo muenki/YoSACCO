@@ -12,6 +12,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/api/v1', require('./src/routes/api'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use((req, res, next) => { res.locals.query = req.query; next(); });
 
@@ -33,7 +34,7 @@ async function start() {
     console.log('✅ Database connected');
     // Sync tables (does NOT drop existing data — use seed.js for that)
     await sequelize.sync({ alter: false });
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║              YoSACCO Platform — Running                  ║
