@@ -337,3 +337,151 @@ router.post('/distribute', async (req, res) => {
   }
 });
 module.exports = router;
+
+// ── Split Distribution (% share capital + % savings + % payout) ──
+router.post('/distribute/split', async (req, res) => {
+  try {
+    const gid      = req.user.groupId;
+    const group    = await Group.findByPk(gid);
+    const settings = await GroupSettings.findOne({ where: { groupId: gid } });
+
+    const {
+      period, year, quarter, month,
+      income_type,
+      share_capital_pct, savings_pct, payout_pct,
+      description
+    } = req.body;
+
+    const scPct   = Math.max(0, parseFloat(share_capital_pct) || 0);
+    const savPct  = Math.max(0, parseFloat(savings_pct) || 0);
+    const payPct  = Math.max(0, parseFloat(payout_pct) || 0);
+    const total   = scPct + savPct + payPct;
+
+    if (Math.abs(total - 100) > 0.1)
+      return res.redirect('/admin/reports?tab=interest&error=percentages_must_total_100&period='+period+'&year='+year);
+
+    // Rebuild pool
+    const { start, end } = (() => {
+      const y = parseInt(year) || new Date().getFullYear();
+      const q = parseInt(quarter) || Math.ceil((new Date().getMonth()+1)/3);
+      const m = month !== undefined ? parseInt(month) : new Date().getMonth();
+      if (period === 'annual')    return { start: new Date(y,0,1), end: new Date(y,11,31,23,59,59) };
+      if (period === 'quarterly') return { start: new Date(y,(q-1)*3,1), end: new Date(y,q*3,0,23,59,59) };
+      return { start: new Date(y,m,1), end: new Date(y,m+1,0,23,59,59) };
+    })();
+    const dateFilter = { [Op.between]: [start, end] };
+
+    const interestRate = settings ? settings.newLoanInterestRate / 100 : 0.015;
+    const allMembers   = await User.findAll({
+      where: { groupId: gid, role: { [Op.notIn]: ['superadmin'] }, active: true }
+    });
+
+    // Calculate pool
+    const periodRepayments = await Repayment.findAll({ where: { groupId: gid, date: dateFilter } });
+    const totalRepaid = periodRepayments.reduce((t,r) => t + r.amount, 0);
+    const periodInterest = Math.round(totalRepaid * (interestRate / (1 + interestRate)));
+    const activeLoansRaw = await Loan.findAll({ where: { groupId: gid, status: 'active' } });
+    const accrualMonths = period==='annual'?12:period==='quarterly'?3:1;
+    const accruedInterest = activeLoansRaw.reduce((t,l) =>
+      t + Math.round((l.totalRepayable - l.amountRepaid) * interestRate * accrualMonths), 0);
+    const periodInterestDisplay = periodInterest > 0 ? periodInterest : accruedInterest;
+
+    const otherIncomes = await OtherIncome.findAll({ where: { groupId: gid, date: dateFilter }, attributes: ['amount'] });
+    const totalOtherIncome = otherIncomes.reduce((t,i) => t + i.amount, 0);
+    const expenditures = await Expenditure.findAll({ where: { groupId: gid, date: dateFilter }, attributes: ['amount'] });
+    const totalExpend = expenditures.reduce((t,e) => t + e.amount, 0);
+
+    let poolToDistribute = Math.max(0, periodInterestDisplay + totalOtherIncome - totalExpend);
+    if (income_type === 'interest')    poolToDistribute = Math.max(0, periodInterestDisplay);
+    if (income_type === 'other_income') poolToDistribute = Math.max(0, totalOtherIncome);
+    if (poolToDistribute <= 0)
+      return res.redirect('/admin/reports?tab=interest&error=nothing_to_distribute&period='+period+'&year='+year);
+
+    // Calculate weights
+    const methodStr = settings?.interestDistributionMethod || 'share_capital_and_savings';
+    const memberData = await Promise.all(allMembers.map(async m => {
+      const mj = m.toJSON();
+      const rows = await Saving.findAll({ where: { memberId: mj.id, status: { [Op.ne]: 'pending' } }, attributes: ['amount'] });
+      const totalBalance = rows.reduce((t,s) => t + s.amount, 0);
+      let weight = 0;
+      if (methodStr === 'share_capital_only') weight = mj.shareCapitalPaid || 0;
+      else if (methodStr === 'savings_only')  weight = totalBalance;
+      else weight = (mj.shareCapitalPaid || 0) + totalBalance;
+      return { ...mj, totalBalance, weight };
+    }));
+    const totalWeight = memberData.reduce((t,m) => t + m.weight, 0);
+    if (totalWeight <= 0)
+      return res.redirect('/admin/reports?tab=interest&error=no_weight&period='+period+'&year='+year);
+
+    const scPool  = Math.round(poolToDistribute * scPct  / 100);
+    const savPool = Math.round(poolToDistribute * savPct / 100);
+    const payPool = Math.round(poolToDistribute * payPct / 100);
+    const label   = description || `Split distribution — ${period} ${year}`;
+    const months  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const mIdx    = month !== undefined ? parseInt(month) : new Date().getMonth();
+    const periodLabel = period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[mIdx]+' '+year;
+
+    let posted = 0;
+    for (const ms of memberData) {
+      const share = ms.weight / totalWeight;
+
+      // Share capital portion
+      if (scPool > 0) {
+        const scShare = Math.round(share * scPool);
+        if (scShare > 0) {
+          await ms.update({ shareCapitalPaid: (ms.shareCapitalPaid || 0) + scShare });
+          await Saving.create({
+            memberId: ms.id, groupId: gid,
+            amount: scShare, type: 'share_capital',
+            description: `${label} — share capital portion`,
+            date: new Date(), postedBy: req.user.id, status: 'confirmed'
+          });
+        }
+      }
+
+      // Savings portion
+      if (savPool > 0) {
+        const savShare = Math.round(share * savPool);
+        if (savShare > 0) {
+          await Saving.create({
+            memberId: ms.id, groupId: gid,
+            amount: savShare, type: 'dividend',
+            description: `${label} — savings portion`,
+            date: new Date(), postedBy: req.user.id, status: 'confirmed'
+          });
+        }
+      }
+
+      // Payout portion
+      if (payPool > 0) {
+        const payShare = Math.round(share * payPool);
+        if (payShare > 0) {
+          await Saving.create({
+            memberId: ms.id, groupId: gid,
+            amount: -payShare, type: 'payout',
+            description: `${label} — cash payout`,
+            date: new Date(), postedBy: req.user.id, status: 'confirmed'
+          });
+          // Send email
+          try {
+            const sharePct = (share * 100).toFixed(1);
+            require('../utils/email').emails.payoutNotification(ms, payShare, sharePct, group.toJSON()).catch(()=>{});
+          } catch(e) {}
+        }
+      }
+      posted++;
+    }
+
+    await AuditLog.create({
+      userId: req.user.id,
+      action: 'SPLIT_DISTRIBUTION',
+      detail: `Split distribution of UGX ${poolToDistribute.toLocaleString()} to ${posted} members: ${scPct}% share capital, ${savPct}% savings, ${payPct}% payout (${label})`,
+      groupId: gid,
+    });
+
+    res.redirect(`/admin/reports?tab=interest&success=distributed&period=${period}&year=${year}&quarter=${quarter}&month=${month}`);
+  } catch(err) {
+    console.error('Split distribution error:', err);
+    res.redirect('/admin/reports?tab=interest&error=distribution_failed');
+  }
+});

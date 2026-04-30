@@ -235,6 +235,94 @@ body.printing-tab .page-content { padding:8px!important; }
     var _periodLabel  = period==='annual'?year:period==='quarterly'?'Q'+quarter+' '+year:months[month]+' '+year;
   %>
 
+
+  <!-- SPLIT DISTRIBUTION FORM -->
+  <% if ((_interestAmt > 0) || (locals.totalOtherIncomePeriod > 0)) { %>
+  <div class="card mb-4 no-print" style="border:2px solid #FFC000;background:#fffbeb;border-radius:10px;">
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div>
+          <div class="font-semibold" style="font-size:16px;">⚖️ Split Distribution</div>
+          <div class="text-sm text-muted">Allocate percentages to Share Capital, Savings, and Cash Payout (must total 100%)</div>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:#b45309;">UGX <%= (locals.totalDistributionPool||0).toLocaleString() %></div>
+      </div>
+      <form method="POST" action="/admin/reports/distribute/split" onsubmit="return validateSplit(this)">
+        <input type="hidden" name="period"   value="<%= period %>">
+        <input type="hidden" name="year"     value="<%= year %>">
+        <input type="hidden" name="quarter"  value="<%= quarter %>">
+        <input type="hidden" name="month"    value="<%= month %>">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:13px;font-weight:600;">Income Source</label>
+            <select name="income_type" class="form-control">
+              <option value="combined">Combined (Interest + Other)</option>
+              <option value="interest">Loan Interest Only</option>
+              <option value="other_income">Other Income Only</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;">Description</label>
+            <input type="text" name="description" class="form-control" value="Split distribution — <%= months[month] %> <%= year %>">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#1e40af;">📊 Share Capital %</label>
+            <input type="number" name="share_capital_pct" class="form-control split-pct" min="0" max="100" step="0.1" value="0" oninput="updateSplitPreview()">
+            <div class="text-sm text-muted mt-1" id="sc-preview">UGX 0</div>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#065f46;">💰 Savings %</label>
+            <input type="number" name="savings_pct" class="form-control split-pct" min="0" max="100" step="0.1" value="0" oninput="updateSplitPreview()">
+            <div class="text-sm text-muted mt-1" id="sav-preview">UGX 0</div>
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;color:#991b1b;">💵 Cash Payout %</label>
+            <input type="number" name="payout_pct" class="form-control split-pct" min="0" max="100" step="0.1" value="0" oninput="updateSplitPreview()">
+            <div class="text-sm text-muted mt-1" id="pay-preview">UGX 0</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div id="split-total-badge" style="background:#f3f4f6;border-radius:8px;padding:8px 14px;font-weight:700;font-size:14px;">
+            Total: <span id="split-total">0</span>%
+          </div>
+          <button type="submit" class="btn btn-warning" style="font-weight:700;">
+            ⚖️ Execute Split Distribution
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  const _splitPool = <%= locals.totalDistributionPool || 0 %>;
+  function updateSplitPreview() {
+    const pcts = Array.from(document.querySelectorAll('.split-pct')).map(i => parseFloat(i.value)||0);
+    const total = pcts.reduce((a,b)=>a+b,0);
+    document.getElementById('split-total').textContent = total.toFixed(1);
+    const badge = document.getElementById('split-total-badge');
+    badge.style.background = Math.abs(total-100)<0.1 ? '#d1fae5' : total>100 ? '#fee2e2' : '#fef3c7';
+    document.getElementById('sc-preview').textContent  = 'UGX ' + Math.round(_splitPool*pcts[0]/100).toLocaleString();
+    document.getElementById('sav-preview').textContent = 'UGX ' + Math.round(_splitPool*pcts[1]/100).toLocaleString();
+    document.getElementById('pay-preview').textContent = 'UGX ' + Math.round(_splitPool*pcts[2]/100).toLocaleString();
+  }
+  function validateSplit(form) {
+    const pcts = Array.from(form.querySelectorAll('.split-pct')).map(i => parseFloat(i.value)||0);
+    const total = pcts.reduce((a,b)=>a+b,0);
+    if (Math.abs(total-100) > 0.1) {
+      alert('Percentages must total 100%. Current total: ' + total.toFixed(1) + '%');
+      return false;
+    }
+    const pool = _splitPool.toLocaleString();
+    return confirm('Execute split distribution of UGX ' + pool + '?\n\n' +
+      pcts[0].toFixed(1) + '% → Share Capital\n' +
+      pcts[1].toFixed(1) + '% → Member Savings\n' +
+      pcts[2].toFixed(1) + '% → Cash Payout\n\nThis cannot be undone.');
+  }
+  </script>
+  <% } %>
+
   <!-- INTEREST INCOME DISTRIBUTION -->
   <% if (_interestAmt > 0) { %>
   <div class="card mb-4 no-print" style="border-left:4px solid #0D7377;background:#f0f9f9;">
