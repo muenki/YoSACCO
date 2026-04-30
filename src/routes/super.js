@@ -47,7 +47,8 @@ router.post('/groups/create', upload.single("logo"), async (req, res) => {
     const slug  = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const logoPath = req.file ? "/uploads/logos/" + req.file.filename : null;
     const group = await Group.create({ name, slug, accentColor: accentColor||'#0D7377', adminEmail: adminEmail.toLowerCase(), accountNumber: accountNumber||null, bankName: bankName||null, logo: logoPath, active: true });
-    await User.create({ name: adminName, email: adminEmail.toLowerCase(), password: bcrypt.hashSync(adminPassword, 10), role: 'admin', groupId: group.id, active: true });
+    const grpPrefix = name.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase();
+    await User.create({ name: adminName, email: adminEmail.toLowerCase(), password: bcrypt.hashSync(adminPassword, 10), role: 'admin', groupId: group.id, memberId: grpPrefix+'-0001', active: true, mustChangePassword: false });
     await AuditLog.create({ userId: req.user.id, action: 'CREATE_GROUP', detail: `Created group: ${name}` });
     res.redirect('/super/groups?success=group_created');
   } catch (err) { console.error(err); res.redirect('/super/groups?error=create_failed'); }

@@ -103,9 +103,14 @@ router.post('/members/add', async (req, res) => {
     const gid   = req.user.groupId;
     const group = await Group.findByPk(gid);
     if (await User.findOne({ where: { email: email.toLowerCase() } })) return res.redirect('/admin/members?error=email_exists');
-    const count    = await User.count({ where: { groupId: gid } });
     const prefix   = group.name.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase();
-    const memberId = `${prefix}-${String(count + 1).padStart(4,'0')}`;
+    // Find highest existing memberId number to avoid duplicates
+    const existingIds = await User.findAll({ where: { groupId: gid, memberId: { [require('sequelize').Op.ne]: null } }, attributes: ['memberId'] });
+    const maxNum = existingIds.reduce((max, u) => {
+      const n = parseInt((u.memberId || '').split('-')[1] || '0');
+      return n > max ? n : max;
+    }, 0);
+    const memberId = `${prefix}-${String(maxNum + 1).padStart(4,'0')}`;
     const tempPass = `Yosacco@${Math.floor(1000 + Math.random() * 9000)}`;
     const newMember = await User.create({
       name, email: email.toLowerCase(), phone, nationalId,
