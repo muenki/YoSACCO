@@ -10,6 +10,21 @@ const {
 } = require('../models');
 const { Op } = require('sequelize');
 
+function getRange(period, year, quarter, month) {
+  const y = parseInt(year) || new Date().getFullYear();
+  let start, end;
+  if (period === "annual") {
+    start = new Date(y, 0, 1); end = new Date(y, 11, 31, 23, 59, 59);
+  } else if (period === "quarterly") {
+    const q = parseInt(quarter) || Math.ceil((new Date().getMonth()+1)/3);
+    start = new Date(y, (q-1)*3, 1); end = new Date(y, q*3, 0, 23, 59, 59);
+  } else {
+    const m = month !== undefined ? parseInt(month) : new Date().getMonth();
+    start = new Date(y, m, 1); end = new Date(y, m+1, 0, 23, 59, 59);
+  }
+  return { start, end };
+}
+
 // ─── AUTH ──────────────────────────────────────────────────────────────────
 
 router.post('/login', async (req, res) => {
@@ -553,21 +568,6 @@ router.get('/super/invoices', apiAuth('superadmin'), async (req, res) => {
     res.json({ invoices });
   } catch { res.status(500).json({ message: 'Server error' }); }
 });
-
-function getRange(period, year, quarter, month) {
-  const y = parseInt(year) || new Date().getFullYear();
-  let start, end;
-  if (period === "annual") {
-    start = new Date(y, 0, 1); end = new Date(y, 11, 31, 23, 59, 59);
-  } else if (period === "quarterly") {
-    const q = parseInt(quarter) || Math.ceil((new Date().getMonth()+1)/3);
-    start = new Date(y, (q-1)*3, 1); end = new Date(y, q*3, 0, 23, 59, 59);
-  } else {
-    const m = month !== undefined ? parseInt(month) : new Date().getMonth();
-    start = new Date(y, m, 1); end = new Date(y, m+1, 0, 23, 59, 59);
-  }
-  return { start, end };
-}
 router.get('/admin/reports/full', apiAuth('admin'), async (req, res) => {
   try {
     const gid = req.user.groupId;
