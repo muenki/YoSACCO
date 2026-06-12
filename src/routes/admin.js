@@ -1,4 +1,5 @@
 const router  = require('express').Router();
+const upload  = require('../middleware/upload');
 const bcrypt  = require('bcryptjs');
 const { Op }  = require('sequelize');
 const { Group, User, Saving, Loan, Repayment, AuditLog } = require('../models');
@@ -97,7 +98,7 @@ router.get('/members', async (req, res) => {
   }
 });
 
-router.post('/members/add', async (req, res) => {
+router.post('/members/add', upload.single('photo'), async (req, res) => {
   try {
     const { name, email, phone, nationalId, monthlyContribution, shareCapitalTarget } = req.body;
     const gid   = req.user.groupId;
@@ -120,6 +121,7 @@ router.post('/members/add', async (req, res) => {
       monthlyContribution: parseInt(monthlyContribution) || 10000,
       shareCapitalTarget:  parseInt(shareCapitalTarget)  || 1000000,
       shareCapitalPaid: 0, active: true,
+      photo: req.file ? '/uploads/members/' + req.file.filename : null,
     });
     await AuditLog.create({ userId: req.user.id, action: 'ADD_MEMBER', detail: `Added member: ${name} (${memberId})`, groupId: gid });
     emails.welcomeMember(newMember.toJSON(), group.toJSON(), tempPass).catch(() => {});
@@ -155,13 +157,14 @@ router.post('/members/:id/toggle', async (req, res) => {
   } catch (err) { console.error(err); res.redirect('/admin/members'); }
 });
 
-router.post('/members/:id/edit', async (req, res) => {
+router.post('/members/:id/edit', upload.single('photo'), async (req, res) => {
   try {
     const gid = req.user.groupId;
     const m   = await User.findOne({ where: { id: req.params.id, groupId: gid } });
     if (!m) return res.redirect('/admin/members?error=not_found');
     const { name, email, phone, nationalId, role, monthlyContribution, shareCapitalTarget, shareCapitalPaid } = req.body;
-    await m.update({ name, email: email.toLowerCase(), phone, nationalId, role: role||m.role, monthlyContribution: parseInt(monthlyContribution)||m.monthlyContribution, shareCapitalTarget: parseInt(shareCapitalTarget)||m.shareCapitalTarget, shareCapitalPaid: parseInt(shareCapitalPaid)||m.shareCapitalPaid });
+    const photoUpdate = req.file ? { photo: '/uploads/members/' + req.file.filename } : {};
+    await m.update({ name, email: email.toLowerCase(), phone, nationalId, role: role||m.role, monthlyContribution: parseInt(monthlyContribution)||m.monthlyContribution, shareCapitalTarget: parseInt(shareCapitalTarget)||m.shareCapitalTarget, shareCapitalPaid: parseInt(shareCapitalPaid)||m.shareCapitalPaid, ...photoUpdate });
     await AuditLog.create({ userId: req.user.id, action: 'EDIT_MEMBER', detail: `Updated member: ${name}`, groupId: gid });
     res.redirect('/admin/members?success=member_updated');
   } catch (err) { console.error(err); res.redirect('/admin/members?error=edit_failed'); }
@@ -206,6 +209,11 @@ router.post('/savings/post', async (req, res) => {
       description: description || 'Monthly contribution',
       date: new Date(), postedBy: req.user.id,
     });
+    // If this is a share capital payment, update the member's shareCapitalPaid total
+    if (type === 'share_capital') {
+      member.shareCapitalPaid = (member.shareCapitalPaid||0) + parseInt(amount);
+      await member.save();
+    }
     await AuditLog.create({ userId: req.user.id, action: 'POST_SAVINGS', detail: `Posted UGX ${amount} for ${member.name}`, groupId: gid });
     const balance = await getBalance(memberId);
     emails.savingsReceiptToMember(member.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(() => {});
@@ -230,7 +238,8 @@ router.get('/loans', async (req, res) => {
       const ch = l.chairpersonId   ? await User.findByPk(l.chairpersonId,   { attributes: ['name'] }) : null;
       return { ...l.toJSON(), member: member?.toJSON() || null, savingsBalance, coUser: co?.name||null, trUser: tr?.name||null, chUser: ch?.name||null };
     }));
-    res.render('admin/loans', { user: req.user, group, loans, query: req.query });
+    const members = await User.findAll({ where: { groupId: gid, role: { [Op.notIn]: ['superadmin','admin'] }, active: true }, order: [['name','ASC']] });
+    res.render('admin/loans', { user: req.user, group, loans, members, query: req.query });
   } catch (err) {
     console.error('Loans error:', err);
     res.render('error', { message: 'Error loading loans', user: req.user });
@@ -621,3 +630,32 @@ router.post('/withdrawals/:id/disburse', async (req, res) => {
   } catch(err) { console.error(err); res.redirect('/admin/withdrawals?error=failed'); }
 });
 module.exports = router;
+
+// ── Admin Direct Loan Posting ─────────────────────────────────────
+router.post('/loans/post-direct', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const group = await Group.findByPk(gid);
+    const { memberId, loanType, amount, purpose, repaymentMonths } = req.body;
+    const member = await User.findOne({ where: { id: memberId, groupId: gid } });
+    if (!member) return res.redirect('/admin/loans?error=member_not_found');
+    const rate = loanType === 'emergency' ? 0.02 : 0.015;
+    const amt  = parseInt(amount);
+    const months = parseInt(repaymentMonths);
+    const monthlyInstallment = Math.round(amt * (1 + rate * months) / months);
+    const totalRepayable     = monthlyInstallment * months;
+    const loan = await Loan.create({
+      memberId: member.id, groupId: gid,
+      loanType: loanType || 'new_loan',
+      amount: amt, purpose, repaymentMonths: months,
+      monthlyInstallment, totalRepayable, amountRepaid: 0,
+      status: 'active',
+      creditOfficerStatus: 'approved', treasurerStatus: 'approved', chairpersonStatus: 'approved',
+      approvedBy: req.user.id, approvedAt: new Date(), disbursedAt: new Date(),
+      appliedAt: new Date(),
+    });
+    await AuditLog.create({ userId: req.user.id, action: 'POST_LOAN_DIRECT', detail: `Admin posted loan for ${member.name} — UGX ${amt.toLocaleString()}`, groupId: gid });
+    emails.loanApprovedToMember(member.toJSON(), loan.toJSON(), group.toJSON()).catch(() => {});
+    res.redirect('/admin/loans?success=loan_posted');
+  } catch (err) { console.error('Post loan error:', err); res.redirect('/admin/loans?error=post_failed'); }
+});
