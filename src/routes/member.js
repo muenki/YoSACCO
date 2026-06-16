@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const { Op } = require('sequelize');
 const { Group, User, Saving, Loan, Repayment, AuditLog, GroupSettings } = require('../models');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { emails } = require('../utils/email');
@@ -6,7 +7,7 @@ const { emails } = require('../utils/email');
 router.use(authenticate, requireRole('member','admin','credit_officer','treasurer','chairperson'));
 
 const getBalance = async (memberId) => {
-  const rows = await Saving.findAll({ where: { memberId }, attributes: ['amount'] });
+  const rows = await Saving.findAll({ where: { memberId, type: { [Op.ne]: 'share_capital' } }, attributes: ['amount'] });
   return rows.reduce((s, r) => s + r.amount, 0);
 };
 

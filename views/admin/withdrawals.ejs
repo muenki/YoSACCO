@@ -1,0 +1,85 @@
+<%- include('../partials/head', { title: 'Savings Withdrawals', activePage: 'admin-withdrawals', group }) %>
+
+<% const q = locals.query || {}; %>
+<% if (q.success === 'disbursed')   { %><div class="alert alert-success">Withdrawal disbursed successfully. Member notified.</div><% } %>
+<% if (q.success === 'rejected')    { %><div class="alert alert-danger">Withdrawal request rejected.</div><% } %>
+<% if (q.error === 'not_ready')     { %><div class="alert alert-danger">Withdrawal not yet fully approved.</div><% } %>
+<% if (q.error === 'insufficient_balance') { %><div class="alert alert-danger">Insufficient savings balance.</div><% } %>
+
+<div class="flex-between mb-4">
+  <h2>Savings Withdrawals</h2>
+</div>
+
+<div class="stats-grid mb-6">
+  <div class="stat-card"><div class="label">Total Requests</div><div class="value"><%= withdrawals.length %></div></div>
+  <div class="stat-card"><div class="label">Pending</div><div class="value" style="color:var(--warning);"><%= withdrawals.filter(w=>['pending','credit_approved','chair_approved'].includes(w.status)).length %></div></div>
+  <div class="stat-card"><div class="label">Disbursed</div><div class="value" style="color:var(--success);"><%= withdrawals.filter(w=>w.status==='disbursed').length %></div></div>
+  <div class="stat-card"><div class="label">Rejected</div><div class="value" style="color:var(--danger);"><%= withdrawals.filter(w=>w.status==='rejected').length %></div></div>
+</div>
+
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Amount</th>
+          <th>Reason</th>
+          <th>Applied</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!withdrawals.length) { %>
+        <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-muted);">No withdrawal requests yet.</td></tr>
+        <% } %>
+        <% withdrawals.forEach(w => { %>
+        <tr>
+          <td>
+            <div class="member-row">
+              <div class="avatar" style="width:32px;height:32px;font-size:11px;"><%= w.member ? w.member.name.split(' ').map(n=>n[0]).join('') : '?' %></div>
+              <div>
+                <div class="name"><%= w.member ? w.member.name : 'Unknown' %></div>
+                <div class="id"><%= w.member?.memberId || '—' %></div>
+              </div>
+            </div>
+          </td>
+          <td class="font-semibold">UGX <%= w.amount.toLocaleString() %></td>
+          <td class="text-sm"><%= w.reason || '—' %></td>
+          <td class="text-sm"><%= new Date(w.appliedAt).toLocaleDateString() %></td>
+          <td>
+            <% if (w.status === 'disbursed') { %>
+              <span class="badge badge-success">Disbursed</span>
+            <% } else if (w.status === 'rejected') { %>
+              <span class="badge badge-danger">Rejected</span>
+            <% } else if (w.status === 'chair_approved') { %>
+              <span class="badge badge-info">Ready to Disburse</span>
+            <% } else if (w.status === 'credit_approved') { %>
+              <span class="badge badge-warning">Credit Approved</span>
+            <% } else { %>
+              <span class="badge badge-warning">Pending</span>
+            <% } %>
+          </td>
+          <td>
+            <div class="flex gap-1">
+              <% if (w.status === 'chair_approved') { %>
+              <form method="POST" action="/admin/withdrawals/<%= w.id %>/disburse" style="display:inline;">
+                <button class="btn btn-sm btn-success" onclick="return confirm('Disburse UGX <%= w.amount.toLocaleString() %> to <%= w.member?.name %>?')">Disburse</button>
+              </form>
+              <% } %>
+              <% if (!['disbursed','rejected'].includes(w.status)) { %>
+              <form method="POST" action="/admin/withdrawals/<%= w.id %>/reject" style="display:inline;">
+                <button class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);" onclick="return confirm('Reject this withdrawal request?')">Reject</button>
+              </form>
+              <% } %>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

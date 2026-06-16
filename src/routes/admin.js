@@ -15,6 +15,7 @@ const getBalance = async (memberId) => {
       memberId,
       status: { [Op.ne]: 'pending' },
       description: { [Op.notLike]: '%loan repayment%' },
+      type: { [Op.ne]: 'share_capital' },
     },
     attributes: ['amount']
   });
@@ -412,6 +413,24 @@ router.post('/savings/:id/reject', async (req, res) => {
     if (tx) { await tx.destroy(); await AuditLog.create({ userId: req.user.id, action: 'REJECT_DEPOSIT', detail: 'Rejected pending deposit', groupId: gid }); }
     res.redirect('/admin/savings?success=deposit_rejected');
   } catch(err) { console.error(err); res.redirect('/admin/savings?error=reject_failed'); }
+});
+
+// ── Reverse a confirmed savings transaction (admin correction) ─────
+router.post('/savings/:id/reverse', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const tx  = await Saving.findOne({ where: { id: req.params.id, groupId: gid, status: 'confirmed' } });
+    if (!tx) return res.redirect('/admin/savings?error=tx_not_found');
+    const member = await User.findByPk(tx.memberId);
+    // If it was a share capital posting, reverse the shareCapitalPaid update too
+    if (tx.type === 'share_capital' && member) {
+      member.shareCapitalPaid = Math.max(0, (member.shareCapitalPaid||0) - tx.amount);
+      await member.save();
+    }
+    await AuditLog.create({ userId: req.user.id, action: 'REVERSE_SAVINGS', detail: `Reversed UGX ${tx.amount.toLocaleString()} (${tx.type}) for ${member?.name||'unknown'}`, groupId: gid });
+    await tx.destroy();
+    res.redirect('/admin/savings?success=transaction_reversed');
+  } catch(err) { console.error('Reverse savings error:', err); res.redirect('/admin/savings?error=reverse_failed'); }
 });
 // ── Loan Terms Settings ───────────────────────────────────────────
 router.get('/loan-terms', async (req, res) => {

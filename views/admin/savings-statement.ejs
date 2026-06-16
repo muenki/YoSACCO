@@ -61,11 +61,12 @@
         <th>Type</th>
         <th>Amount (UGX)</th>
         <th>Balance (UGX)</th>
+        <th class="no-print">Action</th>
       </tr>
     </thead>
     <tbody>
       <% if(!transactions.length){ %>
-      <tr><td colspan="6" style="text-align:center;padding:20px;color:#999;">No transactions found.</td></tr>
+      <tr><td colspan="7" style="text-align:center;padding:20px;color:#999;">No transactions found.</td></tr>
       <% } %>
       <% transactions.forEach(function(t, i){ %>
       <tr>
@@ -77,6 +78,11 @@
           <%= t.amount >= 0 ? '+' : '' %><%= t.amount.toLocaleString() %>
         </td>
         <td><%= t.runningBalance.toLocaleString() %></td>
+        <td class="no-print">
+          <form method="POST" action="/admin/savings/<%= t.id %>/reverse" onsubmit="return confirm('Reverse this transaction of UGX <%= t.amount.toLocaleString() %>? This cannot be undone.')">
+            <button type="submit" style="font-size:11px;padding:4px 8px;background:#fff5f5;color:#c53030;border:1px solid #fc8181;border-radius:4px;cursor:pointer;">Reverse</button>
+          </form>
+        </td>
       </tr>
       <% }); %>
       <tr class="total-row">
