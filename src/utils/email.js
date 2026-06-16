@@ -154,13 +154,15 @@ const emails = {
   },
 
   async savingsReceiptToMember(member, transaction, balance, group) {
+    const receiptNo = 'RCT-' + (transaction.id || '').replace(/-/g,'').slice(0,8).toUpperCase();
     return sendEmail({
       to: member.email,
-      subject: `Savings Receipt — UGX ${transaction.amount.toLocaleString()} — ${group.name}`,
+      subject: `Savings Receipt ${receiptNo} — UGX ${transaction.amount.toLocaleString()} — ${group.name}`,
       html: emailWrapper('Savings Receipt', group.accentColor, `
         <p>Dear <strong>${member.name}</strong>,</p>
         <p>Your savings account has been credited. Here is your receipt:</p>
         <div class="info-box">
+          <div class="info-row"><span class="info-key">Receipt No.</span><span class="info-val">${receiptNo}</span></div>
           <div class="info-row"><span class="info-key">Transaction type</span><span class="info-val">${transaction.description}</span></div>
           <div class="info-row"><span class="info-key">Amount credited</span><span class="info-val">UGX ${transaction.amount.toLocaleString()}</span></div>
           <div class="info-row"><span class="info-key">Date</span><span class="info-val">${new Date(transaction.date).toLocaleDateString()}</span></div>
@@ -172,13 +174,15 @@ const emails = {
   },
 
   async loanRepaymentReceipt(member, repayment, remaining, group) {
+    const receiptNo = 'RCT-' + (repayment.id || '').replace(/-/g,'').slice(0,8).toUpperCase();
     return sendEmail({
       to: member.email,
-      subject: `Loan Repayment Receipt — UGX ${repayment.amount.toLocaleString()} — ${group.name}`,
+      subject: `Loan Repayment Receipt ${receiptNo} — UGX ${repayment.amount.toLocaleString()} — ${group.name}`,
       html: emailWrapper('Repayment Receipt', group.accentColor, `
         <p>Dear <strong>${member.name}</strong>,</p>
         <p>Your loan repayment has been recorded successfully.</p>
         <div class="info-box">
+          <div class="info-row"><span class="info-key">Receipt No.</span><span class="info-val">${receiptNo}</span></div>
           <div class="info-row"><span class="info-key">Amount paid</span><span class="info-val">UGX ${repayment.amount.toLocaleString()}</span></div>
           <div class="info-row"><span class="info-key">Payment date</span><span class="info-val">${new Date(repayment.date).toLocaleDateString()}</span></div>
           <div class="info-row"><span class="info-key">Outstanding balance</span><span class="info-val">UGX ${remaining.toLocaleString()}</span></div>
