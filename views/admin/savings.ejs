@@ -162,10 +162,10 @@
 <div class="grid-2 gap-4 mb-6 no-print">
   <!-- Post Savings Form -->
   <div class="card">
-    <div class="card-header"><h3>Post Savings Contribution</h3></div>
+    <div class="card-header"><h3>Post Savings Contribution</h3><span class="text-muted text-sm">Add one or more transactions for a single member</span></div>
     <div class="card-body">
-      <form method="POST" action="/admin/savings/post">
-        <div class="form-group">
+      <form method="POST" action="/admin/savings/post-batch" id="batchForm">
+        <div class="form-group mb-3">
           <label class="form-label">Select Member *</label>
           <select name="memberId" class="form-control" required>
             <option value="">— Choose member —</option>
@@ -174,28 +174,39 @@
             <% }); %>
           </select>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Amount (UGX) *</label>
-            <input type="number" name="amount" class="form-control" placeholder="e.g. 50000" min="1000" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Type</label>
-            <select name="type" class="form-control">
-              <option value="contribution">Monthly Contribution</option>
-              <option value="share_capital">Share Capital</option>
-              <option value="interest">Interest Credit</option>
-              <option value="dividend">Dividend</option>
-              <option value="other">Other</option>
-            </select>
+
+        <div id="lineItems">
+          <div class="line-item" style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Type</label>
+                <select name="type" class="form-control">
+                  <option value="contribution">Monthly Contribution</option>
+                  <option value="share_capital">Share Capital</option>
+                  <option value="loan_repayment">Loan Repayment</option>
+                  <option value="loan_fine">Loan Fine</option>
+                  <option value="interest">Interest Credit</option>
+                  <option value="dividend">Dividend</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Amount (UGX)</label>
+                <input type="number" name="amount" class="form-control" placeholder="e.g. 50000" min="1">
+              </div>
+            </div>
+            <div class="form-group" style="margin-top:8px;">
+              <label class="form-label">Description (optional)</label>
+              <input type="text" name="description" class="form-control" placeholder="e.g. Monthly contribution — June 2026">
+            </div>
+            <button type="button" class="remove-line btn btn-sm btn-outline" style="margin-top:8px;color:var(--danger);border-color:var(--danger);display:none;">Remove</button>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Description</label>
-          <input type="text" name="description" class="form-control" placeholder="e.g. Monthly contribution — April 2025">
-        </div>
-        <p class="text-xs text-muted mb-4">A receipt email will automatically be sent to the member upon posting.</p>
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Post Savings &amp; Send Receipt</button>
+
+        <button type="button" id="addLineBtn" class="btn btn-sm btn-outline mb-3" style="width:100%;">+ Add Another Transaction</button>
+
+        <p class="text-xs text-muted mb-4">A separate receipt email will be sent to the member for each transaction posted. Loan repayments require an active loan.</p>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Post All Transactions &amp; Send Receipts</button>
       </form>
     </div>
   </div>
@@ -348,6 +359,25 @@ function printMemberLedger(idx) {
     target.classList.remove('selected');
   }, 2000);
 }
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var addBtn = document.getElementById('addLineBtn');
+  if (!addBtn) return;
+  addBtn.addEventListener('click', function() {
+    var container = document.getElementById('lineItems');
+    var first = container.querySelector('.line-item');
+    var clone = first.cloneNode(true);
+    clone.querySelectorAll('input').forEach(function(i){ i.value = ''; });
+    clone.querySelector('select').selectedIndex = 0;
+    var removeBtn = clone.querySelector('.remove-line');
+    removeBtn.style.display = 'inline-block';
+    removeBtn.addEventListener('click', function(){ clone.remove(); });
+    container.appendChild(clone);
+  });
+});
 </script>
 
 <%- include('../partials/foot') %>

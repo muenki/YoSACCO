@@ -197,6 +197,70 @@ router.get('/savings', async (req, res) => {
   }
 });
 
+// ── Batch Transaction Posting (multiple line items for one member) ──
+router.post('/savings/post-batch', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const { memberId } = req.body;
+    const member = await User.findOne({ where: { id: memberId, groupId: gid } });
+    const group  = await Group.findByPk(gid);
+    if (!member) return res.redirect('/admin/savings?error=member_not_found');
+
+    // Lines arrive as parallel arrays: type[], amount[], description[]
+    let types = req.body.type || [];
+    let amounts = req.body.amount || [];
+    let descriptions = req.body.description || [];
+    if (!Array.isArray(types)) types = [types];
+    if (!Array.isArray(amounts)) amounts = [amounts];
+    if (!Array.isArray(descriptions)) descriptions = [descriptions];
+
+    let posted = 0;
+    for (let i = 0; i < types.length; i++) {
+      const type = types[i];
+      const amt  = parseInt(amounts[i]);
+      const desc = descriptions[i] || '';
+      if (!amt || amt <= 0) continue;
+
+      if (type === 'loan_repayment') {
+        // Follow the same logic as the dedicated loan repayment route
+        const activeLoan = await Loan.findOne({ where: { memberId: member.id, status: 'active' }, order: [['disbursedAt','DESC']] });
+        if (!activeLoan) continue; // skip if no active loan
+        const repayment = await Repayment.create({ loanId: activeLoan.id, memberId: member.id, groupId: gid, amount: amt, date: new Date(), postedBy: req.user.id });
+        activeLoan.amountRepaid = (activeLoan.amountRepaid||0) + amt;
+        const remaining = Math.max(0, activeLoan.totalRepayable - activeLoan.amountRepaid);
+        if (remaining === 0) activeLoan.status = 'repaid';
+        await activeLoan.save();
+        await AuditLog.create({ userId: req.user.id, action: 'LOAN_REPAYMENT', detail: `Recorded UGX ${amt.toLocaleString()} repayment for ${member.name} (batch)`, groupId: gid });
+        emails.loanRepaymentReceipt(member.toJSON(), repayment.toJSON(), remaining, group.toJSON()).catch(() => {});
+        posted++;
+        continue;
+      }
+
+      // All other types (contribution, share_capital, loan_fine, interest, dividend, other)
+      const tx = await Saving.create({
+        memberId: member.id, groupId: gid, amount: amt,
+        type: type || 'other',
+        description: desc || (type === 'loan_fine' ? 'Loan fine' : 'Contribution'),
+        date: new Date(), postedBy: req.user.id,
+      });
+      if (type === 'share_capital') {
+        member.shareCapitalPaid = (member.shareCapitalPaid||0) + amt;
+        await member.save();
+      }
+      await AuditLog.create({ userId: req.user.id, action: 'POST_SAVINGS', detail: `Posted UGX ${amt.toLocaleString()} (${type}) for ${member.name} (batch)`, groupId: gid });
+      const balance = await getBalance(member.id);
+      emails.savingsReceiptToMember(member.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(() => {});
+      posted++;
+    }
+
+    if (posted === 0) return res.redirect('/admin/savings?error=no_valid_lines');
+    res.redirect('/admin/savings?success=batch_posted&count=' + posted);
+  } catch (err) {
+    console.error('Batch post error:', err);
+    res.redirect('/admin/savings?error=batch_failed');
+  }
+});
+
 router.post('/savings/post', async (req, res) => {
   try {
     const { memberId, amount, type, description } = req.body;
