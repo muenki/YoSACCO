@@ -92,10 +92,10 @@
     <div class="card-header"><h3>💰 Record Other Income</h3></div>
     <div class="card-body">
       <p class="text-sm text-muted mb-3">Record income other than member savings — e.g. donations, grants, rental income, project returns, fines.</p>
-      <form method="POST" action="/admin/expenditure/income/add">
+      <form method="POST" action="/admin/expenditure/income/add" id="incomeForm">
         <div class="form-group">
           <label class="form-label">Income Source *</label>
-          <select name="source" class="form-control" required>
+          <select name="source" class="form-control" required onchange="toggleMemberField(this.value)">
             <option value="">— Select source —</option>
             <option>Donation / Grant</option>
             <option>Rental Income</option>
@@ -103,8 +103,18 @@
             <option>Investment Returns</option>
             <option>Loan Processing Fees</option>
             <option>Member Fines / Penalties</option>
+            <option>Member Registration Fee</option>
             <option>Government Support</option>
             <option>Other</option>
+          </select>
+        </div>
+        <div class="form-group" id="memberFieldGroup" style="display:none;">
+          <label class="form-label">Member <span class="text-muted text-xs">(required for fines & registration)</span></label>
+          <select name="memberId" class="form-control" id="memberSelect">
+            <option value="">— Select member —</option>
+            <% if (typeof members !== 'undefined') { members.forEach(function(m){ %>
+            <option value="<%= m.id %>"><%= m.name %> (<%= m.memberId||'?' %>)</option>
+            <% }); } %>
           </select>
         </div>
         <div class="form-row">
@@ -121,8 +131,23 @@
           <label class="form-label">Description</label>
           <textarea name="description" class="form-control" rows="2" placeholder="Details about this income..."></textarea>
         </div>
-        <button type="submit" class="btn btn-success" style="width:100%;justify-content:center;">Record Income</button>
+        <button type="submit" class="btn btn-success" style="width:100%;justify-content:center;">Record Income &amp; Send Receipt</button>
       </form>
+      <script>
+      function toggleMemberField(val) {
+        var memberSources = ['Member Fines / Penalties', 'Member Registration Fee'];
+        var grp = document.getElementById('memberFieldGroup');
+        var sel = document.getElementById('memberSelect');
+        if (memberSources.includes(val)) {
+          grp.style.display = 'block';
+          sel.required = true;
+        } else {
+          grp.style.display = 'none';
+          sel.required = false;
+          sel.value = '';
+        }
+      }
+      </script>
     </div>
   </div>
 </div>
@@ -175,22 +200,23 @@
 <div class="card p-0 mb-6">
   <div class="table-wrap">
     <table>
-      <thead><tr><th>#</th><th>Date</th><th>Source</th><th>Description</th><th>Amount (UGX)</th></tr></thead>
+      <thead><tr><th>Receipt No.</th><th>Date</th><th>Source</th><th>Member</th><th>Description</th><th>Amount (UGX)</th></tr></thead>
       <tbody>
         <% if (!otherIncomes.length) { %>
-        <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">No other income recorded yet.</td></tr>
+        <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">No other income recorded yet.</td></tr>
         <% } %>
         <% otherIncomes.forEach(function(inc, i){ %>
         <tr>
-          <td class="text-muted text-sm"><%= i+1 %></td>
+          <td><code style="font-size:11px;background:#f0f4f8;padding:2px 6px;border-radius:4px;"><%= inc.receiptNo||'—' %></code></td>
           <td class="text-sm text-muted"><%= new Date(inc.date).toLocaleDateString('en-UG',{year:'numeric',month:'short',day:'numeric'}) %></td>
           <td><span class="badge badge-success" style="font-size:11px;"><%= inc.source %></span></td>
+          <td class="text-sm"><%= inc.memberName||'—' %></td>
           <td class="text-sm"><%= inc.description||'—' %></td>
           <td class="font-semibold text-success">+ UGX <%= inc.amount.toLocaleString() %></td>
         </tr>
         <% }); %>
         <tr style="background:var(--bg);font-weight:700;">
-          <td colspan="4" style="text-align:right;padding:10px 16px;">TOTAL OTHER INCOME</td>
+          <td colspan="5" style="text-align:right;padding:10px 16px;">TOTAL OTHER INCOME</td>
           <td style="padding:10px 16px;color:var(--success);">UGX <%= totalOtherIncome.toLocaleString() %></td>
         </tr>
       </tbody>

@@ -9,6 +9,8 @@ const OtherIncome = sequelize.define('OtherIncome', {
   description: { type: DataTypes.TEXT, allowNull: true },
   date:        { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   postedBy:    { type: DataTypes.UUID, allowNull: true },
+  memberId:    { type: DataTypes.UUID, allowNull: true },
+  receiptNo:   { type: DataTypes.STRING, allowNull: true },
 }, { tableName: 'other_incomes', timestamps: true });
 
 module.exports = OtherIncome;

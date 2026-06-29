@@ -568,7 +568,11 @@ router.get('/expenditure', async (req, res) => {
     const group = await Group.findByPk(gid);
     const { Expenditure, OtherIncome } = require('../models');
     const expenditures   = await Expenditure.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
-    const otherIncomes   = await OtherIncome.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
+    const otherIncomesRaw = await OtherIncome.findAll({ where: { groupId: gid }, order: [['date','DESC']] });
+    const otherIncomes = await Promise.all(otherIncomesRaw.map(async inc => {
+      const incMember = inc.memberId ? await User.findByPk(inc.memberId, { attributes: ['name','memberId'] }) : null;
+      return { ...inc.toJSON(), memberName: incMember ? incMember.name + ' (' + incMember.memberId + ')' : null };
+    }));
     // All confirmed savings (including dividends — they ARE member assets)
     const savings        = await Saving.findAll({
       where: {
@@ -603,7 +607,8 @@ router.get('/expenditure', async (req, res) => {
     const totalDivExp = await Saving.sum('amount', { where:{ groupId: gid, type:'dividend', status:'confirmed' } }).catch(()=>0) || 0;
     const undistOtherInc = Math.max(0, totalOtherIncome - totalDivExp);
     const correctedBalance = totalSavingsIncome + totalShareCapital + totalInterestNet + undistOtherInc - totalExpend - loanPortfolio - totalPayoutsExp;
-    res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance: correctedBalance, loanPortfolio, totalShareCapital, payouts: payoutRowsExp.map(p=>p.toJSON()), totalPayouts: totalPayoutsExp, query: req.query });
+    const expMembers = await User.findAll({ where: { groupId: gid, active: true, role: { [Op.notIn]: ['superadmin'] } }, order: [['name','ASC']] });
+    res.render('admin/expenditure', { user: req.user, group, expenditures, otherIncomes, totalSavingsIncome, totalOtherIncome, totalIncome, totalExpend, netBalance: correctedBalance, loanPortfolio, totalShareCapital, payouts: payoutRowsExp.map(p=>p.toJSON()), totalPayouts: totalPayoutsExp, members: expMembers, query: req.query });
   } catch(err) { console.error(err); res.render('error', { message: 'Error', user: req.user }); }
 });
 
@@ -612,12 +617,58 @@ router.post('/expenditure/income/add', async (req, res) => {
   try {
     const gid = req.user.groupId;
     const { OtherIncome } = require('../models');
-    const { amount, source, description, date } = req.body;
+    const { amount, source, description, date, memberId } = req.body;
     const parsedAmount = parseInt(amount);
-    await OtherIncome.create({ groupId: gid, amount: parsedAmount, source, description, date: date ? new Date(date) : new Date(), postedBy: req.user.id });
-    await AuditLog.create({ userId: req.user.id, action: 'ADD_INCOME', detail: 'Recorded income: UGX ' + parsedAmount.toLocaleString() + ' from ' + source, groupId: gid });
-    // Redirect to reports distribution tab to prompt immediate distribution
-    res.redirect('/admin/reports?tab=interest&success=income_added&prompt_distribute=1&income_amount=' + parsedAmount + '&income_source=' + encodeURIComponent(source));
+    const group = await Group.findByPk(gid);
+
+    // Generate receipt number: PREFIX-RCT-00001
+    const prefix = group.name.split(' ').filter(w => w.match(/[A-Za-z]/)).map(w => w[0]).join('').toUpperCase();
+    const lastReceipt = await OtherIncome.findOne({ where: { groupId: gid, receiptNo: { [Op.ne]: null } }, order: [['createdAt', 'DESC']] });
+    let nextNum = 1;
+    if (lastReceipt && lastReceipt.receiptNo) {
+      const parts = lastReceipt.receiptNo.split('-');
+      nextNum = (parseInt(parts[parts.length - 1]) || 0) + 1;
+    }
+    const receiptNo = `${prefix}-RCT-${String(nextNum).padStart(5, '0')}`;
+
+    // Resolve member if provided
+    const member = memberId ? await User.findOne({ where: { id: memberId, groupId: gid } }) : null;
+
+    const income = await OtherIncome.create({
+      groupId: gid, amount: parsedAmount, source, description,
+      date: date ? new Date(date) : new Date(),
+      postedBy: req.user.id,
+      memberId: member ? member.id : null,
+      receiptNo,
+    });
+
+    await AuditLog.create({ userId: req.user.id, action: 'ADD_INCOME', detail: `Recorded income ${receiptNo}: UGX ${parsedAmount.toLocaleString()} from ${source}${member ? ' — ' + member.name : ''}`, groupId: gid });
+
+    // Send receipt email to member if applicable
+    if (member) {
+      const { sendEmail, emailWrapper } = require('../utils/email');
+      const appUrl = process.env.APP_URL || 'http://localhost:3000';
+      const receiptHtml = emailWrapper('Payment Receipt', group.accentColor || '#0A2342', `
+        <p>Dear <strong>${member.name}</strong>,</p>
+        <p>A payment has been recorded on your account. Here is your receipt:</p>
+        <div class="info-box">
+          <div class="info-row"><span class="info-key">Receipt No.</span><span class="info-val">${receiptNo}</span></div>
+          <div class="info-row"><span class="info-key">Payment Type</span><span class="info-val">${source}</span></div>
+          <div class="info-row"><span class="info-key">Amount</span><span class="info-val">UGX ${parsedAmount.toLocaleString()}</span></div>
+          <div class="info-row"><span class="info-key">Description</span><span class="info-val">${description || source}</span></div>
+          <div class="info-row"><span class="info-key">Date</span><span class="info-val">${new Date(income.date).toLocaleDateString()}</span></div>
+          <div class="info-row"><span class="info-key">SACCO</span><span class="info-val">${group.name}</span></div>
+        </div>
+        <a class="btn" href="${appUrl}/member/savings">View My Account</a>
+      `);
+      sendEmail({
+        to: member.email,
+        subject: `Payment Receipt ${receiptNo} — ${source} — UGX ${parsedAmount.toLocaleString()} — ${group.name}`,
+        html: receiptHtml,
+      }).catch(() => {});
+    }
+
+    res.redirect('/admin/expenditure?success=income_added&receipt=' + receiptNo);
   } catch(err) { console.error(err); res.redirect('/admin/expenditure?error=income_failed'); }
 });
 
