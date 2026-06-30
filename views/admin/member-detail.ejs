@@ -95,12 +95,16 @@
 </div>
 
 
+
 <% if (typeof memberIncomes !== 'undefined' && memberIncomes.length > 0) { %>
-<div class="section-head" style="margin-top:24px;"><h2>Other Payments (Fines, Registration & Other)</h2></div>
-<div class="card p-0">
+<div class="section-head no-print" style="margin-top:24px;">
+  <h2>Other Payments (Fines, Registration & Other)</h2>
+  <button onclick="printPayments()" class="btn btn-sm btn-outline no-print">🖨 Print</button>
+</div>
+<div id="paymentsSection" class="card p-0">
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Receipt No.</th><th>Date</th><th>Source</th><th>Description</th><th>Amount (UGX)</th></tr></thead>
+      <thead><tr><th>Receipt No.</th><th>Date</th><th>Source</th><th>Description</th><th>Amount (UGX)</th><th class="no-print">Action</th></tr></thead>
       <tbody>
         <% memberIncomes.forEach(function(inc){ %>
         <tr>
@@ -109,16 +113,47 @@
           <td><span class="badge badge-info" style="font-size:11px;"><%= inc.source %></span></td>
           <td class="text-sm"><%= inc.description||'—' %></td>
           <td class="font-semibold" style="color:var(--success);">UGX <%= inc.amount.toLocaleString() %></td>
+          <td class="no-print">
+            <form method="POST" action="/admin/expenditure/income/<%= inc.id %>/reverse" onsubmit="return confirm('Reverse receipt <%= inc.receiptNo %> of UGX <%= inc.amount.toLocaleString() %>? This cannot be undone.')">
+              <button type="submit" style="font-size:11px;padding:4px 8px;background:#fff5f5;color:#c53030;border:1px solid #fc8181;border-radius:4px;cursor:pointer;">Reverse</button>
+            </form>
+          </td>
         </tr>
         <% }); %>
         <tr style="background:var(--bg-secondary);font-weight:700;">
           <td colspan="4" style="text-align:right;padding:10px 16px;">TOTAL</td>
           <td style="padding:10px 16px;color:var(--success);">UGX <%= memberIncomes.reduce(function(t,i){return t+i.amount;},0).toLocaleString() %></td>
+          <td class="no-print"></td>
         </tr>
       </tbody>
     </table>
   </div>
 </div>
+<script>
+function printPayments() {
+  var name = '<%= member.name %>';
+  var id = '<%= member.memberId %>';
+  var rows = document.querySelectorAll('#paymentsSection tbody tr');
+  var html = '<html><head><title>Other Payments — ' + name + '</title>';
+  html += '<style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{padding:8px 12px;border:1px solid #ddd;font-size:13px;}th{background:#f5f5f5;}.no-print{display:none!important;}</style></head><body>';
+  html += '<h2>Other Payments Statement</h2>';
+  html += '<p><strong>Member:</strong> ' + name + ' &nbsp; <strong>ID:</strong> ' + id + '</p>';
+  html += '<table><thead><tr><th>Receipt No.</th><th>Date</th><th>Source</th><th>Description</th><th>Amount (UGX)</th></tr></thead><tbody>';
+  rows.forEach(function(row) {
+    var cells = row.querySelectorAll('td:not(.no-print)');
+    if (cells.length >= 5) {
+      html += '<tr>';
+      cells.forEach(function(td) { html += '<td>' + td.innerText + '</td>'; });
+      html += '</tr>';
+    }
+  });
+  html += '</tbody></table></body></html>';
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  w.print();
+}
+</script>
 <% } %>
 
 <%- include('../partials/foot') %>

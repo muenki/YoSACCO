@@ -674,6 +674,20 @@ router.post('/expenditure/income/add', async (req, res) => {
   } catch(err) { console.error(err); res.redirect('/admin/expenditure?error=income_failed'); }
 });
 
+
+// ── Reverse an OtherIncome entry ─────────────────────────────────
+router.post('/expenditure/income/:id/reverse', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const { OtherIncome } = require('../models');
+    const inc = await OtherIncome.findOne({ where: { id: req.params.id, groupId: gid } });
+    if (!inc) return res.redirect('/admin/expenditure?error=not_found');
+    await AuditLog.create({ userId: req.user.id, action: 'REVERSE_INCOME', detail: `Reversed income ${inc.receiptNo||''}: UGX ${inc.amount.toLocaleString()} from ${inc.source}`, groupId: gid });
+    await inc.destroy();
+    const ref = req.headers.referer || '/admin/expenditure';
+    res.redirect(ref.includes('members') ? ref + '?success=reversed' : '/admin/expenditure?success=income_reversed');
+  } catch(err) { console.error(err); res.redirect('/admin/expenditure?error=reverse_failed'); }
+});
 router.post('/expenditure/add', async (req, res) => {
   try {
     const gid = req.user.groupId;
