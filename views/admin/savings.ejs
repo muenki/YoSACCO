@@ -180,14 +180,10 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Type</label>
-                <select name="type" class="form-control">
+                <select name="type" class="form-control" onchange="checkSubscription(this)">
                   <option value="contribution">Monthly Contribution</option>
                   <option value="share_capital">Share Capital</option>
-                  <option value="loan_repayment">Loan Repayment</option>
-                  <option value="loan_fine">Loan Fine</option>
-                  <option value="interest">Interest Credit</option>
-                  <option value="dividend">Dividend</option>
-                  <option value="other">Other</option>
+                  <option value="subscription">Subscription Fee</option>
                 </select>
               </div>
               <div class="form-group">
@@ -364,6 +360,17 @@ function printMemberLedger(idx) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+  // Switch form action for subscription fee (goes to other incomes)
+  window.checkSubscription = function(sel) {
+    var form = document.getElementById('batchForm');
+    if (sel.value === 'subscription') {
+      form.action = '/admin/savings/post-batch-subscription';
+    } else {
+      form.action = '/admin/savings/post-batch';
+    }
+  };
+
   var addBtn = document.getElementById('addLineBtn');
   if (!addBtn) return;
   addBtn.addEventListener('click', function() {

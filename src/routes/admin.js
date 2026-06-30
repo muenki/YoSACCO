@@ -199,6 +199,92 @@ router.get('/savings', async (req, res) => {
   }
 });
 
+
+// ── Subscription Fee → posts to OtherIncome, sends receipt ───────
+router.post('/savings/post-batch-subscription', async (req, res) => {
+  try {
+    const gid = req.user.groupId;
+    const { memberId } = req.body;
+    const member = await User.findOne({ where: { id: memberId, groupId: gid } });
+    const group  = await Group.findByPk(gid);
+    if (!member) return res.redirect('/admin/savings?error=member_not_found');
+
+    let amounts = req.body.amount || [];
+    let descriptions = req.body.description || [];
+    if (!Array.isArray(amounts)) amounts = [amounts];
+    if (!Array.isArray(descriptions)) descriptions = [descriptions];
+
+    const { OtherIncome } = require('../models');
+    const { sendEmail } = require('../utils/email');
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const accent = group.accentColor || '#0A2342';
+    const prefix = group.name.split(' ').filter(w => w.match(/[A-Za-z]/)).map(w => w[0]).join('').toUpperCase();
+
+    let posted = 0;
+    for (let i = 0; i < amounts.length; i++) {
+      const amt = parseInt(amounts[i]);
+      const desc = descriptions[i] || 'Subscription Fee';
+      if (!amt || amt <= 0) continue;
+
+      // Generate receipt number
+      const lastReceipt = await OtherIncome.findOne({ where: { groupId: gid, receiptNo: { [Op.ne]: null } }, order: [['createdAt','DESC']] });
+      let nextNum = 1;
+      if (lastReceipt && lastReceipt.receiptNo) {
+        const parts = lastReceipt.receiptNo.split('-');
+        nextNum = (parseInt(parts[parts.length-1]) || 0) + 1;
+      }
+      const receiptNo = `${prefix}-RCT-${String(nextNum).padStart(5,'0')}`;
+
+      const income = await OtherIncome.create({
+        groupId: gid, amount: amt, source: 'Subscription Fee',
+        description: desc, date: new Date(),
+        postedBy: req.user.id, memberId: member.id, receiptNo,
+      });
+
+      await AuditLog.create({ userId: req.user.id, action: 'ADD_INCOME', detail: `Subscription fee ${receiptNo}: UGX ${amt.toLocaleString()} from ${member.name}`, groupId: gid });
+
+      // Send receipt email
+      const receiptHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+        body{font-family:Arial,sans-serif;background:#f5f7fa;margin:0;padding:20px;}
+        .container{max-width:580px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0e0e0;}
+        .header{background:${accent};padding:28px 32px;color:#fff;}.header h1{margin:0;font-size:22px;}
+        .body{padding:28px 32px;}.body p{font-size:15px;line-height:1.7;color:#333;margin:0 0 14px;}
+        .info-box{background:#f6f8fa;border-radius:8px;padding:16px 20px;margin:16px 0;}
+        .info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e8e8e8;font-size:14px;}
+        .info-row:last-child{border-bottom:none;}.info-key{color:#666;}.info-val{font-weight:600;color:#111;}
+        .btn{display:inline-block;background:${accent};color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;margin-top:12px;}
+        .footer{background:#f0f0f0;padding:16px 32px;font-size:12px;color:#999;text-align:center;}
+      </style></head><body><div class="container">
+        <div class="header"><h1>${group.name}</h1><p>Online SACCO Management Platform</p></div>
+        <div class="body">
+          <p>Dear <strong>${member.name}</strong>,</p>
+          <p>Your subscription fee payment has been recorded. Here is your receipt:</p>
+          <div class="info-box">
+            <div class="info-row"><span class="info-key">Receipt No.</span><span class="info-val">${receiptNo}</span></div>
+            <div class="info-row"><span class="info-key">Payment Type</span><span class="info-val">Subscription Fee</span></div>
+            <div class="info-row"><span class="info-key">Amount</span><span class="info-val">UGX ${amt.toLocaleString()}</span></div>
+            <div class="info-row"><span class="info-key">Description</span><span class="info-val">${desc}</span></div>
+            <div class="info-row"><span class="info-key">Date</span><span class="info-val">${new Date(income.date).toLocaleDateString()}</span></div>
+            <div class="info-row"><span class="info-key">SACCO</span><span class="info-val">${group.name}</span></div>
+          </div>
+          <a class="btn" href="${appUrl}/member/savings">View My Account</a>
+        </div>
+        <div class="footer">${group.name} · This is an automated message, please do not reply.</div>
+      </div></body></html>`;
+
+      sendEmail({
+        to: member.email,
+        subject: `Subscription Fee Receipt ${receiptNo} — UGX ${amt.toLocaleString()} — ${group.name}`,
+        html: receiptHtml,
+      }).catch(() => {});
+      posted++;
+    }
+
+    if (posted === 0) return res.redirect('/admin/savings?error=no_valid_lines');
+    res.redirect('/admin/savings?success=batch_posted&count=' + posted);
+  } catch(err) { console.error('Subscription post error:', err); res.redirect('/admin/savings?error=batch_failed'); }
+});
+
 // ── Batch Transaction Posting (multiple line items for one member) ──
 router.post('/savings/post-batch', async (req, res) => {
   try {
