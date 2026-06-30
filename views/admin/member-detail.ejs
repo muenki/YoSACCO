@@ -94,4 +94,31 @@
   </div>
 </div>
 
+
+<% if (typeof memberIncomes !== 'undefined' && memberIncomes.length > 0) { %>
+<div class="section-head" style="margin-top:24px;"><h2>Other Payments (Fines, Registration & Other)</h2></div>
+<div class="card p-0">
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Receipt No.</th><th>Date</th><th>Source</th><th>Description</th><th>Amount (UGX)</th></tr></thead>
+      <tbody>
+        <% memberIncomes.forEach(function(inc){ %>
+        <tr>
+          <td><code style="font-size:11px;background:#f0f4f8;padding:2px 6px;border-radius:4px;"><%= inc.receiptNo||'—' %></code></td>
+          <td class="text-sm text-muted"><%= new Date(inc.date).toLocaleDateString() %></td>
+          <td><span class="badge badge-info" style="font-size:11px;"><%= inc.source %></span></td>
+          <td class="text-sm"><%= inc.description||'—' %></td>
+          <td class="font-semibold" style="color:var(--success);">UGX <%= inc.amount.toLocaleString() %></td>
+        </tr>
+        <% }); %>
+        <tr style="background:var(--bg-secondary);font-weight:700;">
+          <td colspan="4" style="text-align:right;padding:10px 16px;">TOTAL</td>
+          <td style="padding:10px 16px;color:var(--success);">UGX <%= memberIncomes.reduce(function(t,i){return t+i.amount;},0).toLocaleString() %></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
 <%- include('../partials/foot') %>

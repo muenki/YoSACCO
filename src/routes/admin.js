@@ -140,9 +140,11 @@ router.get('/members/:id', async (req, res) => {
     const member = await User.findOne({ where: { id: req.params.id, groupId: gid } });
     if (!member) return res.redirect('/admin/members?error=not_found');
     const savings = await Saving.findAll({ where: { memberId: member.id }, order: [['date','DESC']] });
-    const balance = savings.reduce((s, r) => s + r.amount, 0);
+    const balance = savings.filter(s => s.type !== 'share_capital' && s.status !== 'pending').reduce((s, r) => s + r.amount, 0);
     const loans   = await Loan.findAll({ where: { memberId: member.id }, order: [['appliedAt','DESC']] });
-    res.render('admin/member-detail', { user: req.user, group, member: member.toJSON(), savings, balance, loans });
+    const { OtherIncome } = require('../models');
+    const memberIncomes = await OtherIncome.findAll({ where: { memberId: member.id, groupId: gid }, order: [['date','DESC']] });
+    res.render('admin/member-detail', { user: req.user, group, member: member.toJSON(), savings, balance, loans, memberIncomes });
   } catch (err) {
     console.error('Member detail error:', err);
     res.redirect('/admin/members');
