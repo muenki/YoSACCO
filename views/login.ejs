@@ -353,6 +353,9 @@
       <% if (success === 'logged_out') { %>
       <div class="alert-s alert-success-s">You have been signed out successfully.</div>
       <% } %>
+      <% if (success === 'password_reset') { %>
+      <div class="alert-s alert-success-s">Your password has been reset successfully. Please sign in.</div>
+      <% } %>
 
       <form method="POST" action="/login">
         <label class="form-label-s">Email address</label>
@@ -361,6 +364,9 @@
         <input type="password" name="password" class="form-input" placeholder="••••••••" required>
         <button type="submit" class="btn-login">Sign in to YoSACCO →</button>
       </form>
+      <div style="text-align:center;margin-top:12px;">
+        <a href="/forgot-password" style="font-size:13px;color:#D35050;font-weight:600;">Forgot your password?</a>
+      </div>
 
       <div style="margin-top:20px;padding-top:16px;border-top:1px solid #f0f0f0;text-align:center;">
         <p style="font-size:12px;color:#aaa;">Need access? Contact your SACCO admin or</p>
