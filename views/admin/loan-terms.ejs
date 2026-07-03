@@ -71,11 +71,11 @@
         <input type="text" name="airtelMoneyNumber" class="form-control" placeholder="e.g. 0701234567" value="<%= settings.airtelMoneyNumber || '' %>">
       <div class="form-group">
         <label class="form-label">Bank Account Name</label>
-        <input type="text" name="bankAccountName" class="form-control" placeholder="e.g. Kampala Teachers SACCO" value="<%= settings.bankAccountName || \'\' %>">
+        <input type="text" name="bankAccountName" class="form-control" placeholder="e.g. Kampala Teachers SACCO" value="<%= settings.bankAccountName || '' %>">
       </div>
       <div class="form-group">
         <label class="form-label">Bank Branch</label>
-        <input type="text" name="bankBranch" class="form-control" placeholder="e.g. Kampala Road Branch" value="<%= settings.bankBranch || \'\' %>">
+        <input type="text" name="bankBranch" class="form-control" placeholder="e.g. Kampala Road Branch" value="<%= settings.bankBranch || '' %>">
       </div>
     </div>
   </div>
@@ -89,19 +89,19 @@
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">PesaPal Consumer Key</label>
-        <input type="text" name="pesapalConsumerKey" class="form-control" placeholder="Your PesaPal consumer key" value="<%= settings.pesapalConsumerKey || \'\' %>">
+        <input type="text" name="pesapalConsumerKey" class="form-control" placeholder="Your PesaPal consumer key" value="<%= settings.pesapalConsumerKey || '' %>">
       </div>
       <div class="form-group">
         <label class="form-label">PesaPal Consumer Secret</label>
-        <input type="password" name="pesapalConsumerSecret" class="form-control" placeholder="Your PesaPal consumer secret" value="<%= settings.pesapalConsumerSecret || \'\' %>">
+        <input type="password" name="pesapalConsumerSecret" class="form-control" placeholder="Your PesaPal consumer secret" value="<%= settings.pesapalConsumerSecret || '' %>">
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">PesaPal Account Reference</label>
-      <input type="text" name="pesapalAccountRef" class="form-control" placeholder="e.g. KTS-SACCO" value="<%= settings.pesapalAccountRef || \'\' %>">
+      <input type="text" name="pesapalAccountRef" class="form-control" placeholder="e.g. KTS-SACCO" value="<%= settings.pesapalAccountRef || '' %>">
     </div>
     <div class="alert alert-info" style="font-size:13px;margin-top:8px;">
-      <strong>Status:</strong> <%= (settings.pesapalConsumerKey && settings.pesapalConsumerSecret) ? \'✅ Configured — members can make online payments\' : \'⚠️ Not configured yet\' %>
+      <strong>Status:</strong> <%= (settings.pesapalConsumerKey && settings.pesapalConsumerSecret) ? '✅ Configured — members can make online payments' : '⚠️ Not configured yet' %>
     </div>
   </div>
 </div>

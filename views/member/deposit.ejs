@@ -129,12 +129,7 @@
           <div class="info-item"><span class="info-key">Account No.</span><span class="info-val font-semibold"><%= settings.accountNumber %></span></div>
           <% } %>
           <div class="info-item"><span class="info-key">Account Name</span><span class="info-val"><%= group.name %></span></div>
-          <% if(settings && settings.mtnMomoNumber) { %>
-          <div class="info-item"><span class="info-key">🟡 MTN MoMo</span><span class="info-val"><%= settings.mtnMomoNumber %></span></div>
-          <% } %>
-          <% if(settings && settings.airtelMoneyNumber) { %>
-          <div class="info-item"><span class="info-key">🔴 Airtel Money</span><span class="info-val"><%= settings.airtelMoneyNumber %></span></div>
-          <% } %>
+
         </div>
         <p class="text-xs text-muted mt-3">Always use your <strong>Member ID (<%= user.memberId %>)</strong> as the payment reference.</p>
       </div>
