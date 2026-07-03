@@ -141,9 +141,54 @@ router.post('/deposit', async (req, res) => {
   try {
     const m     = req.user;
     const group = await Group.findByPk(m.groupId);
-    const { amount, paymentMethod, paymentType, projectId } = req.body;
+    const settings = await GroupSettings.findOne({ where: { groupId: m.groupId } });
+    const { amount, paymentMethod, paymentType, projectId, phone } = req.body;
     const parsedAmount = parseInt(amount);
     const ref  = `TXN${Date.now()}`;
+
+    // ── PESAPAL ONLINE PAYMENT (MTN MoMo, Airtel, Visa) ──────────
+    const onlineMethods = ['MTN MoMo', 'Airtel Money', 'Visa / Mastercard'];
+    if (onlineMethods.includes(paymentMethod) && settings?.pesapalConsumerKey && settings?.pesapalConsumerSecret) {
+      try {
+        // Temporarily use group-specific PesaPal credentials
+        const originalKey    = process.env.PESAPAL_CONSUMER_KEY;
+        const originalSecret = process.env.PESAPAL_CONSUMER_SECRET;
+        process.env.PESAPAL_CONSUMER_KEY    = settings.pesapalConsumerKey;
+        process.env.PESAPAL_CONSUMER_SECRET = settings.pesapalConsumerSecret;
+
+        const { getToken, registerIPN, submitOrder } = require('../utils/pesapal');
+        const token = await getToken();
+        let ipnId = process.env.PESAPAL_IPN_ID;
+        if (!ipnId) { ipnId = await registerIPN(token); }
+
+        const reference = `${group.id.slice(0,8)}-${m.id.slice(0,8)}-${Date.now()}`;
+        const nameParts = m.name.split(' ');
+        const typeLabels = { monthly_contribution: 'Monthly Contribution', share_capital: 'Share Capital', loan_repayment: 'Loan Repayment', annual_subscription: 'Annual Subscription', extra_savings: 'Extra Savings', project_contribution: 'Project Contribution' };
+        const callbackUrl = `${process.env.APP_URL}/member/deposit/callback?ref=${reference}&groupId=${group.id}&memberId=${m.id}&type=${paymentType}&projectId=${projectId||''}`;
+
+        const order = await submitOrder({
+          token, ipnId,
+          amount: parsedAmount,
+          currency: 'UGX',
+          description: `${typeLabels[paymentType]||'Payment'} — ${group.name}`,
+          reference,
+          email: m.email,
+          phone: phone || m.phone,
+          firstName: nameParts[0],
+          lastName: nameParts.slice(1).join(' ') || nameParts[0],
+          callbackUrl,
+        });
+
+        // Restore original env
+        process.env.PESAPAL_CONSUMER_KEY    = originalKey;
+        process.env.PESAPAL_CONSUMER_SECRET = originalSecret;
+
+        if (order.redirect_url) return res.redirect(order.redirect_url);
+      } catch(pesapalErr) {
+        console.error('PesaPal error:', pesapalErr.response?.data || pesapalErr.message);
+        // Fall through to manual pending deposit if PesaPal fails
+      }
+    }
 
     // ── PROJECT CONTRIBUTION — goes to project, NOT savings ───────
     if (paymentType === 'project_contribution') {
@@ -191,6 +236,90 @@ router.post('/deposit', async (req, res) => {
     emails.savingsReceiptToMember(m.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(()=>{});
     return res.redirect(`/member/savings?success=deposit_pending&ref=${ref.slice(-6)}&method=${encodeURIComponent(paymentMethod)}&amount=${parsedAmount}`);
   } catch (err) { console.error('Deposit error:', err); res.redirect('/member/deposit?error=deposit_failed'); }
+});
+
+
+// ── PesaPal Payment Callback ──────────────────────────────────────
+router.get('/deposit/callback', authenticate, async (req, res) => {
+  try {
+    const { orderTrackingId, groupId, memberId, type, projectId } = req.query;
+    const { getToken, getTransactionStatus } = require('../utils/pesapal');
+    const settings = await GroupSettings.findOne({ where: { groupId } });
+
+    // Use group-specific credentials
+    if (settings?.pesapalConsumerKey) {
+      process.env.PESAPAL_CONSUMER_KEY    = settings.pesapalConsumerKey;
+      process.env.PESAPAL_CONSUMER_SECRET = settings.pesapalConsumerSecret;
+    }
+
+    const token  = await getToken();
+    const status = await getTransactionStatus(token, orderTrackingId);
+
+    if (status.payment_status_description === 'Completed') {
+      const member = await User.findByPk(memberId);
+      const group  = await Group.findByPk(groupId);
+      const amount = Math.round(parseFloat(status.amount));
+
+      // ── Project contribution ──
+      if (type === 'project_contribution' && projectId) {
+        const { Project, ProjectContribution } = require('../models');
+        const project = await Project.findByPk(projectId);
+        if (project) {
+          await ProjectContribution.create({ projectId, memberId, groupId, amount, date: new Date(), postedBy: memberId, notes: `Online payment via ${status.payment_method}` });
+          project.raisedAmount = (project.raisedAmount||0) + amount;
+          await project.save();
+        }
+        await AuditLog.create({ userId: memberId, action: 'ONLINE_PAYMENT', detail: `Online project contribution UGX ${amount.toLocaleString()}`, groupId });
+        return res.redirect('/member/projects?success=payment_received');
+      }
+
+      // ── Loan repayment ──
+      if (type === 'loan_repayment') {
+        const activeLoan = await Loan.findOne({ where: { memberId, status: 'active' }, order: [['disbursedAt','DESC']] });
+        if (activeLoan) {
+          const repayment = await Repayment.create({ loanId: activeLoan.id, memberId, groupId, amount, date: new Date(), postedBy: memberId });
+          activeLoan.amountRepaid = (activeLoan.amountRepaid||0) + amount;
+          const remaining = Math.max(0, activeLoan.totalRepayable - activeLoan.amountRepaid);
+          if (remaining === 0) activeLoan.status = 'repaid';
+          await activeLoan.save();
+          emails.loanRepaymentReceipt(member.toJSON(), repayment.toJSON(), remaining, group.toJSON()).catch(()=>{});
+        }
+        await AuditLog.create({ userId: memberId, action: 'ONLINE_PAYMENT', detail: `Online loan repayment UGX ${amount.toLocaleString()}`, groupId });
+        return res.redirect('/member/loans?success=payment_received');
+      }
+
+      // ── Savings / share capital ──
+      const typeMap = {
+        monthly_contribution: { type: 'contribution',  desc: `Monthly contribution via ${status.payment_method||'online'}` },
+        annual_subscription:  { type: 'contribution',  desc: `Annual subscription via ${status.payment_method||'online'}` },
+        share_capital:        { type: 'share_capital', desc: `Share capital via ${status.payment_method||'online'}` },
+        extra_savings:        { type: 'online_deposit',desc: `Extra savings via ${status.payment_method||'online'}` },
+      };
+      const mapped = typeMap[type] || { type: 'online_deposit', desc: `Online payment via ${status.payment_method||'online'}` };
+
+      const tx = await Saving.create({
+        memberId, groupId, amount,
+        type: mapped.type, description: mapped.desc,
+        date: new Date(), postedBy: memberId, status: 'confirmed',
+      });
+
+      if (type === 'share_capital') {
+        member.shareCapitalPaid = (member.shareCapitalPaid||0) + amount;
+        await member.save();
+      }
+
+      await AuditLog.create({ userId: memberId, action: 'ONLINE_PAYMENT', detail: `Online payment UGX ${amount.toLocaleString()} via ${status.payment_method||'PesaPal'}`, groupId });
+      const balance = await getBalance(memberId);
+      emails.savingsReceiptToMember(member.toJSON(), tx.toJSON(), balance, group.toJSON()).catch(()=>{});
+      return res.redirect('/member/savings?success=payment_received');
+    }
+
+    // Payment not completed
+    res.redirect('/member/deposit?error=payment_incomplete');
+  } catch(err) {
+    console.error('Deposit callback error:', err);
+    res.redirect('/member/deposit?error=callback_failed');
+  }
 });
 
 router.get('/profile', async (req, res) => {
