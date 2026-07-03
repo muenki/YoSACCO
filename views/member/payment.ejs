@@ -1,0 +1,55 @@
+<%- include('../partials/head', { title: 'Make Payment', activePage: 'member-pay', group }) %>
+
+<% const q = locals.query || {}; %>
+<% if (q.error === 'invalid_amount') { %><div class="alert alert-danger">Please enter a valid amount (minimum UGX 1,000).</div><% } %>
+<% if (q.error === 'payment_failed') { %><div class="alert alert-danger">Payment could not be processed. Please try again.</div><% } %>
+<% if (q.error === 'payment_incomplete') { %><div class="alert alert-warning">Payment was not completed. Please try again.</div><% } %>
+
+<div style="max-width:500px;margin:0 auto;">
+  <h2 style="margin-bottom:4px;">Make a Payment</h2>
+  <p class="text-muted text-sm mb-4">Pay via MTN Mobile Money or Airtel Money. Funds go directly to <%= group.name %>.</p>
+
+  <div class="card">
+    <div class="card-body">
+      <form method="POST" action="/member/pay/initiate">
+        <div class="form-group mb-3">
+          <label class="form-label">Payment Type *</label>
+          <select name="paymentType" class="form-control" required>
+            <option value="contribution">Monthly Contribution</option>
+            <option value="share_capital">Share Capital</option>
+            <option value="subscription">Subscription Fee</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Amount (UGX) *</label>
+          <input type="number" name="amount" class="form-control" placeholder="e.g. 50000" min="1000" required>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Mobile Money Number</label>
+          <input type="tel" name="phone" class="form-control" value="<%= user.phone||'' %>" placeholder="+256 7XX XXX XXX">
+          <p class="text-xs text-muted mt-1">Leave blank to use your registered number (<%= user.phone||'not set' %>)</p>
+        </div>
+
+        <div style="background:#f6f8fa;border-radius:8px;padding:14px;margin-bottom:16px;">
+          <p class="text-sm font-semibold mb-1">Payment will be sent to:</p>
+          <p class="text-sm text-muted mb-0"><strong><%= group.name %></strong></p>
+          <% if (settings.bankName) { %>
+          <p class="text-sm text-muted mb-0"><%= settings.bankName %> — <%= settings.accountNumber||'—' %></p>
+          <% } %>
+          <% if (settings.mtnMomoNumber) { %>
+          <p class="text-sm text-muted mb-0">MTN: <%= settings.mtnMomoNumber %></p>
+          <% } %>
+          <% if (settings.airtelMoneyNumber) { %>
+          <p class="text-sm text-muted mb-0">Airtel: <%= settings.airtelMoneyNumber %></p>
+          <% } %>
+        </div>
+
+        <p class="text-xs text-muted mb-3">You will be redirected to PesaPal to complete the payment securely. A receipt will be emailed to you upon success.</p>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Proceed to Payment →</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/foot') %>

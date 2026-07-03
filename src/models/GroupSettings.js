@@ -23,6 +23,13 @@ const GroupSettings = sequelize.define('GroupSettings', {
     type: DataTypes.ENUM('share_capital_only','share_capital_and_savings','savings_only'),
     defaultValue: 'share_capital_and_savings',
   },
+  // Payment Gateway (PesaPal)
+  pesapalConsumerKey:    { type: DataTypes.STRING, allowNull: true },
+  pesapalConsumerSecret: { type: DataTypes.STRING, allowNull: true },
+  pesapalAccountRef:     { type: DataTypes.STRING, allowNull: true }, // SACCO's unique ref on PesaPal
+  bankAccountName:       { type: DataTypes.STRING, allowNull: true },
+  bankBranch:            { type: DataTypes.STRING, allowNull: true },
+  swiftCode:             { type: DataTypes.STRING, allowNull: true },
   // Subscription
   subscriptionType:      { type: DataTypes.ENUM('monthly','annual'), defaultValue: 'monthly' },
   subscriptionAmount:    { type: DataTypes.INTEGER, defaultValue: 50000 },

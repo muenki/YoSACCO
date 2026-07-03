@@ -603,7 +603,7 @@ router.post('/loan-terms', async (req, res) => {
     const {
       newLoanInterestRate, topupInterestRate, emergencyInterestRate,
       newLoanMaxMultiplier, emergencyMaxMultiplier, loanProcessingFee,
-      loanTermsText, mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName
+      loanTermsText, mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName, bankAccountName, bankBranch, pesapalConsumerKey, pesapalConsumerSecret, pesapalAccountRef
     } = req.body;
 
     const newRate  = parseFloat(newLoanInterestRate)  || 1.5;
@@ -641,7 +641,8 @@ router.post('/loan-terms', async (req, res) => {
       emergencyMaxMultiplier: emerMult,
       loanProcessingFee: procFee,
       loanTermsText: finalTerms,
-      mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName
+      mtnMomoNumber, airtelMoneyNumber, accountNumber, bankName,
+      bankAccountName, bankBranch, pesapalConsumerKey, pesapalConsumerSecret, pesapalAccountRef
     });
 
     await AuditLog.create({ userId: req.user.id, action: 'UPDATE_LOAN_TERMS', detail: 'Updated loan terms and payment settings', groupId: gid });

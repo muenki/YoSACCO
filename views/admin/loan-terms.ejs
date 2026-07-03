@@ -69,10 +69,43 @@
       <div class="form-group">
         <label class="form-label">Airtel Money Number</label>
         <input type="text" name="airtelMoneyNumber" class="form-control" placeholder="e.g. 0701234567" value="<%= settings.airtelMoneyNumber || '' %>">
+      <div class="form-group">
+        <label class="form-label">Bank Account Name</label>
+        <input type="text" name="bankAccountName" class="form-control" placeholder="e.g. Kampala Teachers SACCO" value="<%= settings.bankAccountName || \'\' %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Bank Branch</label>
+        <input type="text" name="bankBranch" class="form-control" placeholder="e.g. Kampala Road Branch" value="<%= settings.bankBranch || \'\' %>">
       </div>
     </div>
   </div>
 </div>
+
+<!-- PesaPal Payment Gateway -->
+<div class="card mb-6">
+  <div class="card-header"><h3>💳 PesaPal Payment Gateway</h3></div>
+  <div class="card-body">
+    <p class="text-sm text-muted mb-4">Configure PesaPal to enable members to pay via MTN/Airtel Mobile Money online. Get credentials at <a href="https://developer.pesapal.com" target="_blank">developer.pesapal.com</a>.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">PesaPal Consumer Key</label>
+        <input type="text" name="pesapalConsumerKey" class="form-control" placeholder="Your PesaPal consumer key" value="<%= settings.pesapalConsumerKey || \'\' %>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">PesaPal Consumer Secret</label>
+        <input type="password" name="pesapalConsumerSecret" class="form-control" placeholder="Your PesaPal consumer secret" value="<%= settings.pesapalConsumerSecret || \'\' %>">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">PesaPal Account Reference</label>
+      <input type="text" name="pesapalAccountRef" class="form-control" placeholder="e.g. KTS-SACCO" value="<%= settings.pesapalAccountRef || \'\' %>">
+    </div>
+    <div class="alert alert-info" style="font-size:13px;margin-top:8px;">
+      <strong>Status:</strong> <%= (settings.pesapalConsumerKey && settings.pesapalConsumerSecret) ? \'✅ Configured — members can make online payments\' : \'⚠️ Not configured yet\' %>
+    </div>
+  </div>
+</div>
+
 
 <!-- Loan Terms & Conditions -->
 <div class="card mb-6">
