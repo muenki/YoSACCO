@@ -1,10 +1,78 @@
 <%- include('../partials/head', { title: 'Loan Management', activePage: 'admin-loans', group }) %>
 
 <% const q = locals.query || {}; %>
+<% if (q.success === 'loan_posted')   { %><div class="alert alert-success">Loan posted successfully. Member has been notified.</div><% } %>
+<% if (q.error === 'post_failed')     { %><div class="alert alert-danger">Failed to post loan. Please try again.</div><% } %>
 <% if (q.success === 'loan_approved')   { %><div class="alert alert-success">Loan approved and email sent to member.</div><% } %>
 <% if (q.success === 'loan_disbursed')  { %><div class="alert alert-success">Loan disbursed successfully. Email sent to member.</div><% } %>
 <% if (q.success === 'loan_declined')   { %><div class="alert alert-danger" style="background:var(--warning-bg);color:var(--warning);border-color:#f6e05e;">Loan declined. Member has been notified.</div><% } %>
 <% if (q.success === 'repayment_recorded') { %><div class="alert alert-success">Repayment recorded. Receipt sent to member.</div><% } %>
+
+<div class="grid-2 gap-4 mb-6 no-print">
+  <div class="card">
+    <div class="card-header"><h3>Post Loan Directly</h3><span class="text-muted text-sm">For members who bypassed the normal application process</span></div>
+    <div class="card-body">
+      <form method="POST" action="/admin/loans/post-direct">
+        <div class="form-group mb-3">
+          <label class="form-label">Select Member *</label>
+          <select name="memberId" class="form-control" required>
+            <option value="">— Choose member —</option>
+            <% members.forEach(m => { %>
+            <option value="<%= m.id %>"><%= m.name %> (<%= m.memberId || 'No ID' %>)</option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Loan Type *</label>
+            <select name="loanType" class="form-control" required>
+              <option value="new_loan">New Loan (1.5%/mo)</option>
+              <option value="emergency">Emergency (2%/mo)</option>
+              <option value="top_up">Top Up (1.5%/mo)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (UGX) *</label>
+            <input type="number" name="amount" class="form-control" required min="10000" oninput="calcInstallment()">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Repayment Period (months) *</label>
+            <input type="number" name="repaymentMonths" id="repayMonths" class="form-control" required min="1" max="60" oninput="calcInstallment()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Purpose *</label>
+            <input type="text" name="purpose" class="form-control" required placeholder="e.g. School fees">
+          </div>
+        </div>
+        <div id="loanCalc" style="display:none;background:var(--success-bg);border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+          <div class="flex-between text-sm"><span class="text-muted">Monthly Installment</span><strong id="calcInstallment" style="color:var(--success);">—</strong></div>
+          <div class="flex-between text-sm mt-1"><span class="text-muted">Total Repayable</span><strong id="calcTotal">—</strong></div>
+        </div>
+        <p class="text-xs text-muted mb-3">Loan will be posted as <strong>Active</strong> immediately. Member will receive an email notification.</p>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Post Loan & Notify Member</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function calcInstallment() {
+  const amt = parseFloat(document.querySelector('[name="amount"]')?.value) || 0;
+  const months = parseInt(document.getElementById('repayMonths')?.value) || 0;
+  const type = document.querySelector('[name="loanType"]')?.value;
+  if (amt > 0 && months > 0) {
+    const rate = type === 'emergency' ? 0.02 : 0.015;
+    const monthly = Math.round(amt * rate * Math.pow(1 + rate, months) / (Math.pow(1 + rate, months) - 1));
+    const total = monthly * months;
+    document.getElementById('calcInstallment').textContent = 'UGX ' + monthly.toLocaleString();
+    document.getElementById('calcTotal').textContent = 'UGX ' + total.toLocaleString();
+    document.getElementById('loanCalc').style.display = 'block';
+  }
+}
+</script>
+
 
 <div class="stats-grid mb-6">
   <div class="stat-card"><div class="label">Pending / In Review</div><div class="value"><%= loans.filter(l=>['pending','under_review'].includes(l.status)).length %></div></div>

@@ -413,7 +413,7 @@ router.post('/loans/:id/approve', async (req, res) => {
     loan.approvedBy         = req.user.id;
     loan.disbursedAt        = new Date();
     loan.notes              = req.body.notes || '';
-    loan.monthlyInstallment = Math.round(loan.amount * (1 + rate * loan.repaymentMonths) / loan.repaymentMonths);
+    loan.monthlyInstallment = Math.round(loan.amount * rate * Math.pow(1 + rate, loan.repaymentMonths) / (Math.pow(1 + rate, loan.repaymentMonths) - 1));
     loan.totalRepayable     = loan.monthlyInstallment * loan.repaymentMonths;
     // Mark all stages as approved if admin overrides
     loan.creditOfficerStatus = 'approved';
@@ -451,7 +451,7 @@ router.post('/loans/:id/disburse', async (req, res) => {
     const group  = await Group.findByPk(gid);
     const member = await User.findByPk(loan.memberId);
     const rate   = loan.loanType === 'emergency' ? 0.02 : 0.015;
-    loan.monthlyInstallment = Math.round(loan.amount * (1 + rate * loan.repaymentMonths) / loan.repaymentMonths);
+    loan.monthlyInstallment = Math.round(loan.amount * rate * Math.pow(1 + rate, loan.repaymentMonths) / (Math.pow(1 + rate, loan.repaymentMonths) - 1));
     loan.totalRepayable     = loan.monthlyInstallment * loan.repaymentMonths;
     loan.status             = 'active';
     loan.approvedBy         = req.user.id;
