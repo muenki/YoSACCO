@@ -159,6 +159,34 @@ router.get('/', async (req, res) => {
       return { ...p.toJSON(), totalContrib, memberContribs };
     }));
 
+
+    // ── PREVIOUS YEAR DATA ────────────────────────────────────────
+    const prevY = y - 1;
+    const prevStart = new Date(prevY, 0, 1);
+    const prevEnd   = new Date(prevY, 11, 31, 23, 59, 59);
+    const prevDateFilter = { [Op.between]: [prevStart, prevEnd] };
+
+    const prevSavingsRows = await Saving.findAll({ where:{ groupId:gid, date:prevDateFilter, status:{ [Op.ne]:'pending' } } });
+    const prevTotalSavings = prevSavingsRows.reduce((t,s)=>t+s.amount,0);
+
+    const prevRepayments = await Repayment.findAll({ where:{ groupId:gid, date:prevDateFilter } });
+    const prevTotalRepaid = prevRepayments.reduce((t,r)=>t+r.amount,0);
+    const prevInterest = Math.round(prevTotalRepaid * (interestRate / (1 + interestRate)));
+
+    const prevOtherIncome = await OtherIncome.findAll({ where:{ groupId:gid, date:prevDateFilter } });
+    const prevTotalOtherIncome = prevOtherIncome.reduce((t,i)=>t+i.amount,0);
+
+    const prevExpends = await Expenditure.findAll({ where:{ groupId:gid, date:prevDateFilter } });
+    const prevTotalExpend = prevExpends.reduce((t,e)=>t+e.amount,0);
+
+    const prevLoansActive = await Loan.findAll({ where:{ groupId:gid, status:'active', appliedAt:{ [Op.lte]:prevEnd } } });
+    const prevLoanPortfolio = prevLoansActive.reduce((t,l)=>t+(l.totalRepayable-l.amountRepaid),0);
+
+    const prevSavingsEver = await Saving.findAll({ where:{ groupId:gid, status:{ [Op.ne]:'pending' }, createdAt:{ [Op.lte]:prevEnd } }, attributes:['amount'] });
+    const prevTotalSavingsEver = prevSavingsEver.reduce((t,s)=>t+s.amount,0);
+
+    const prevShareCapital = await User.sum('shareCapitalPaid', { where:{ groupId:gid } }).catch(()=>0) || 0;
+
     const currentYear = new Date().getFullYear();
     const years       = Array.from({length:6},(_,i)=>currentYear-i);
     const months      = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -194,6 +222,14 @@ router.get('/', async (req, res) => {
       projectCollections,
       years, months,
       settings: settings?.toJSON() || {},
+      prevYear: prevY,
+      prevTotalSavings,
+      prevInterest,
+      prevTotalOtherIncome,
+      prevTotalExpend,
+      prevLoanPortfolio,
+      prevTotalSavingsEver,
+      prevShareCapital,
     });
   } catch(err) {
     console.error('Reports error:', err);

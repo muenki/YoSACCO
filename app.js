@@ -22,6 +22,10 @@ app.use('/admin/reports', require('./src/routes/reports'));  // must be before /
 app.use('/admin',         require('./src/routes/projects')); // projects & assets
 app.use('/admin',         require('./src/routes/admin'));
 app.use('/member',        require('./src/routes/member'));
+app.use('/member',        require('./src/routes/payment'));
+app.use('/',              require('./src/routes/payment'));
+app.use('/member',        require('./src/routes/payment'));
+app.use('/',              require('./src/routes/payment'));
 app.use('/approver',      require('./src/routes/approver'));
 
 app.use((req, res) => res.status(404).render('error', { message: 'Page not found (404)', user: null }));

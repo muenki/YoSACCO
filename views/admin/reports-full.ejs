@@ -108,7 +108,7 @@ body.printing-tab .page-content { padding:8px!important; }
 
 <!-- Tabs -->
 <div class="tab-nav no-print">
-  <% var tabs = [['savings','💰 Savings'],['loans','📋 Loans'],['interest','📊 Distribution'],['expenditure','💸 Expenditure'],['projects','🏗️ Projects'],['project_collections','📦 Collections'],['assets','🏛️ Assets'],['summary','📄 Summary']]; %>
+  <% var tabs = [['savings','💰 Savings'],['loans','📋 Loans'],['interest','📊 Distribution'],['expenditure','💸 Expenditure'],['projects','🏗️ Projects'],['project_collections','📦 Collections'],['assets','🏛️ Assets'],['summary','📄 Summary'],['income_statement','📑 Income Statement'],['balance_sheet','⚖️ Balance Sheet']]; %>
   <% tabs.forEach(function(t){ %>
   <button class="tab-btn <%= tab===t[0]?'active':'' %>" onclick="switchTab('<%= t[0] %>')"><%= t[1] %></button>
   <% }); %>
@@ -679,6 +679,232 @@ body.printing-tab .page-content { padding:8px!important; }
         <div style="font-size:18px;font-weight:700;">NET AVAILABLE BALANCE</div>
         <div style="font-size:28px;font-weight:800;color:<%= availableBalance >= 0 ? 'var(--teal)' : 'var(--danger)' %>;">UGX <%= availableBalance.toLocaleString() %></div>
       </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ INCOME STATEMENT ══════════════════════════════════════════ -->
+<div class="tab-pane <%= tab==='income_statement'?'active':'' %>" id="tab-income_statement">
+  <div class="flex-between mb-4">
+    <div>
+      <h2 style="margin:0;"><%= group.name %></h2>
+      <div class="text-muted text-sm">Income Statement — For the Year Ended 31 December <%= year %></div>
+    </div>
+    <button onclick="printTab('income_statement')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
+  </div>
+  <div class="card" style="max-width:760px;margin:0 auto;">
+    <div class="card-body p-0">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);">
+            <th style="padding:12px 16px;text-align:left;font-size:13px;width:50%;"></th>
+            <th style="padding:12px 16px;text-align:right;font-size:13px;">Current Year<br><span style="font-weight:400;color:var(--text-muted);">UGX (<%= year %>)</span></th>
+            <th style="padding:12px 16px;text-align:right;font-size:13px;">Previous Year<br><span style="font-weight:400;color:var(--text-muted);">UGX (<%= prevYear %>)</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <%
+            var curRevenue = totalPeriodSavings + periodInterest + totalOtherIncomePeriod;
+            var prevRevenue = prevTotalSavings + prevInterest + prevTotalOtherIncome;
+            var curGrossProfit = curRevenue;
+            var prevGrossProfit = prevRevenue;
+            var curOpProfit = curRevenue - totalExpend;
+            var prevOpProfit = prevRevenue - prevTotalExpend;
+            var curNetProfit = curOpProfit;
+            var prevNetProfit = prevOpProfit;
+          %>
+          <!-- REVENUE -->
+          <tr style="background:var(--bg-secondary);">
+            <td colspan="3" style="padding:8px 16px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Revenue</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;font-size:13px;padding-left:28px;">Member Savings Contributions</td>
+            <td style="padding:9px 16px;text-align:right;font-size:13px;"><%= totalPeriodSavings.toLocaleString() %></td>
+            <td style="padding:9px 16px;text-align:right;font-size:13px;color:var(--text-muted);"><%= prevTotalSavings.toLocaleString() %></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;font-size:13px;padding-left:28px;">Loan Interest Income</td>
+            <td style="padding:9px 16px;text-align:right;font-size:13px;"><%= periodInterest.toLocaleString() %></td>
+            <td style="padding:9px 16px;text-align:right;font-size:13px;color:var(--text-muted);"><%= prevInterest.toLocaleString() %></td>
+          </tr>
+          <tr style="border-bottom:2px solid var(--border);">
+            <td style="padding:9px 16px;font-size:13px;padding-left:28px;">Other Income</td>
+            <td style="padding:9px 16px;text-align:right;font-size:13px;"><%= totalOtherIncomePeriod.toLocaleString() %></td>
+            <td style="padding:9px 16px;text-align:right;font-size:13px;color:var(--text-muted);"><%= prevTotalOtherIncome.toLocaleString() %></td>
+          </tr>
+          <tr style="border-bottom:2px solid var(--border);background:var(--bg-secondary);">
+            <td style="padding:10px 16px;font-weight:700;font-size:13px;">Gross Revenue</td>
+            <td style="padding:10px 16px;text-align:right;font-weight:700;font-size:13px;"><%= curRevenue.toLocaleString() %></td>
+            <td style="padding:10px 16px;text-align:right;font-weight:700;font-size:13px;color:var(--text-muted);"><%= prevRevenue.toLocaleString() %></td>
+          </tr>
+          <!-- EXPENDITURE -->
+          <tr style="background:var(--bg-secondary);">
+            <td colspan="3" style="padding:8px 16px;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);">Expenditure</td>
+          </tr>
+          <% expenditures.forEach(e => { %>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;font-size:13px;padding-left:28px;"><%= e.description || e.category %></td>
+            <td style="padding:9px 16px;text-align:right;font-size:13px;color:var(--danger);">(<%= e.amount.toLocaleString() %>)</td>
+            <td style="padding:9px 16px;text-align:right;font-size:13px;color:var(--text-muted);">—</td>
+          </tr>
+          <% }) %>
+          <% if (!expenditures.length) { %>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td colspan="3" style="padding:9px 16px;font-size:13px;color:var(--text-muted);padding-left:28px;">No expenditures in this period.</td>
+          </tr>
+          <% } %>
+          <tr style="border-bottom:2px solid var(--border);background:var(--bg-secondary);">
+            <td style="padding:10px 16px;font-weight:700;font-size:13px;">Total Expenditure</td>
+            <td style="padding:10px 16px;text-align:right;font-weight:700;font-size:13px;color:var(--danger);">(<%= totalExpend.toLocaleString() %>)</td>
+            <td style="padding:10px 16px;text-align:right;font-weight:700;font-size:13px;color:var(--text-muted);">(<%= prevTotalExpend.toLocaleString() %>)</td>
+          </tr>
+          <!-- OPERATING PROFIT -->
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:10px 16px;font-weight:700;font-size:13px;">Operating Surplus</td>
+            <td style="padding:10px 16px;text-align:right;font-weight:700;font-size:13px;color:<%= curOpProfit>=0?'var(--success)':'var(--danger)' %>;"><%= curOpProfit.toLocaleString() %></td>
+            <td style="padding:10px 16px;text-align:right;font-weight:700;font-size:13px;color:var(--text-muted);"><%= prevOpProfit.toLocaleString() %></td>
+          </tr>
+          <!-- NET SURPLUS -->
+          <tr style="background:<%= curNetProfit>=0?'#f0fff4':'#fff5f5' %>;border-top:3px solid var(--border);">
+            <td style="padding:14px 16px;font-weight:800;font-size:15px;">NET SURPLUS / (DEFICIT)</td>
+            <td style="padding:14px 16px;text-align:right;font-weight:800;font-size:15px;color:<%= curNetProfit>=0?'var(--success)':'var(--danger)' %>;">UGX <%= curNetProfit.toLocaleString() %></td>
+            <td style="padding:14px 16px;text-align:right;font-weight:800;font-size:15px;color:var(--text-muted);">UGX <%= prevNetProfit.toLocaleString() %></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BALANCE SHEET ════════════════════════════════════════════ -->
+<div class="tab-pane <%= tab==='balance_sheet'?'active':'' %>" id="tab-balance_sheet">
+  <div class="flex-between mb-4">
+    <div>
+      <h2 style="margin:0;"><%= group.name %></h2>
+      <div class="text-muted text-sm">Balance Sheet — As at 31 December <%= year %></div>
+    </div>
+    <button onclick="printTab('balance_sheet')" class="btn btn-sm btn-outline no-print">🖨 Print</button>
+  </div>
+  <div class="card" style="max-width:760px;margin:0 auto;">
+    <div class="card-body p-0">
+      <%
+        var curTotalAssets = totalSavingsEver + loanPortfolio + totalOtherIncomeEver + allAssets.reduce((t,a)=>t+(a.currentValue||a.purchaseCost||0),0);
+        var prevTotalAssets = prevTotalSavingsEver + prevLoanPortfolio + 0 + 0;
+        var curTotalLiabilities = totalExpendsEver;
+        var prevTotalLiabilities = 0;
+        var curEquity = totalShareCapital + totalSavingsEver + interestIncome;
+        var prevEquity = prevShareCapital + prevTotalSavingsEver + 0;
+        var curTotalLE = curTotalLiabilities + curEquity;
+        var prevTotalLE = prevTotalLiabilities + prevEquity;
+        var curCheck = curTotalAssets - curTotalLE;
+        var prevCheck = prevTotalAssets - prevTotalLE;
+      %>
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid var(--border);background:var(--bg-secondary);">
+            <th style="padding:12px 16px;text-align:left;font-size:13px;width:55%;"></th>
+            <th style="padding:12px 16px;text-align:right;font-size:13px;">Current Year<br><span style="font-weight:400;color:var(--text-muted);">UGX (<%= year %>)</span></th>
+            <th style="padding:12px 16px;text-align:right;font-size:13px;">Previous Year<br><span style="font-weight:400;color:var(--text-muted);">UGX (<%= prevYear %>)</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ASSETS -->
+          <tr style="background:var(--bg-secondary);">
+            <td colspan="3" style="padding:10px 16px;font-weight:800;font-size:13px;">Assets</td>
+          </tr>
+          <tr>
+            <td colspan="3" style="padding:6px 16px;font-weight:600;font-size:12px;color:var(--text-muted);padding-left:24px;">Current assets:</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 16px;font-size:13px;padding-left:36px;">Cash & Member Savings</td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;"><%= totalSavingsEver.toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;color:var(--text-muted);"><%= prevTotalSavingsEver.toLocaleString() %></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 16px;font-size:13px;padding-left:36px;">Loans Receivable (Active)</td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;"><%= loanPortfolio.toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;color:var(--text-muted);"><%= prevLoanPortfolio.toLocaleString() %></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 16px;font-size:13px;padding-left:36px;">Other Income Receivable</td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;"><%= totalOtherIncomeEver.toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;color:var(--text-muted);">0</td>
+          </tr>
+          <tr style="border-bottom:2px solid var(--border);background:var(--bg-secondary);">
+            <td style="padding:8px 16px;font-weight:600;font-size:13px;padding-left:24px;">Total current assets</td>
+            <td style="padding:8px 16px;text-align:right;font-weight:600;font-size:13px;"><%= (totalSavingsEver+loanPortfolio+totalOtherIncomeEver).toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-weight:600;font-size:13px;color:var(--text-muted);"><%= (prevTotalSavingsEver+prevLoanPortfolio).toLocaleString() %></td>
+          </tr>
+          <!-- NON-CURRENT ASSETS -->
+          <% allAssets.forEach(a => { %>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 16px;font-size:13px;padding-left:36px;"><%= a.name %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;"><%= (a.currentValue||a.purchaseCost||0).toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;color:var(--text-muted);">—</td>
+          </tr>
+          <% }) %>
+          <tr style="border-bottom:3px solid var(--border);background:var(--bg-secondary);">
+            <td style="padding:10px 16px;font-weight:800;font-size:13px;">Total Assets</td>
+            <td style="padding:10px 16px;text-align:right;font-weight:800;font-size:13px;"><%= curTotalAssets.toLocaleString() %></td>
+            <td style="padding:10px 16px;text-align:right;font-weight:800;font-size:13px;color:var(--text-muted);"><%= prevTotalAssets.toLocaleString() %></td>
+          </tr>
+
+          <!-- LIABILITIES -->
+          <tr style="background:var(--bg-secondary);"><td colspan="3" style="padding:10px 16px;font-weight:800;font-size:13px;">Liabilities</td></tr>
+          <tr>
+            <td colspan="3" style="padding:6px 16px;font-weight:600;font-size:12px;color:var(--text-muted);padding-left:24px;">Current liabilities:</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 16px;font-size:13px;padding-left:36px;">Accounts Payable / Expenditure</td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;"><%= totalExpendsEver.toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;color:var(--text-muted);">0</td>
+          </tr>
+          <tr style="border-bottom:3px solid var(--border);background:var(--bg-secondary);">
+            <td style="padding:10px 16px;font-weight:800;font-size:13px;">Total Liabilities</td>
+            <td style="padding:10px 16px;text-align:right;font-weight:800;font-size:13px;"><%= curTotalLiabilities.toLocaleString() %></td>
+            <td style="padding:10px 16px;text-align:right;font-weight:800;font-size:13px;color:var(--text-muted);">0</td>
+          </tr>
+
+          <!-- EQUITY -->
+          <tr style="background:var(--bg-secondary);"><td colspan="3" style="padding:10px 16px;font-weight:800;font-size:13px;">Members' Equity</td></tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 16px;font-size:13px;padding-left:36px;">Share Capital</td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;"><%= totalShareCapital.toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;color:var(--text-muted);"><%= prevShareCapital.toLocaleString() %></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 16px;font-size:13px;padding-left:36px;">Retained Savings</td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;"><%= totalSavingsEver.toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;color:var(--text-muted);"><%= prevTotalSavingsEver.toLocaleString() %></td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:8px 16px;font-size:13px;padding-left:36px;">Interest Earned (Cumulative)</td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;"><%= interestIncome.toLocaleString() %></td>
+            <td style="padding:8px 16px;text-align:right;font-size:13px;color:var(--text-muted);">0</td>
+          </tr>
+          <tr style="border-bottom:3px solid var(--border);background:var(--bg-secondary);">
+            <td style="padding:10px 16px;font-weight:800;font-size:13px;">Members' Equity</td>
+            <td style="padding:10px 16px;text-align:right;font-weight:800;font-size:13px;"><%= curEquity.toLocaleString() %></td>
+            <td style="padding:10px 16px;text-align:right;font-weight:800;font-size:13px;color:var(--text-muted);"><%= prevEquity.toLocaleString() %></td>
+          </tr>
+          <tr style="background:#f0f4ff;">
+            <td style="padding:12px 16px;font-weight:800;font-size:14px;">Total Liabilities & Members' Equity</td>
+            <td style="padding:12px 16px;text-align:right;font-weight:800;font-size:14px;color:var(--primary);"><%= curTotalLE.toLocaleString() %></td>
+            <td style="padding:12px 16px;text-align:right;font-weight:800;font-size:14px;color:var(--text-muted);"><%= prevTotalLE.toLocaleString() %></td>
+          </tr>
+          <!-- CHECK ROW -->
+          <tr style="border-top:1px solid var(--border);background:var(--bg-secondary);">
+            <td style="padding:8px 16px;font-size:12px;color:var(--text-muted);font-style:italic;">Check (Assets - Liabilities - Equity)</td>
+            <td style="padding:8px 16px;text-align:right;font-size:12px;font-weight:600;color:<%= curCheck===0?'var(--success)':'var(--danger)' %>;">
+              <%= curCheck.toLocaleString() %>
+            </td>
+            <td style="padding:8px 16px;text-align:right;font-size:12px;font-weight:600;color:<%= prevCheck===0?'var(--success)':'var(--text-muted)' %>;">
+              <%= prevCheck.toLocaleString() %>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
