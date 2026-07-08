@@ -162,11 +162,17 @@ router.get('/member/profile', apiAuth('member'), async (req, res) => {
     const user = await User.findByPk(req.user.id, {
       attributes: ['id', 'name', 'email', 'role', 'phone', 'memberId',
         'nationalId', 'joinDate', 'monthlyContribution',
-        'shareCapitalTarget', 'shareCapitalPaid'],
-      include: [{ model: Group, as: 'group', attributes: ['id', 'name'] }]
+        'shareCapitalTarget', 'shareCapitalPaid', 'photo'],
+      include: [{ model: Group, as: 'group', attributes: ['id', 'name', 'accentColor'] }]
     });
-    res.json(user);
-  } catch { res.status(500).json({ message: 'Server error' }); }
+    const settings = await GroupSettings.findOne({ where: { groupId: req.user.groupId } });
+    const balance = await (async () => {
+      const { Op } = require('sequelize');
+      const rows = await Saving.findAll({ where: { memberId: req.user.id, status: { [Op.ne]: 'pending' }, type: { [Op.ne]: 'share_capital' } }, attributes: ['amount'] });
+      return rows.reduce((s, r) => s + r.amount, 0);
+    })();
+    res.json({ ...user.toJSON(), balance, settings: settings ? { mtnMomoNumber: settings.mtnMomoNumber, airtelMoneyNumber: settings.airtelMoneyNumber, bankName: settings.bankName, accountNumber: settings.accountNumber, pesapalConfigured: !!(settings.pesapalConsumerKey && settings.pesapalConsumerSecret) } : {} });
+  } catch(e) { console.error(e); res.status(500).json({ message: 'Server error' }); }
 });
 
 router.get('/member/projects', apiAuth('member'), async (req, res) => {
@@ -176,6 +182,49 @@ router.get('/member/projects', apiAuth('member'), async (req, res) => {
     });
     res.json({ projects });
   } catch { res.status(500).json({ message: 'Server error' }); }
+});
+
+
+// ── Member Deposit (Mobile App) ───────────────────────────────────
+router.post('/member/deposit', apiAuth('member'), async (req, res) => {
+  try {
+    const { amount, type, method, description } = req.body;
+    const parsedAmount = parseInt(amount);
+    if (!parsedAmount || parsedAmount < 1000) return res.status(400).json({ message: 'Minimum deposit is UGX 1,000' });
+    const ref = 'TXN' + Date.now();
+    const typeMap = {
+      contribution:   { type: 'contribution',   desc: description || `Monthly contribution via ${method}` },
+      share_capital:  { type: 'share_capital',  desc: description || `Share capital via ${method}` },
+      extra_savings:  { type: 'online_deposit', desc: description || `Extra savings via ${method}` },
+      loan_repayment: { type: 'online_deposit', desc: description || `Loan repayment via ${method}` },
+    };
+    const mapped = typeMap[type] || { type: 'online_deposit', desc: description || 'Mobile deposit' };
+    const tx = await Saving.create({
+      memberId: req.user.id, groupId: req.user.groupId,
+      amount: parsedAmount, type: mapped.type,
+      description: mapped.desc,
+      date: new Date(), postedBy: req.user.id,
+      status: 'pending', transactionRef: ref,
+    });
+    await AuditLog.create({ userId: req.user.id, action: 'MOBILE_DEPOSIT', detail: `Mobile deposit intent UGX ${parsedAmount.toLocaleString()} via ${method}`, groupId: req.user.groupId });
+    res.json({ success: true, reference: ref, transaction: tx });
+  } catch(e) { console.error(e); res.status(500).json({ message: 'Server error' }); }
+});
+
+
+// ── Member Loan Extension Request (Mobile) ────────────────────────
+router.post('/member/loans/:id/extension', apiAuth('member'), async (req, res) => {
+  try {
+    const loan = await Loan.findOne({ where: { id: req.params.id, memberId: req.user.id, status: 'active' } });
+    if (!loan) return res.status(404).json({ message: 'Loan not found' });
+    if (loan.extensionStatus === 'pending') return res.status(400).json({ message: 'Extension already pending' });
+    const { extensionMonths, reason } = req.body;
+    const months = parseInt(extensionMonths);
+    if (!months || months < 1 || months > 24) return res.status(400).json({ message: 'Extension must be 1-24 months' });
+    await loan.update({ extensionRequested: true, extensionMonths: months, extensionReason: reason || '', extensionStatus: 'pending', extensionRequestedAt: new Date(), originalMonths: loan.originalMonths || loan.repaymentMonths });
+    await AuditLog.create({ userId: req.user.id, action: 'LOAN_EXTENSION_REQUEST', detail: `Requested ${months} month extension`, groupId: req.user.groupId });
+    res.json({ success: true, message: 'Extension request submitted' });
+  } catch(e) { console.error(e); res.status(500).json({ message: 'Server error' }); }
 });
 
 // ─── ADMIN ─────────────────────────────────────────────────────────────────
