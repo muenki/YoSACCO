@@ -49,6 +49,14 @@ const Loan = sequelize.define('Loan', {
 
   // For top-ups: reference to parent loan
   parentLoanId:         { type: DataTypes.UUID,   allowNull: true },
+  // Loan extension/restructuring
+  extensionRequested:   { type: DataTypes.BOOLEAN, defaultValue: false },
+  extensionMonths:      { type: DataTypes.INTEGER, allowNull: true },
+  extensionReason:      { type: DataTypes.TEXT,    allowNull: true },
+  extensionStatus:      { type: DataTypes.ENUM('pending','approved','rejected'), allowNull: true },
+  extensionRequestedAt: { type: DataTypes.DATE,    allowNull: true },
+  extensionApprovedAt:  { type: DataTypes.DATE,    allowNull: true },
+  originalMonths:       { type: DataTypes.INTEGER, allowNull: true },
 }, { tableName: 'loans', timestamps: true });
 
 module.exports = Loan;

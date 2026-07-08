@@ -7,6 +7,9 @@
 <% if (q.success === 'loan_disbursed')  { %><div class="alert alert-success">Loan disbursed successfully. Email sent to member.</div><% } %>
 <% if (q.success === 'loan_declined')   { %><div class="alert alert-danger" style="background:var(--warning-bg);color:var(--warning);border-color:#f6e05e;">Loan declined. Member has been notified.</div><% } %>
 <% if (q.success === 'repayment_recorded') { %><div class="alert alert-success">Repayment recorded. Receipt sent to member.</div><% } %>
+<% if (q.success === 'extension_approved') { %><div class="alert alert-success">Loan extension approved. Member has been notified.</div><% } %>
+<% if (q.success === 'extension_rejected') { %><div class="alert alert-danger">Loan extension request declined. Member has been notified.</div><% } %>
+<% if (q.success === 'loan_posted') { %><div class="alert alert-success">Loan posted successfully. Member has been notified.</div><% } %>
 
 <div class="grid-2 gap-4 mb-6 no-print">
   <div class="card">
@@ -73,6 +76,43 @@ function calcInstallment() {
 }
 </script>
 
+
+
+<!-- Extension Requests Banner -->
+<% var pendingExtensions = loans.filter(function(l){ return l.extensionStatus === 'pending'; }); %>
+<% if (pendingExtensions.length > 0) { %>
+<div class="alert alert-warning mb-4" style="border-left:4px solid #f6ad55;">
+  <strong>⚠️ <%= pendingExtensions.length %> loan extension request(s) pending your review.</strong>
+</div>
+<% pendingExtensions.forEach(function(loan){ %>
+<div class="loan-card" style="border-left:4px solid #f6ad55;background:#fffbeb;margin-bottom:12px;">
+  <div class="flex-between mb-2">
+    <div class="member-row">
+      <div class="avatar" style="background:#fef3c7;color:#b7791f;"><%= loan.member ? loan.member.name.split(' ').map(function(n){return n[0];}).join('') : '?' %></div>
+      <div>
+        <div class="name"><%= loan.member ? loan.member.name : 'Unknown' %> — <%= loan.member?.memberId %></div>
+        <div class="id">Requesting <strong><%= loan.extensionMonths %> additional months</strong> · Outstanding: UGX <%= (loan.totalRepayable - loan.amountRepaid).toLocaleString() %></div>
+        <div class="id">Reason: <%= loan.extensionReason || 'Not provided' %></div>
+      </div>
+    </div>
+    <span class="badge badge-warning">Extension Pending</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;font-size:12px;">
+    <div><span class="text-muted">Current term</span><br><strong><%= loan.repaymentMonths %> months</strong></div>
+    <div><span class="text-muted">Monthly installment</span><br><strong>UGX <%= loan.monthlyInstallment.toLocaleString() %></strong></div>
+    <div><span class="text-muted">Requested extension</span><br><strong>+<%= loan.extensionMonths %> months</strong></div>
+  </div>
+  <div class="flex gap-2">
+    <form method="POST" action="/admin/loans/<%= loan.id %>/extension/approve" style="display:inline;" onsubmit="return confirm('Approve <%= loan.extensionMonths %>-month extension for <%= loan.member?.name %>? Monthly installment will be recalculated.')">
+      <button type="submit" class="btn btn-sm btn-success">✅ Approve Extension</button>
+    </form>
+    <form method="POST" action="/admin/loans/<%= loan.id %>/extension/reject" style="display:inline;" onsubmit="return confirm('Decline this extension request?')">
+      <button type="submit" class="btn btn-sm btn-outline" style="color:var(--danger);border-color:var(--danger);">❌ Decline</button>
+    </form>
+  </div>
+</div>
+<% }); %>
+<% } %>
 
 <div class="stats-grid mb-6">
   <div class="stat-card"><div class="label">Pending / In Review</div><div class="value"><%= loans.filter(l=>['pending','under_review'].includes(l.status)).length %></div></div>

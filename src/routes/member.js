@@ -322,6 +322,52 @@ router.get('/deposit/callback', authenticate, async (req, res) => {
   }
 });
 
+
+// ── Request Loan Extension ────────────────────────────────────────
+router.post('/loans/:id/request-extension', authenticate, async (req, res) => {
+  try {
+    const loan = await Loan.findOne({ where: { id: req.params.id, memberId: req.user.id, status: 'active' } });
+    if (!loan) return res.redirect('/member/loans?error=loan_not_found');
+    if (loan.extensionRequested && loan.extensionStatus === 'pending') {
+      return res.redirect('/member/loans?error=extension_already_pending');
+    }
+    const { extensionMonths, reason } = req.body;
+    const months = parseInt(extensionMonths);
+    if (!months || months < 1 || months > 24) return res.redirect('/member/loans?error=invalid_months');
+
+    await loan.update({
+      extensionRequested: true,
+      extensionMonths: months,
+      extensionReason: reason || '',
+      extensionStatus: 'pending',
+      extensionRequestedAt: new Date(),
+      originalMonths: loan.originalMonths || loan.repaymentMonths,
+    });
+
+    await AuditLog.create({ userId: req.user.id, action: 'LOAN_EXTENSION_REQUEST', detail: `Requested ${months} month extension for loan`, groupId: req.user.groupId });
+
+    // Notify admin via email
+    const { User, Group } = require('../models');
+    const group = await Group.findByPk(req.user.groupId);
+    const admins = await User.findAll({ where: { groupId: req.user.groupId, role: 'admin' } });
+    const { sendEmail } = require('../utils/email');
+    for (const admin of admins) {
+      sendEmail({
+        to: admin.email,
+        subject: `Loan Extension Request — ${req.user.name} — ${months} months — ${group.name}`,
+        html: `<p>Dear ${admin.name},</p>
+        <p>${req.user.name} (${req.user.memberId}) has requested a <strong>${months}-month extension</strong> on their active loan.</p>
+        <p><strong>Reason:</strong> ${reason || 'Not provided'}</p>
+        <p><strong>Outstanding balance:</strong> UGX ${(loan.totalRepayable - loan.amountRepaid).toLocaleString()}</p>
+        <p><strong>Current monthly installment:</strong> UGX ${loan.monthlyInstallment.toLocaleString()}</p>
+        <p>Please log in to review and approve or reject this request.</p>`,
+      }).catch(() => {});
+    }
+
+    res.redirect('/member/loans?success=extension_requested');
+  } catch(err) { console.error('Extension request error:', err); res.redirect('/member/loans?error=extension_failed'); }
+});
+
 router.get('/profile', async (req, res) => {
   try {
     const group = await Group.findByPk(req.user.groupId);

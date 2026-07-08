@@ -805,6 +805,85 @@ router.post('/expenditure/add', async (req, res) => {
   } catch(err) { console.error(err); res.redirect('/admin/expenditure?error=add_failed'); }
 });
 
+
+// ── Loan Extension — Approve ──────────────────────────────────────
+router.post('/loans/:id/extension/approve', async (req, res) => {
+  try {
+    const gid  = req.user.groupId;
+    const loan = await Loan.findOne({ where: { id: req.params.id, groupId: gid, status: 'active', extensionStatus: 'pending' } });
+    if (!loan) return res.redirect('/admin/loans?error=not_found');
+    const member = await Group.findByPk(gid).then(async g => {
+      const m = await User.findByPk(loan.memberId);
+      return { member: m, group: g };
+    });
+
+    const rate = loan.loanType === 'emergency' ? 0.02 : 0.015;
+    const outstanding = loan.totalRepayable - loan.amountRepaid;
+    const newTotalMonths = loan.repaymentMonths + loan.extensionMonths;
+    // Remaining months = new total months - months already paid
+    const monthsPaid = Math.round(loan.amountRepaid / loan.monthlyInstallment);
+    const remainingMonths = newTotalMonths - monthsPaid;
+    // Recalculate installment on outstanding balance using reducing balance
+    const newInstallment = Math.round(outstanding * rate * Math.pow(1+rate, remainingMonths) / (Math.pow(1+rate, remainingMonths) - 1));
+    const newTotalRepayable = loan.amountRepaid + (newInstallment * remainingMonths);
+
+    await loan.update({
+      repaymentMonths: newTotalMonths,
+      monthlyInstallment: newInstallment,
+      totalRepayable: newTotalRepayable,
+      extensionStatus: 'approved',
+      extensionApprovedAt: new Date(),
+    });
+
+    await AuditLog.create({ userId: req.user.id, action: 'LOAN_EXTENSION_APPROVED', detail: `Approved ${loan.extensionMonths}-month extension. New installment: UGX ${newInstallment.toLocaleString()}`, groupId: gid });
+
+    // Email member
+    const { sendEmail } = require('../utils/email');
+    const m = await User.findByPk(loan.memberId);
+    const g = await Group.findByPk(gid);
+    sendEmail({
+      to: m.email,
+      subject: `Loan Extension Approved — ${loan.extensionMonths} months — ${g.name}`,
+      html: `<p>Dear ${m.name},</p>
+      <p>Your request for a <strong>${loan.extensionMonths}-month loan extension</strong> has been <strong style="color:green;">approved</strong>.</p>
+      <table style="border-collapse:collapse;width:100%;max-width:500px;">
+        <tr><td style="padding:8px;border:1px solid #ddd;">New repayment period</td><td style="padding:8px;border:1px solid #ddd;">${newTotalMonths} months total</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;">New monthly installment</td><td style="padding:8px;border:1px solid #ddd;">UGX ${newInstallment.toLocaleString()}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;">Outstanding balance</td><td style="padding:8px;border:1px solid #ddd;">UGX ${outstanding.toLocaleString()}</td></tr>
+        <tr><td style="padding:8px;border:1px solid #ddd;">Remaining months</td><td style="padding:8px;border:1px solid #ddd;">${remainingMonths} months</td></tr>
+      </table>
+      <p>Please log in to view your updated loan schedule.</p>`,
+    }).catch(() => {});
+
+    res.redirect('/admin/loans?success=extension_approved');
+  } catch(err) { console.error('Extension approve error:', err); res.redirect('/admin/loans?error=extension_failed'); }
+});
+
+// ── Loan Extension — Reject ───────────────────────────────────────
+router.post('/loans/:id/extension/reject', async (req, res) => {
+  try {
+    const gid  = req.user.groupId;
+    const loan = await Loan.findOne({ where: { id: req.params.id, groupId: gid, extensionStatus: 'pending' } });
+    if (!loan) return res.redirect('/admin/loans?error=not_found');
+
+    await loan.update({ extensionStatus: 'rejected', extensionApprovedAt: new Date() });
+    await AuditLog.create({ userId: req.user.id, action: 'LOAN_EXTENSION_REJECTED', detail: `Rejected loan extension request`, groupId: gid });
+
+    const { sendEmail } = require('../utils/email');
+    const m = await User.findByPk(loan.memberId);
+    const g = await Group.findByPk(gid);
+    sendEmail({
+      to: m.email,
+      subject: `Loan Extension Request Update — ${g.name}`,
+      html: `<p>Dear ${m.name},</p>
+      <p>Your request for a loan extension has been <strong style="color:red;">declined</strong> at this time.</p>
+      <p>Please contact your SACCO admin for more information.</p>`,
+    }).catch(() => {});
+
+    res.redirect('/admin/loans?success=extension_rejected');
+  } catch(err) { console.error('Extension reject error:', err); res.redirect('/admin/loans?error=extension_failed'); }
+});
+
 // ── Admin Invoices ────────────────────────────────────────────────
 router.get('/invoices', async (req, res) => {
   try {

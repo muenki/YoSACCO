@@ -184,6 +184,44 @@
   </div>
   <div class="progress mb-1"><div class="progress-bar" style="background:var(--success);width:<%= loan.totalRepayable>0?Math.round(loan.amountRepaid/loan.totalRepayable*100):0 %>%"></div></div>
   <div class="text-xs text-muted"><%= loan.totalRepayable>0?Math.round(loan.amountRepaid/loan.totalRepayable*100):0 %>% repaid · <%= loan.repaymentMonths %> month term</div>
+
+  <!-- Extension Request -->
+  <% if (loan.extensionStatus === 'pending') { %>
+  <div style="background:#fffbeb;border:1px solid #f6e05e;border-radius:8px;padding:12px;margin-top:10px;">
+    <p class="text-sm" style="color:#b7791f;margin:0;">⏳ <strong>Extension request pending</strong> — you requested <%= loan.extensionMonths %> additional months. Awaiting admin approval.</p>
+  </div>
+  <% } else if (loan.extensionStatus === 'approved') { %>
+  <div style="background:#f0fff4;border:1px solid #9ae6b4;border-radius:8px;padding:12px;margin-top:10px;">
+    <p class="text-sm" style="color:#276749;margin:0;">✅ <strong>Extension approved</strong> — your loan has been extended by <%= loan.extensionMonths %> months. New monthly installment: UGX <%= loan.monthlyInstallment.toLocaleString() %></p>
+  </div>
+  <% } else if (loan.extensionStatus === 'rejected') { %>
+  <div style="background:#fff5f5;border:1px solid #fc8181;border-radius:8px;padding:12px;margin-top:10px;">
+    <p class="text-sm" style="color:#c53030;margin:0;">❌ <strong>Extension request declined.</strong> Please contact your SACCO admin for more information.</p>
+  </div>
+  <% } else { %>
+  <div style="margin-top:10px;">
+    <button onclick="document.getElementById('ext-<%= loan.id %>').style.display='block';this.style.display='none'" class="btn btn-sm btn-outline" style="font-size:12px;">📅 Request Repayment Extension</button>
+    <div id="ext-<%= loan.id %>" style="display:none;margin-top:10px;background:var(--bg-secondary);border-radius:8px;padding:14px;">
+      <p class="text-sm font-semibold mb-2">Request Loan Extension</p>
+      <form method="POST" action="/member/loans/<%= loan.id %>/request-extension">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" style="font-size:12px;">Additional Months (1-24)</label>
+            <input type="number" name="extensionMonths" class="form-control" min="1" max="24" placeholder="e.g. 3" required>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:8px;">
+          <label class="form-label" style="font-size:12px;">Reason for Extension</label>
+          <textarea name="reason" class="form-control" rows="2" placeholder="Briefly explain why you need more time..." style="font-size:13px;"></textarea>
+        </div>
+        <div class="flex gap-2 mt-2">
+          <button type="submit" class="btn btn-sm btn-primary">Submit Request</button>
+          <button type="button" onclick="document.getElementById('ext-<%= loan.id %>').style.display='none'" class="btn btn-sm btn-outline">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <% } %>
   <% } %>
 
   <% if (loan.status === 'rejected' || loan.status === 'declined') { %>
