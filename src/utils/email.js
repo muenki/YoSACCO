@@ -154,19 +154,36 @@ const emails = {
   },
 
   async savingsReceiptToMember(member, transaction, balance, group) {
-    const receiptNo = 'RCT-' + (transaction.id || '').replace(/-/g,'').slice(0,8).toUpperCase();
+    // Generate receipt number using group prefix
+    const prefix = group.name.split(' ').filter(w => w.match(/[A-Za-z]/)).map(w => w[0]).join('').toUpperCase();
+    const receiptNo = prefix + '-RCT-' + (transaction.id || '').replace(/-/g,'').slice(0,8).toUpperCase();
+    // Human-readable transaction type
+    const typeLabels = {
+      contribution: 'Monthly Contribution', share_capital: 'Share Capital',
+      interest: 'Interest Credit', dividend: 'Dividend',
+      online_deposit: 'Online Deposit', loan_fine: 'Loan Fine',
+      subscription: 'Subscription Fee', other: 'Other Payment',
+    };
+    const typeLabel = typeLabels[transaction.type] || transaction.type || 'Savings';
+    // For share capital, show separate balance info
+    const balanceNote = transaction.type === 'share_capital'
+      ? `UGX ${((member.shareCapitalPaid||0)).toLocaleString()} paid toward share capital`
+      : `UGX ${balance.toLocaleString()}`;
+    const balanceLabel = transaction.type === 'share_capital' ? 'Share Capital Paid' : 'New savings balance';
     return sendEmail({
       to: member.email,
-      subject: `Savings Receipt ${receiptNo} — UGX ${transaction.amount.toLocaleString()} — ${group.name}`,
-      html: emailWrapper('Savings Receipt', group.accentColor, `
+      subject: `${typeLabel} Receipt ${receiptNo} — UGX ${transaction.amount.toLocaleString()} — ${group.name}`,
+      html: emailWrapper(typeLabel + ' Receipt', group.accentColor, `
         <p>Dear <strong>${member.name}</strong>,</p>
-        <p>Your savings account has been credited. Here is your receipt:</p>
+        <p>Your payment has been received and recorded. Here is your receipt:</p>
         <div class="info-box">
           <div class="info-row"><span class="info-key">Receipt No.</span><span class="info-val">${receiptNo}</span></div>
-          <div class="info-row"><span class="info-key">Transaction type</span><span class="info-val">${transaction.description}</span></div>
-          <div class="info-row"><span class="info-key">Amount credited</span><span class="info-val">UGX ${transaction.amount.toLocaleString()}</span></div>
+          <div class="info-row"><span class="info-key">Payment Type</span><span class="info-val">${typeLabel}</span></div>
+          <div class="info-row"><span class="info-key">Amount</span><span class="info-val">UGX ${transaction.amount.toLocaleString()}</span></div>
           <div class="info-row"><span class="info-key">Date</span><span class="info-val">${new Date(transaction.date).toLocaleDateString()}</span></div>
-          <div class="info-row"><span class="info-key">New balance</span><span class="info-val">UGX ${balance.toLocaleString()}</span></div>
+          <div class="info-row"><span class="info-key">${balanceLabel}</span><span class="info-val">${balanceNote}</span></div>
+          <div class="info-row"><span class="info-key">Member ID</span><span class="info-val">${member.memberId||'—'}</span></div>
+          <div class="info-row"><span class="info-key">SACCO</span><span class="info-val">${group.name}</span></div>
         </div>
         <a class="btn" href="${APP_URL}/member/savings">View Full Statement</a>
       `),
@@ -174,7 +191,8 @@ const emails = {
   },
 
   async loanRepaymentReceipt(member, repayment, remaining, group) {
-    const receiptNo = 'RCT-' + (repayment.id || '').replace(/-/g,'').slice(0,8).toUpperCase();
+    const prefix = group.name.split(' ').filter(w => w.match(/[A-Za-z]/)).map(w => w[0]).join('').toUpperCase();
+    const receiptNo = prefix + '-RCT-' + (repayment.id || '').replace(/-/g,'').slice(0,8).toUpperCase();
     return sendEmail({
       to: member.email,
       subject: `Loan Repayment Receipt ${receiptNo} — UGX ${repayment.amount.toLocaleString()} — ${group.name}`,
